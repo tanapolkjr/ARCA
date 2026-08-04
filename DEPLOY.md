@@ -24,7 +24,7 @@
 4. **Region: Singapore** (ใกล้ไทยที่สุด = เว็บเร็วกว่า)
 5. รอสร้างเสร็จ 1–2 นาที
 
-## 2. รัน Database Schema — 14 ไฟล์ เรียงตามลำดับ
+## 2. รัน Database Schema — 15 ไฟล์ เรียงตามลำดับ
 
 ในเมนูซ้ายของ Supabase กด **SQL Editor** → **New query** แล้วทำแบบนี้ทีละไฟล์:
 เปิดไฟล์จากโฟลเดอร์ `supabase/migrations/` → คัดลอกทั้งไฟล์ → วางใน SQL Editor → กด **Run** → ต้องขึ้น `Success`
@@ -47,6 +47,7 @@
 | 12 | `0012_borrow_redesign.sql` | ระบบยืมคืนหลายรายการ |
 | 13 | `0013_launch_recheck_fixes.sql` | แก้บั๊กจาก 0012 + ย้ายคลังตัดสต็อกจริง |
 | 14 | `0014_sourcing_module.sql` | โมดูล Sourcing 7 ตาราง + สิทธิ์ Super Admin/Manager + ที่เก็บไฟล์ `product-media` |
+| 15 | `0015_sourcing_to_inventory.sql` | ช่องเชื่อมสินค้า Sourcing ที่ Approved → Inventory |
 
 > **ห้ามรัน `RESET_full_wipe.sql`** — ไฟล์นั้นเป็นเครื่องมือลบข้อมูลทิ้งทั้งหมด ไม่ใช่ migration
 >
@@ -120,7 +121,7 @@ role ที่ใช้ได้: `Super Admin` · `Manager` · `Sale` · `PM` �
 role ยังไม่ใช่ `Super Admin` หรือ `Manager` → กลับไปข้อ 4 แล้ว refresh หน้าเว็บ
 
 **กดอะไรก็ขึ้น error สิทธิ์ / บันทึกไม่ได้**
-มักแปลว่า migration รันไม่ครบ → กลับไปข้อ 2 ไล่ดูว่ารันครบทั้ง 14 ไฟล์จริงไหม
+มักแปลว่า migration รันไม่ครบ → กลับไปข้อ 2 ไล่ดูว่ารันครบทั้ง 15 ไฟล์จริงไหม
 
 **เว็บเข้าไม่ได้หลังไม่ได้ใช้งานนาน**
 Supabase แพลนฟรีจะ pause โปรเจกต์อัตโนมัติหลังไม่มีทราฟฟิกประมาณ 1 สัปดาห์ → เข้า dashboard กด Resume ไม่ใช่บั๊กของโค้ด

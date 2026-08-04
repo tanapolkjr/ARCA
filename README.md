@@ -781,3 +781,79 @@ Changed in `features/sourcing/product/ImageManager.tsx` plus a new
 
 `Lightbox` is generic (`{ src, caption, badge }[]`) — reuse it if factory
 documents ever need a preview.
+
+## 32. Approved products flow into Inventory; Inventory rows are editable (migration 0015)
+
+### 32.1 The promotion link
+
+`stock_items.source_product_id → products.id`, with a partial unique index so
+one Sourcing candidate can only ever produce one SKU. `ON DELETE SET NULL`,
+never CASCADE — deleting an evaluation record must not take a live inventory
+item and its stock movements with it.
+
+Field mapping, as specified by the owner:
+
+| Sourcing | Inventory |
+|---|---|
+| Model number | Model Code (`model_code`) |
+| Product name | Description (`description`) |
+| Category | Category (`category`) |
+
+`Others` maps its `custom_category_name` across instead of the literal string
+"Others", which is the more useful label downstream.
+
+### 32.2 When it happens
+
+Recording an **Approved** decision creates the SKU immediately — approving is
+the act that turns a candidate into something the business will stock, so
+there is no second step to forget. `promoteToInventory()` never throws on a
+business problem: a failed promotion must not undo the decision, which is the
+more important record.
+
+Three cases it handles rather than erroring:
+
+- **Model number empty** — Inventory requires it as the model code. The
+  Evaluation tab shows why and offers a retry once it's filled in.
+- **A SKU with that model number already exists, unlinked** — adopts it instead
+  of colliding with the unique constraint. Its description and category are
+  left alone; whoever created that row may have deliberate wording, and
+  silently rewriting live inventory data would be a nasty surprise.
+- **That model number belongs to a different Sourcing product** — refuses and
+  says so.
+
+The Evaluation tab shows the current state for any Approved product: "In
+Inventory as X", or an **Add to Inventory** button. That button is also the
+backfill path for products approved before this release.
+
+**Not automatic in reverse.** Reopening a decision or switching it to Rejected
+leaves the SKU alone — by then it may have stock, serials or install history.
+Removing it is a manual call.
+
+### 32.3 Inventory column names follow Sourcing
+
+Displayed labels are now **Model Number** and **Product Name** (Category was
+already shared). Changed in the table header, the add/edit form, the search
+placeholder, the Excel import help text and its error messages.
+
+**Database columns are unchanged** (`model_code`, `description`) — renaming
+live columns would touch every stock query, the Excel upsert key and the
+install/return flows for zero user-visible gain. Same reasoning as keeping
+`factories` in the Sourcing schema.
+
+The Excel importer now accepts `Model Number` / `Product Name` as header
+aliases **in addition to** the old `Model Code` / `Description`, so sheets
+saved before this release still import.
+
+### 32.4 Editing an Inventory row
+
+Pencil icon on each row opens the same form as "เพิ่มสินค้าใหม่" —
+`NewProductModal` became `ProductModal` handling both create and edit, so the
+two can't drift apart. `updateStockItem()` added to `api/stock.js`.
+
+Renaming `model_code` is safe: nothing references it as a foreign key
+(`stock_transactions`, `stock_balances` and install jobs all key off
+`stock_items.id`), so history survives a rename. A unique-violation on save is
+caught and reported as a readable message rather than a raw Postgres error.
+
+Rows that came from Sourcing show a small link icon next to the model number,
+and the edit form notes that changes here do not flow back to Sourcing.

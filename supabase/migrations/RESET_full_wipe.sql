@@ -46,7 +46,7 @@ drop function if exists is_sourcing_user();
 drop function if exists touch_updated_at();
 
 -- ---------------------------------------------------------------------------
--- After running this: go run 0001_init.sql → 0014_sourcing_module.sql in
+-- After running this: go run 0001_init.sql → 0015_sourcing_to_inventory.sql in
 -- order, same as a brand-new project. Everyone will need to log in again
 -- (their profile row gets recreated by the trigger on first login) — their
 -- Supabase Auth account itself still exists, so no need to recreate that.
