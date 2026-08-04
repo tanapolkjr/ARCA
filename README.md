@@ -748,3 +748,36 @@ rebuilt from zero, which surfaced two gaps:
    to an existing bucket.
 
 No application code changed in this round.
+
+## 31. Sourcing product images: no cropping, click to enlarge, thumbnail strip
+
+Feedback from the live app: the hero photo was being cropped and there was no
+way to view an image full size. Two-up product renders (a lock shown front and
+back in one wide image) lost their edges inside the fixed 4:3 box — exactly the
+detail someone is trying to judge before deciding to import.
+
+Changed in `features/sourcing/product/ImageManager.tsx` plus a new
+`components/sourcing-ui/Lightbox.tsx`:
+
+- **The frame is sized by the photo, not the other way round.** `object-contain`
+  in an `inline-flex` frame capped at 440px tall and `min(560px, 100%)` wide, so
+  a tall photo gets a tall frame and a wide one gets a wide frame. Nothing is
+  cropped anywhere in the module now.
+- **The viewer shows the selected image, not only the hero.** Prev/next arrows,
+  an `n / total` counter, and a thumbnail strip that scrolls sideways and
+  auto-scrolls the active thumbnail into view.
+- **Click a photo to open it full screen** (`Lightbox`): `object-contain` at
+  92vw × 80vh, ← / → to page through, Esc to close, click the backdrop to
+  dismiss, page scroll locked while open.
+- **Clicking a photo no longer opens the file picker.** That was the reason
+  "click to enlarge" had nowhere to go. Uploading is now the explicit **Add**
+  tile at the end of the strip; drag-and-drop still works anywhere on the
+  viewer.
+- **The caption moved under the viewer** and edits whichever image is on
+  screen, instead of a cramped input under each 68px thumbnail.
+- Hero is pinned first in the order. Reorder arrows apply to the gallery tail
+  and the selection follows the image that moved, so reordering a thumbnail
+  that isn't the one on screen no longer jumps to the wrong photo.
+
+`Lightbox` is generic (`{ src, caption, badge }[]`) — reuse it if factory
+documents ever need a preview.
