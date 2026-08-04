@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Info, Lock } from 'lucide-react';
+import { Boxes, Info, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/useToast.jsx';
 import { useUserId } from '@/hooks/useAuth.jsx';
 import { useQuery } from '@/hooks/useSourcingQuery';
 import { getEvaluation, recordDecision, reopenDecision, saveScores } from '@/sourcing-api/evaluations';
 import { listUsers } from '@/sourcing-api/users';
+import { getInventoryLink, promoteToInventory } from '@/sourcing-api/inventory';
 import {
   isComplete, overallScore, scoreColorVar, scoredCount, segmentColorVar, suggestRecommendation,
 } from '@/sourcing-lib/calculations';
 import { CRITERIA, CRITERIA_GROUPS, DECISION_LABEL, MARGIN_THRESHOLD } from '@/sourcing-lib/constants';
 import { fmtDate, fmtPercent, fmtScore } from '@/sourcing-lib/format';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/sourcing-ui/Button';
 import { Textarea } from '@/components/sourcing-ui/Input';
 import { Tooltip } from '@/components/sourcing-ui/Tooltip';
@@ -39,6 +41,9 @@ export function EvaluationTab({ product, onChanged }: { product: ProductSummary;
   const [decision, setDecision] = useState<DecisionStatus | null>(null);
   const [reason, setReason] = useState('');
   const [confirmReopen, setConfirmReopen] = useState(false);
+  const [promoBlocked, setPromoBlocked] = useState<string | null>(null);
+  // The SKU this product was promoted to, if any.
+  const invQ = useQuery(() => getInventoryLink(product.id), [product.id]);
 
   const saved = evalQ.data;
   const locked = (saved?.decision_status ?? 'Not Yet Evaluated') !== 'Not Yet Evaluated';
@@ -91,12 +96,33 @@ export function EvaluationTab({ product, onChanged }: { product: ProductSummary;
       if (dirty) await saveScores(product.id, scores, comments, userId);
       await recordDecision(product.id, decision, reason, userId);
       toast(`Decision recorded: ${DECISION_LABEL[decision]}.`);
+      // Approving is what makes a candidate a real SKU, so the Inventory row
+      // is created here rather than in a separate step someone can forget.
+      // A promotion problem must never undo the decision — hence the try.
+      if (decision === 'Approved') await runPromotion();
       void evalQ.refetch();
       onChanged();
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Recording failed.', 'error');
     } finally {
       setBusy(false);
+    }
+  };
+
+  /** Create or adopt the Inventory SKU. Used on approval and by the button. */
+  const runPromotion = async () => {
+    try {
+      const result = await promoteToInventory(product);
+      if (result.status === 'blocked') {
+        setPromoBlocked(result.reason);
+      } else {
+        setPromoBlocked(null);
+        if (result.status === 'created') toast(`Added to Inventory as "${result.item.model_code}".`);
+        if (result.status === 'linked') toast(`Linked to the existing Inventory item "${result.item.model_code}".`);
+        void invQ.refetch();
+      }
+    } catch (e) {
+      setPromoBlocked(e instanceof Error ? e.message : 'Could not add this product to Inventory.');
     }
   };
 
@@ -133,6 +159,36 @@ export function EvaluationTab({ product, onChanged }: { product: ProductSummary;
             <button className="text-accent hover:underline ml-auto" onClick={() => setConfirmReopen(true)}>
               Reopen
             </button>
+          </div>
+        )}
+
+        {/* Inventory link — only meaningful once the product is Approved. */}
+        {saved?.decision_status === 'Approved' && (
+          <div className="rounded-card border border-line bg-subtle px-3 py-2 text-[13px] flex flex-wrap items-center gap-2">
+            <Boxes size={14} className="text-ink-2" />
+            {invQ.data ? (
+              <>
+                <span className="text-ink-2">In Inventory as</span>
+                <Link to="/stock" className="font-medium text-accent hover:underline">
+                  {invQ.data.model_code}
+                </Link>
+                <span className="text-ink-3">— {invQ.data.description}</span>
+              </>
+            ) : promoBlocked ? (
+              <>
+                <span className="text-ink-2">{promoBlocked}</span>
+                <button className="text-accent hover:underline ml-auto" onClick={() => void runPromotion()}>
+                  Try again
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="text-ink-2">Not in Inventory yet.</span>
+                <button className="text-accent hover:underline ml-auto" onClick={() => void runPromotion()}>
+                  Add to Inventory
+                </button>
+              </>
+            )}
           </div>
         )}
 

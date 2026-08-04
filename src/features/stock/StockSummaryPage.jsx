@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Search, Download, RefreshCw, Plus, PackagePlus, Trash2, FileSpreadsheet, Upload } from "lucide-react";
+import { Search, Download, RefreshCw, Plus, PackagePlus, Trash2, FileSpreadsheet, Upload, Pencil, Link2 } from "lucide-react";
 import { TextInput, Select, Pill, Card, Modal, Field, SearchSelect } from "../../components/ui/primitives.jsx";
 import { useQuery } from "../../hooks/useQuery.js";
-import { listStockSummary, listLocations, listStockItems, createStockItem, receiveStock, deleteStockItem, bulkUpsertStockItems } from "../../api/stock.js";
+import { listStockSummary, listLocations, listStockItems, createStockItem, updateStockItem, receiveStock, deleteStockItem, bulkUpsertStockItems } from "../../api/stock.js";
 import { useAuth } from "../../hooks/useAuth.jsx";
 import { useToast } from "../../hooks/useToast.jsx";
 import { errMsg } from "../../lib/format.js";
@@ -12,8 +12,9 @@ const STOCK_IN_ROLES = ["Super Admin", "Manager", "Store"];
 // Flexible header matching — accepts a few common variations so the sheet
 // doesn't have to match one exact set of column names.
 const HEADER_MAP = {
-  model_code: ["model code", "model_code", "modelcode", "รหัสสินค้า", "รหัส", "model"],
-  description: ["description", "รายละเอียด", "ชื่อสินค้า", "desc", "product name", "product_name"],
+  // "model number" is the Sourcing wording, now used as the column label here too.
+  model_code: ["model number", "model_number", "modelnumber", "model code", "model_code", "modelcode", "รหัสสินค้า", "รหัส", "model"],
+  description: ["product name", "product_name", "productname", "description", "รายละเอียด", "ชื่อสินค้า", "desc"],
   category: ["category", "หมวดหมู่", "หมวด"],
   sub_category: ["sub-category", "sub category", "sub_category", "subcategory", "หมวดหมู่ย่อย", "หมวดย่อย"],
   unit: ["unit", "หน่วย", "หน่วยนับ"],
@@ -57,7 +58,7 @@ function ImportProductsModal({ onClose, onImported }) {
         const rawRows = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
         const parsed = rawRows.map(normalizeRow).filter((r) => r.model_code);
         if (parsed.length === 0) {
-          setParseError("ไม่พบข้อมูลที่ใช้ได้ในไฟล์ — ต้องมีคอลัมน์ Model Code อย่างน้อย");
+          setParseError("ไม่พบข้อมูลที่ใช้ได้ในไฟล์ — ต้องมีคอลัมน์ Model Number อย่างน้อย");
         }
         setRows(parsed);
       } catch (err) {
@@ -98,7 +99,7 @@ function ImportProductsModal({ onClose, onImported }) {
 
       if (dupeCodes.size > 0) {
         toast.error(
-          `นำเข้า ${result.length} รายการแล้ว แต่พบ Model Code ซ้ำในไฟล์ ${dupeCodes.size} รหัส (ใช้แถวสุดท้ายที่เจอแทน): ${Array.from(dupeCodes).join(", ")} — กรุณาตรวจสอบไฟล์ต้นฉบับว่าตั้งใจให้ใช้รหัสเดียวกันจริงหรือพิมพ์ผิด`
+          `นำเข้า ${result.length} รายการแล้ว แต่พบ Model Number ซ้ำในไฟล์ ${dupeCodes.size} รหัส (ใช้แถวสุดท้ายที่เจอแทน): ${Array.from(dupeCodes).join(", ")} — กรุณาตรวจสอบไฟล์ต้นฉบับว่าตั้งใจให้ใช้รหัสเดียวกันจริงหรือพิมพ์ผิด`
         );
       } else {
         toast.success(`นำเข้าสินค้าแล้ว ${result.length} รายการ`);
@@ -114,11 +115,11 @@ function ImportProductsModal({ onClose, onImported }) {
   return (
     <Modal title="นำเข้า Product Master จาก Excel" onClose={onClose}>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
-        ไฟล์ .xlsx ต้องมีหัวคอลัมน์ (แถวแรก) อย่างน้อย <strong>Model Code</strong> — คอลัมน์อื่นที่รองรับ:
-        Description, Category, Unit, Reorder Point (ไม่บังคับ, ชื่อคอลัมน์เป็นภาษาไทยก็ได้ เช่น รหัสสินค้า, รายละเอียด, หมวดหมู่, หน่วย)
+        ไฟล์ .xlsx ต้องมีหัวคอลัมน์ (แถวแรก) อย่างน้อย <strong>Model Number</strong> — คอลัมน์อื่นที่รองรับ:
+        Product Name, Category, Unit, Reorder Point (ไม่บังคับ, ชื่อคอลัมน์เป็นภาษาไทยก็ได้ เช่น รหัสสินค้า, รายละเอียด, หมวดหมู่, หน่วย)
       </p>
       <p className="text-xs text-slate-400 mb-4">
-        ถ้า Model Code ในไฟล์ตรงกับสินค้าที่มีอยู่แล้ว ระบบจะ<strong>อัปเดต</strong>ข้อมูลแถวนั้นแทนการสร้างซ้ำ — นำเข้าไฟล์เดิมซ้ำได้อย่างปลอดภัย
+        ถ้า Model Number ในไฟล์ตรงกับสินค้าที่มีอยู่แล้ว ระบบจะ<strong>อัปเดต</strong>ข้อมูลแถวนั้นแทนการสร้างซ้ำ — นำเข้าไฟล์เดิมซ้ำได้อย่างปลอดภัย
       </p>
 
       <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl py-6 cursor-pointer hover:border-indigo-300 mb-4">
@@ -139,7 +140,7 @@ function ImportProductsModal({ onClose, onImported }) {
         });
         return dupes.size > 0 ? (
           <p className="text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 rounded-lg px-3 py-2 mb-3">
-            ⚠️ พบ Model Code ซ้ำในไฟล์ {dupes.size} รหัส: {Array.from(dupes).join(", ")} — ถ้ากดนำเข้า จะใช้ข้อมูลจากแถวสุดท้ายที่เจอของแต่ละรหัสแทน แนะนำให้กลับไปตรวจสอบไฟล์ต้นฉบับก่อนว่าตั้งใจให้ซ้ำจริงหรือพิมพ์ผิด
+            ⚠️ พบ Model Number ซ้ำในไฟล์ {dupes.size} รหัส: {Array.from(dupes).join(", ")} — ถ้ากดนำเข้า จะใช้ข้อมูลจากแถวสุดท้ายที่เจอของแต่ละรหัสแทน แนะนำให้กลับไปตรวจสอบไฟล์ต้นฉบับก่อนว่าตั้งใจให้ซ้ำจริงหรือพิมพ์ผิด
           </p>
         ) : null;
       })()}
@@ -151,8 +152,8 @@ function ImportProductsModal({ onClose, onImported }) {
             <table className="w-full text-xs">
               <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 sticky top-0">
                 <tr>
-                  <th className="text-left font-medium px-3 py-2">Model Code</th>
-                  <th className="text-left font-medium px-3 py-2">Description</th>
+                  <th className="text-left font-medium px-3 py-2">Model Number</th>
+                  <th className="text-left font-medium px-3 py-2">Product Name</th>
                   <th className="text-left font-medium px-3 py-2">Category</th>
                   <th className="text-left font-medium px-3 py-2">Sub-Category</th>
                   <th className="text-left font-medium px-3 py-2">Unit</th>
@@ -185,36 +186,76 @@ function ImportProductsModal({ onClose, onImported }) {
   );
 }
 
-function NewProductModal({ onClose, onCreated }) {
+/**
+ * Product Master create/edit.
+ *
+ * `item` null = create, otherwise edit that row. One component for both so the
+ * two forms can never drift apart.
+ *
+ * Labels follow the Sourcing vocabulary (Model Number / Product Name /
+ * Category); the database columns are still model_code / description, which is
+ * deliberate — renaming live columns would touch every stock query for no
+ * user-visible gain.
+ */
+function ProductModal({ item, onClose, onSaved }) {
   const toast = useToast();
-  const [form, setForm] = useState({ model_code: "", description: "", category: "", sub_category: "", unit: "ชิ้น", reorder_point: "" });
+  const editing = Boolean(item);
+  const [form, setForm] = useState({
+    model_code: item?.model ?? "",
+    description: item?.desc ?? "",
+    category: item?.category ?? "",
+    sub_category: item?.subCategory ?? "",
+    unit: item?.unit ?? "ชิ้น",
+    reorder_point: item?.reorderPoint ?? "",
+  });
   const [saving, setSaving] = useState(false);
 
   async function handleSave() {
     if (!form.model_code.trim()) {
-      toast.error("กรอก Model Code ก่อน");
+      toast.error("กรอก Model Number ก่อน");
       return;
     }
     setSaving(true);
+    const payload = {
+      model_code: form.model_code.trim(),
+      description: form.description || null,
+      category: form.category || null,
+      sub_category: form.sub_category || null,
+      unit: form.unit || "ชิ้น",
+      reorder_point: form.reorder_point ? Number(form.reorder_point) : 0,
+    };
     try {
-      await createStockItem({
-        model_code: form.model_code, description: form.description || null, category: form.category || null,
-        sub_category: form.sub_category || null,
-        unit: form.unit || "ชิ้น", reorder_point: form.reorder_point ? Number(form.reorder_point) : 0,
-      });
-      toast.success(`เพิ่มสินค้า "${form.model_code}" แล้ว`);
-      onCreated();
+      if (editing) {
+        await updateStockItem(item.id, payload);
+        toast.success(`บันทึก "${payload.model_code}" แล้ว`);
+      } else {
+        await createStockItem(payload);
+        toast.success(`เพิ่มสินค้า "${payload.model_code}" แล้ว`);
+      }
+      onSaved();
     } catch (err) {
-      toast.error("เพิ่มไม่สำเร็จ: " + errMsg(err));
+      const msg = errMsg(err);
+      // Unique violation on model_code — the most common failure here.
+      toast.error(
+        /duplicate|unique/i.test(msg)
+          ? `Model Number "${payload.model_code}" ถูกใช้กับสินค้าอื่นแล้ว`
+          : (editing ? "บันทึกไม่สำเร็จ: " : "เพิ่มไม่สำเร็จ: ") + msg
+      );
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <Modal title="เพิ่มสินค้าใหม่ (Product Master)" onClose={onClose}>
-      <Field label="Model Code" required><TextInput value={form.model_code} onChange={(e) => setForm((f) => ({ ...f, model_code: e.target.value }))} /></Field>
-      <Field label="รายละเอียด"><TextInput value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} /></Field>
+    <Modal title={editing ? `แก้ไขสินค้า — ${item.model}` : "เพิ่มสินค้าใหม่ (Product Master)"} onClose={onClose}>
+      {editing && item.sourceProductId && (
+        <div className="flex items-start gap-2 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 rounded-xl p-3 mb-1">
+          <Link2 className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+          <span>สินค้านี้ถูกดึงมาจาก Sourcing — แก้ไขที่นี่จะไม่ย้อนกลับไปแก้ข้อมูลฝั่ง Sourcing</span>
+        </div>
+      )}
+      <Field label="Model Number" required><TextInput value={form.model_code} onChange={(e) => setForm((f) => ({ ...f, model_code: e.target.value }))} /></Field>
+      <Field label="Product Name"><TextInput value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} /></Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="หมวดหมู่ (Category)"><TextInput placeholder="เช่น Smart Home" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} /></Field>
         <Field label="หมวดหมู่ย่อย (Sub-Category)"><TextInput placeholder="เช่น Gateway, Control Panel" value={form.sub_category} onChange={(e) => setForm((f) => ({ ...f, sub_category: e.target.value }))} /></Field>
@@ -226,7 +267,7 @@ function NewProductModal({ onClose, onCreated }) {
       <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-slate-100 dark:border-slate-700">
         <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">ยกเลิก</button>
         <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm disabled:opacity-60">
-          {saving ? "กำลังบันทึก..." : "เพิ่มสินค้า"}
+          {saving ? "กำลังบันทึก..." : editing ? "บันทึกการแก้ไข" : "เพิ่มสินค้า"}
         </button>
       </div>
     </Modal>
@@ -318,6 +359,7 @@ export default function StockSummary() {
   const [query, setQuery] = useState("");
   const [locationId, setLocationId] = useState("all");
   const [showProductModal, setShowProductModal] = useState(false);
+  const [editItem, setEditItem] = useState(null);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [page, setPage] = useState(1);
@@ -396,7 +438,7 @@ export default function StockSummary() {
             <option>ยืมสินค้า</option>
           </Select>
           <div className="relative">
-            <TextInput placeholder="ค้นหา Model Code / Description..." value={query} onChange={(e) => setQuery(e.target.value)} />
+            <TextInput placeholder="ค้นหา Model Number / Product Name..." value={query} onChange={(e) => setQuery(e.target.value)} />
             <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
         </div>
@@ -413,8 +455,8 @@ export default function StockSummary() {
         <table className="w-full text-sm">
           <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
             <tr>
-              <th className="text-left font-medium px-4 py-3">Model Code</th>
-              <th className="text-left font-medium px-4 py-3">Description</th>
+              <th className="text-left font-medium px-4 py-3">Model Number</th>
+              <th className="text-left font-medium px-4 py-3">Product Name</th>
               <th className="text-left font-medium px-4 py-3">Category</th>
               <th className="text-left font-medium px-4 py-3">Sub-Category</th>
               <th className="text-right font-medium px-4 py-3">On Hand</th>
@@ -432,7 +474,14 @@ export default function StockSummary() {
               const available = r.onHand - r.reserved;
               return (
                 <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30">
-                  <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">{r.model}</td>
+                  <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">
+                    <span className="inline-flex items-center gap-1.5">
+                      {r.model}
+                      {r.sourceProductId && (
+                        <span title="ดึงมาจาก Sourcing" className="text-indigo-400"><Link2 className="w-3.5 h-3.5" /></span>
+                      )}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.desc}</td>
                   <td className="px-4 py-3 text-slate-500">{r.category || "-"}</td>
                   <td className="px-4 py-3 text-slate-500">{r.subCategory || "-"}</td>
@@ -442,7 +491,10 @@ export default function StockSummary() {
                     {available <= 0 ? <Pill tone="rose">{available}</Pill> : <span className="text-emerald-600">{available}</span>}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button onClick={() => handleDeleteItem(r)} className="text-slate-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                    <div className="inline-flex items-center gap-1">
+                      <button onClick={() => setEditItem(r)} title="แก้ไขข้อมูลสินค้า" className="text-slate-400 hover:text-indigo-600 p-1"><Pencil className="w-4 h-4" /></button>
+                      <button onClick={() => handleDeleteItem(r)} title="ลบสินค้า" className="text-slate-400 hover:text-rose-500 p-1"><Trash2 className="w-4 h-4" /></button>
+                    </div>
                   </td>
                 </tr>
               );
@@ -476,11 +528,15 @@ export default function StockSummary() {
       </Card>
 
       {showProductModal && (
-        <NewProductModal onClose={() => setShowProductModal(false)} onCreated={() => { setShowProductModal(false); refetch(); }} />
+        <ProductModal onClose={() => setShowProductModal(false)} onSaved={() => { setShowProductModal(false); refetch(); }} />
       )}
       {showReceiveModal && (
         <ReceiveStockModal onClose={() => setShowReceiveModal(false)} onCreated={() => { setShowReceiveModal(false); refetch(); }} />
       )}
+      {editItem && (
+        <ProductModal item={editItem} onClose={() => setEditItem(null)} onSaved={() => { setEditItem(null); refetch(); }} />
+      )}
+
       {showImportModal && (
         <ImportProductsModal onClose={() => setShowImportModal(false)} onImported={() => { setShowImportModal(false); refetch(); }} />
       )}

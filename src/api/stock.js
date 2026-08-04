@@ -32,6 +32,20 @@ export async function createStockItem(payload) {
   return data;
 }
 
+/**
+ * Edit a Product Master row from the Inventory list.
+ *
+ * model_code is the business key (unique, and what the Excel import upserts
+ * on), but nothing stores it as a foreign key — stock_transactions, balances
+ * and install jobs all reference stock_items.id — so renaming it is safe and
+ * does not orphan history.
+ */
+export async function updateStockItem(id, payload) {
+  const { data, error } = await supabase.from("stock_items").update(payload).eq("id", id).select().single();
+  if (error) throw error;
+  return data;
+}
+
 export async function deleteStockItem(id) {
   const { error } = await supabase.from("stock_items").delete().eq("id", id);
   if (error) throw error;
@@ -450,7 +464,12 @@ export async function listStockSummary({ locationId, query } = {}) {
   // with no stock movement yet still show up — previously they were
   // invisible on this page until their first Stock In, which also made
   // them impossible to find/delete here.
-  let itemQuery = supabase.from("stock_items").select("id, model_code, description, category, sub_category, reorder_point").order("model_code");
+  // unit / reorder_point / source_product_id are here for the row editor and
+  // the "came from Sourcing" marker, not for the summary numbers themselves.
+  let itemQuery = supabase
+    .from("stock_items")
+    .select("id, model_code, description, category, sub_category, unit, reorder_point, source_product_id")
+    .order("model_code");
   if (query) itemQuery = itemQuery.or(`model_code.ilike.%${query}%,description.ilike.%${query}%,category.ilike.%${query}%,sub_category.ilike.%${query}%`);
   const { data: items, error: itemError } = await itemQuery;
   if (itemError) throw itemError;
@@ -474,6 +493,9 @@ export async function listStockSummary({ locationId, query } = {}) {
     desc: it.description,
     category: it.category,
     subCategory: it.sub_category,
+    unit: it.unit,
+    reorderPoint: it.reorder_point,
+    sourceProductId: it.source_product_id,
     onHand: balByItem.get(it.id)?.onHand || 0,
     reserved: balByItem.get(it.id)?.reserved || 0,
   }));
