@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Building2, Check, Plus, Trash2 } from 'lucide-react';
+import { Building2, Check, Plus, Tag as TagIcon, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast.jsx';
 import { useQuery } from '@/hooks/useSourcingQuery';
 import type { BankAccount, Company } from '@/accounting-lib/types';
@@ -7,6 +7,7 @@ import {
   deleteBankAccount, listBankAccounts, listCompanies,
   saveBankAccount, saveCompany, seedDocumentSequence, setDefaultCompany,
 } from '@/accounting-api/setup';
+import { listDocumentTags, saveDocumentTag } from '@/accounting-api/documents';
 import { Field, GhostButton, Modal, NumberInput, PrimaryButton, TextArea, TextInput } from './ui';
 
 const DOC_TYPES = ['QT', 'BL', 'INV', 'RC', 'PO'] as const;
@@ -92,6 +93,8 @@ export function CompanySettingsPage() {
         ))}
       </div>
 
+      <TagSettings />
+
       {editing && (
         <CompanyModal
           company={editing}
@@ -103,6 +106,69 @@ export function CompanySettingsPage() {
       {seedFor && <SeedModal company={seedFor} onClose={() => setSeedFor(null)} />}
     </div>
   );
+}
+
+/**
+ * ชนิดของประเภทงาน (Tag)
+ * ตั้งไว้ที่เดียวแล้วทุกเอกสารเลือกจากรายการนี้ — แบบเดียวกับ Target channels ของ Sourcing
+ * ไม่ให้เพิ่มจากในฟอร์มเอกสาร เพราะจะเกิดชื่อซ้ำที่สะกดต่างกันจนรายงานรวมยอดไม่ได้
+ */
+function TagSettings() {
+  const { toast } = useToast();
+  const tagsQ = useQuery(() => listDocumentTags(), []);
+  const [name, setName] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100
+      dark:border-slate-800 p-5">
+      <div className="flex items-center gap-2 mb-1">
+        <TagIcon className="w-4 h-4 text-slate-400" />
+        <h2 className="font-semibold text-slate-800 dark:text-slate-100">ประเภทงาน (Tag)</h2>
+      </div>
+      <p className="text-xs text-slate-500 mb-3">
+        ใช้จัดกลุ่มและรวมยอดในทุกหน้าเอกสาร · ตั้งที่ใบเสนอราคาแล้วไหลตามไปทุกใบที่แปลงต่อ
+      </p>
+
+      <div className="flex flex-wrap gap-2 mb-4">
+        {tagsQ.data?.map((t) => (
+          <span key={t.id} className="px-3 py-1 rounded-full text-xs font-medium
+            bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+            {t.name}
+          </span>
+        ))}
+        {(tagsQ.data?.length ?? 0) === 0 && (
+          <span className="text-sm text-slate-400">ยังไม่มีประเภทงาน</span>
+        )}
+      </div>
+
+      <div className="flex gap-2 max-w-md">
+        <TextInput
+          value={name} placeholder="เช่น Smart Lock, Construction Product"
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') void add(); }}
+        />
+        <PrimaryButton disabled={busy} onClick={() => void add()}>
+          <Plus className="w-4 h-4" /> เพิ่ม
+        </PrimaryButton>
+      </div>
+    </div>
+  );
+
+  async function add() {
+    const value = name.trim();
+    if (!value) { toast('ใส่ชื่อประเภทงานก่อน', 'error'); return; }
+    setBusy(true);
+    try {
+      await saveDocumentTag({ name: value });
+      setName('');
+      void tagsQ.refetch();
+      toast(`เพิ่ม "${value}" แล้ว`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '';
+      toast(/duplicate|unique/i.test(msg) ? 'มีประเภทงานชื่อนี้อยู่แล้ว' : 'เพิ่มไม่สำเร็จ', 'error');
+    } finally { setBusy(false); }
+  }
 }
 
 function CompanyModal({

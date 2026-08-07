@@ -207,6 +207,7 @@ function ProductModal({ item, onClose, onSaved }) {
     sub_category: item?.subCategory ?? "",
     unit: item?.unit ?? "ชิ้น",
     reorder_point: item?.reorderPoint ?? "",
+    sale_price: item?.salePrice ?? "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -223,6 +224,8 @@ function ProductModal({ item, onClose, onSaved }) {
       sub_category: form.sub_category || null,
       unit: form.unit || "ชิ้น",
       reorder_point: form.reorder_point ? Number(form.reorder_point) : 0,
+      // ราคาขาย: ว่างได้ ระบบจะไม่ดึงไปใส่ใบเสนอราคาถ้ายังไม่ตั้ง
+      sale_price: form.sale_price === "" ? null : Number(form.sale_price),
     };
     try {
       if (editing) {
@@ -256,6 +259,11 @@ function ProductModal({ item, onClose, onSaved }) {
       )}
       <Field label="Model Number" required><TextInput value={form.model_code} onChange={(e) => setForm((f) => ({ ...f, model_code: e.target.value }))} /></Field>
       <Field label="Product Name"><TextInput value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} /></Field>
+      <Field label="ราคาขาย (บาท/หน่วย)">
+        <TextInput type="number" step="0.01" value={form.sale_price} placeholder="ยังไม่ตั้งราคา"
+                   onChange={(e) => setForm((f) => ({ ...f, sale_price: e.target.value }))} />
+        <p className="text-xs text-slate-400 mt-1">ดึงไปใส่ใบเสนอราคาอัตโนมัติ · สินค้าที่มาจาก Sourcing จะเติมราคาที่แนะนำมาให้</p>
+      </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="หมวดหมู่ (Category)"><TextInput placeholder="เช่น Smart Home" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} /></Field>
         <Field label="หมวดหมู่ย่อย (Sub-Category)"><TextInput placeholder="เช่น Gateway, Control Panel" value={form.sub_category} onChange={(e) => setForm((f) => ({ ...f, sub_category: e.target.value }))} /></Field>
@@ -459,6 +467,7 @@ export default function StockSummary() {
               <th className="text-left font-medium px-4 py-3">Product Name</th>
               <th className="text-left font-medium px-4 py-3">Category</th>
               <th className="text-left font-medium px-4 py-3">Sub-Category</th>
+              <th className="text-right font-medium px-4 py-3">ราคาขาย</th>
               <th className="text-right font-medium px-4 py-3">On Hand</th>
               <th className="text-right font-medium px-4 py-3">Reserved</th>
               <th className="text-right font-medium px-4 py-3">Available</th>
@@ -466,9 +475,9 @@ export default function StockSummary() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-            {loading && <tr><td colSpan={8} className="text-center text-slate-400 py-10">กำลังโหลด...</td></tr>}
+            {loading && <tr><td colSpan={9} className="text-center text-slate-400 py-10">กำลังโหลด...</td></tr>}
             {!loading && (!rows || rows.length === 0) && (
-              <tr><td colSpan={8} className="text-center text-slate-400 py-10">ยังไม่มีสินค้าในระบบ — กด "เพิ่มสินค้าใหม่" ก่อน</td></tr>
+              <tr><td colSpan={9} className="text-center text-slate-400 py-10">ยังไม่มีสินค้าในระบบ — กด "เพิ่มสินค้าใหม่" ก่อน</td></tr>
             )}
             {pagedRows.map((r) => {
               const available = r.onHand - r.reserved;
@@ -485,6 +494,11 @@ export default function StockSummary() {
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.desc}</td>
                   <td className="px-4 py-3 text-slate-500">{r.category || "-"}</td>
                   <td className="px-4 py-3 text-slate-500">{r.subCategory || "-"}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-slate-700 dark:text-slate-200">
+                    {r.salePrice != null
+                      ? Number(r.salePrice).toLocaleString("th-TH", { minimumFractionDigits: 2 })
+                      : <span className="text-slate-300">—</span>}
+                  </td>
                   <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-200">{r.onHand}</td>
                   <td className="px-4 py-3 text-right text-amber-600">{r.reserved}</td>
                   <td className="px-4 py-3 text-right font-medium">

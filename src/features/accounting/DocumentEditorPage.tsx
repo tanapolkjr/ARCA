@@ -16,7 +16,7 @@ import { getDefaultCompany, listBankAccounts, listCompanies, listTemplates, list
 import {
   approveQuotation, cancelApDocument, cancelDocument,
   companySnapshot, convertArDocument, customerSnapshotFrom, deleteApDraft, deleteArDocument,
-  loadSource, resetQuotationToDraft, saveDocumentTag,
+  loadSource, resetQuotationToDraft,
   getApDocument, getArDocument, getDocNo, issueApDocument, issueArDocument, listChildDocuments,
   listDocumentTags, saveApDocument, saveArDocument,
 } from '@/accounting-api/documents';
@@ -66,7 +66,8 @@ function DocumentEditorInner() {
   const [partyId, setPartyId] = useState('');
   const [docDate, setDocDate] = useState(new Date().toISOString().slice(0, 10));
   const [dueDate, setDueDate] = useState('');
-  const [validUntil, setValidUntil] = useState('');
+  // ใบเสนอราคายืนราคาถึงสิ้นปีเป็นค่าตั้งต้น ตามที่ใช้จริง
+  const [validUntil, setValidUntil] = useState(`${new Date().getFullYear()}-12-31`);
   const [jobName, setJobName] = useState('');
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
@@ -88,7 +89,6 @@ function DocumentEditorInner() {
   // ยอดของใบต้นทางและยอดที่ยังออกได้ — ใช้กันไม่ให้วางบิลเกิน
   const [sourceTotal, setSourceTotal] = useState<number | null>(null);
   const [sourceRemaining, setSourceRemaining] = useState<number | null>(null);
-  const [newTag, setNewTag] = useState('');
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState(false);
   const [showReceive, setShowReceive] = useState(false);
@@ -216,6 +216,21 @@ function DocumentEditorInner() {
     if (!companyId) { toast('เลือกบริษัทผู้ออกเอกสารก่อน', 'error'); return null; }
     if (!partyId) { toast(ar ? 'เลือกลูกค้าก่อน' : 'เลือกผู้ขายก่อน', 'error'); return null; }
     if (!items.some((i) => i.description.trim())) { toast('ใส่รายการอย่างน้อย 1 บรรทัด', 'error'); return null; }
+
+    // ช่องที่ต้องมีก่อนออกเอกสารจริง — ขาดแล้วเอกสารใช้ตามงานไม่ได้
+    const missing: string[] = [];
+    if (!jobName.trim()) missing.push('ชื่องาน');
+    if (!tagId) missing.push('ประเภทงาน (Tag)');
+    if (!contactName.trim()) missing.push('ผู้ติดต่อ');
+    if (!contactPhone.trim()) missing.push('เบอร์โทรผู้ติดต่อ');
+    if (ar) {
+      if (!salesUserId) missing.push('ผู้ขาย (พนักงาน)');
+      if (docType === 'QT' && !validUntil) missing.push('วันหมดอายุใบเสนอราคา');
+    }
+    if (missing.length) {
+      toast(`ยังไม่ได้กรอก: ${missing.join(' · ')}`, 'error');
+      return null;
+    }
 
     // ห้ามวางบิลเกินยอดที่ใบต้นทางเหลือ
     if (sourceRemaining != null && totals.grandTotal > sourceRemaining + 0.01) {
@@ -600,7 +615,8 @@ function DocumentEditorInner() {
             </Field>
 
             {docType === 'QT' ? (
-              <Field label="ยืนราคาถึง">
+              <Field label="วันหมดอายุใบเสนอราคา" required
+                     hint="ค่าตั้งต้นคือวันสุดท้ายของปี">
                 <TextInput type="date" value={validUntil} disabled={locked}
                            onChange={(e) => setValidUntil(e.target.value)} />
               </Field>
@@ -612,7 +628,7 @@ function DocumentEditorInner() {
             )}
 
             {ar && (
-              <Field label="ผู้ขาย (พนักงาน)">
+              <Field label="ผู้ขาย (พนักงาน)" required>
                 <Select value={salesUserId} disabled={locked}
                         onChange={(e) => setSalesUserId(e.target.value)}>
                   <option value="">— ไม่ระบุ —</option>
@@ -621,14 +637,14 @@ function DocumentEditorInner() {
               </Field>
             )}
 
-            <Field label="ชื่องาน" className="md:col-span-2"
+            <Field label="ชื่องาน" required className="md:col-span-2"
                    hint="เช่น SMART LOCK - PHUKET (โครงการ Kata Bello จำนวน 760 Units)">
               <TextInput value={jobName} disabled={locked}
                          onChange={(e) => setJobName(e.target.value)} />
             </Field>
 
             {ar && (
-              <Field label="ประเภทงาน" hint="ส่งอย่างเดียวไม่ต้องเปิดโปรเจกต์">
+              <Field label="ประเภทงาน" required hint="ส่งอย่างเดียวไม่ต้องเปิดโปรเจกต์">
                 <Select value={fulfilment} disabled={locked}
                         onChange={(e) => setFulfilment(e.target.value as 'install' | 'delivery')}>
                   <option value="install">ติดตั้ง</option>
@@ -659,61 +675,19 @@ function DocumentEditorInner() {
               </Field>
             )}
 
-            <Field label="ประเภทงาน (Tag)"
-                   hint="ยึดจากใบเสนอราคา แล้วไหลตามไปทุกเอกสารที่แปลงต่อ">
-              <div className="flex gap-1">
-                <Select value={tagId} disabled={locked} onChange={(e) => setTagId(e.target.value)}>
-                  <option value="">— ไม่ระบุ —</option>
-                  {tagsQ.data?.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </Select>
-                {!locked && (
-                  <button
-                    type="button" title="เพิ่มประเภทงานใหม่"
-                    onClick={() => setNewTag(newTag ? '' : ' ')}
-                    className="px-3 rounded-xl border border-slate-200 dark:border-slate-700
-                      text-slate-500 hover:text-indigo-600 shrink-0"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-              {newTag !== '' && (
-                <div className="flex gap-1 mt-1">
-                  <TextInput
-                    autoFocus placeholder="ชื่อประเภทงานใหม่"
-                    value={newTag.trim()} onChange={(e) => setNewTag(e.target.value || ' ')}
-                  />
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const name = newTag.trim();
-                      if (!name) return;
-                      try {
-                        await saveDocumentTag({ name });
-                        // refetch คืน void — อ่านรายการใหม่ตรงๆ เพื่อหา id ที่เพิ่งสร้าง
-                        const list = await listDocumentTags();
-                        const created = list.find((t) => t.name === name);
-                        if (created) setTagId(created.id);
-                        void tagsQ.refetch();
-                        setNewTag('');
-                        toast(`เพิ่มประเภทงาน "${name}" แล้ว`);
-                      } catch (e) {
-                        toast(e instanceof Error ? e.message : 'เพิ่มไม่สำเร็จ', 'error');
-                      }
-                    }}
-                    className="px-3 rounded-xl bg-indigo-600 text-white text-sm shrink-0"
-                  >
-                    เพิ่ม
-                  </button>
-                </div>
-              )}
+            <Field label="ประเภทงาน (Tag)" required
+                   hint="เพิ่มชนิดใหม่ได้ที่หน้าตั้งค่าบริษัท">
+              <Select value={tagId} disabled={locked} onChange={(e) => setTagId(e.target.value)}>
+                <option value="">— ไม่ระบุ —</option>
+                {tagsQ.data?.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </Select>
             </Field>
 
-            <Field label="ผู้ติดต่อ">
+            <Field label="ผู้ติดต่อ" required>
               <TextInput value={contactName} disabled={locked}
                          onChange={(e) => setContactName(e.target.value)} />
             </Field>
-            <Field label="เบอร์โทรผู้ติดต่อ">
+            <Field label="เบอร์โทรผู้ติดต่อ" required>
               <TextInput value={contactPhone} disabled={locked}
                          onChange={(e) => setContactPhone(e.target.value)} />
             </Field>
@@ -733,22 +707,30 @@ function DocumentEditorInner() {
                 <NumberInput value={vatRate} disabled={locked} step="0.01"
                              onChange={(e) => setVatRate(Number(e.target.value))} />
               </Field>
-              <Field label="หัก ณ ที่จ่าย %" className="w-40" hint="ค่าบริการนิติบุคคล = 3%">
-                <div className="flex gap-1">
+              {/* ขายสินค้าอย่างเดียวไม่ต้องหัก ณ ที่จ่าย — หักได้เฉพาะค่าบริการ */}
+              <Field label="หัก ณ ที่จ่าย" className="w-44">
+                <Select
+                  value={[0, 1, 2, 3, 5].includes(whtRate) ? String(whtRate) : 'custom'}
+                  disabled={locked}
+                  onChange={(e) => {
+                    if (e.target.value === 'custom') { setWhtRate(0.01); return; }
+                    setWhtRate(Number(e.target.value));
+                  }}
+                >
+                  <option value="0">ไม่หัก</option>
+                  <option value="3">หัก 3% (ค่าบริการ / รับจ้างทำของ)</option>
+                  <option value="1">หัก 1% (ค่าขนส่ง)</option>
+                  <option value="5">หัก 5% (ค่าเช่า)</option>
+                  <option value="2">หัก 2% (ค่าโฆษณา)</option>
+                  <option value="custom">กำหนดเอง…</option>
+                </Select>
+              </Field>
+              {![0, 1, 2, 3, 5].includes(whtRate) && (
+                <Field label="อัตราที่กำหนดเอง %" className="w-32">
                   <NumberInput value={whtRate} disabled={locked} step="0.01"
                                onChange={(e) => setWhtRate(Number(e.target.value))} />
-                  <button
-                    type="button" disabled={locked}
-                    onClick={() => setWhtRate(whtRate === 3 ? 0 : 3)}
-                    className={`px-2 rounded-xl border text-xs shrink-0
-                      ${whtRate === 3
-                        ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-300 text-indigo-700 dark:text-indigo-300'
-                        : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:text-indigo-600'}`}
-                  >
-                    3%
-                  </button>
-                </div>
-              </Field>
+                </Field>
+              )}
               <Field label="แบ่งชำระ %" className="w-32" hint="ว่าง = เต็มจำนวน">
                 <NumberInput value={billingPercent} disabled={locked} placeholder="30"
                              onChange={(e) => setBillingPercent(e.target.value)} />
@@ -969,7 +951,7 @@ function StockPicker({
     <div className="relative mt-1">
       <input
         value={term}
-        placeholder="ค้นหาสินค้าจากคลัง…"
+        placeholder="ค้นหา Model Number / Product Name จากคลัง…"
         onChange={(e) => { setTerm(e.target.value); setOpen(true); }}
         onFocus={() => setOpen(true)}
         onBlur={() => window.setTimeout(() => setOpen(false), 150)}
@@ -987,15 +969,20 @@ function StockPicker({
               className="block w-full text-left px-3 py-1.5 text-xs
                 hover:bg-indigo-50 dark:hover:bg-slate-700"
             >
-              <span className="font-medium">{s.model_code}</span>
-              {s.description && <span className="text-slate-400"> · {s.description}</span>}
+              <div className="flex items-baseline gap-2">
+                <span className="font-medium">{s.model_code}</span>
+                <span className="text-slate-400 truncate">{s.description}</span>
+                <span className="ml-auto tabular-nums text-slate-500 shrink-0">
+                  {s.sale_price != null ? money(s.sale_price) : 'ยังไม่ตั้งราคา'}
+                </span>
+              </div>
             </button>
           ))}
           {matches.length === 0 && (
             <div className="px-3 py-2 text-xs text-slate-400">
               ไม่พบสินค้านี้ —{' '}
               <Link to="/stock" className="text-indigo-600 hover:underline">
-                ไปเพิ่มใน Inventory
+                ไปเพิ่มใน Inventory พร้อมตั้งราคาขาย
               </Link>
             </div>
           )}

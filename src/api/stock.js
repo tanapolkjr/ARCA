@@ -468,7 +468,7 @@ export async function listStockSummary({ locationId, query } = {}) {
   // the "came from Sourcing" marker, not for the summary numbers themselves.
   let itemQuery = supabase
     .from("stock_items")
-    .select("id, model_code, description, category, sub_category, unit, reorder_point, source_product_id")
+    .select("id, model_code, description, category, sub_category, unit, reorder_point, sale_price, source_product_id")
     .order("model_code");
   if (query) itemQuery = itemQuery.or(`model_code.ilike.%${query}%,description.ilike.%${query}%,category.ilike.%${query}%,sub_category.ilike.%${query}%`);
   const { data: items, error: itemError } = await itemQuery;
@@ -495,6 +495,7 @@ export async function listStockSummary({ locationId, query } = {}) {
     subCategory: it.sub_category,
     unit: it.unit,
     reorderPoint: it.reorder_point,
+    salePrice: it.sale_price,
     sourceProductId: it.source_product_id,
     onHand: balByItem.get(it.id)?.onHand || 0,
     reserved: balByItem.get(it.id)?.reserved || 0,

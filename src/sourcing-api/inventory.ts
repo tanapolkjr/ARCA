@@ -6,6 +6,7 @@ export interface InventoryLink {
   model_code: string;
   description: string | null;
   category: string | null;
+  sale_price: number | null;
 }
 
 export type PromotionOutcome =
@@ -33,7 +34,24 @@ function categoryFor(product: Product): string {
     : product.category;
 }
 
-const LINK_SELECT = 'id, model_code, description, category';
+const LINK_SELECT = 'id, model_code, description, category, sale_price';
+
+/**
+ * ราคาขายที่แนะนำจากประมาณการต้นทุนล่าสุดของสินค้านี้
+ * product_costs เป็น append-only ประวัติจึงเรียงตามเวลาแล้วเอาแถวล่าสุด
+ */
+async function suggestedPrice(productId: string): Promise<number | null> {
+  const { data, error } = await supabase
+    .from('product_costs')
+    .select('suggested_selling_price')
+    .eq('product_id', productId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  const v = data?.suggested_selling_price;
+  return v == null ? null : Number(v);
+}
 
 /** The SKU this product was promoted to, or null. */
 export async function getInventoryLink(productId: string): Promise<InventoryLink | null> {
@@ -66,7 +84,7 @@ export async function promoteToInventory(product: Product): Promise<PromotionOut
   // Excel import, or before this feature existed. Adopt it rather than
   // colliding with the unique constraint.
   const { data: byCode, error: byCodeError } = await supabase
-    .from('stock_items').select('id, model_code, description, category, source_product_id')
+    .from('stock_items').select('id, model_code, description, category, sale_price, source_product_id')
     .eq('model_code', modelCode).maybeSingle();
   if (byCodeError) throw byCodeError;
 
@@ -80,9 +98,15 @@ export async function promoteToInventory(product: Product): Promise<PromotionOut
     // Link only. Existing description/category are left alone on purpose —
     // whoever created that row may have deliberate wording, and silently
     // rewriting live inventory data would be a nasty surprise.
+    // เติมราคาขายให้เฉพาะกรณีที่ยังว่าง — ไม่ทับราคาที่คนตั้งไว้เอง
+    const patch: Record<string, unknown> = { source_product_id: product.id };
+    if (byCode.sale_price == null) {
+      const p = await suggestedPrice(product.id);
+      if (p != null) patch.sale_price = p;
+    }
     const { data, error } = await supabase
       .from('stock_items')
-      .update({ source_product_id: product.id })
+      .update(patch)
       .eq('id', byCode.id)
       .select(LINK_SELECT).single();
     if (error) throw error;
@@ -95,6 +119,7 @@ export async function promoteToInventory(product: Product): Promise<PromotionOut
       model_code: modelCode,
       description: product.name,
       category: categoryFor(product),
+      sale_price: await suggestedPrice(product.id),
       source_product_id: product.id,
     })
     .select(LINK_SELECT).single();
