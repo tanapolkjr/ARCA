@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabaseClient.js';
-import { computeTotals, lineTotal } from '@/accounting-lib/calc';
+import { computeTotals, lineDiscount, lineTotal } from '@/accounting-lib/calc';
 import type {
   ApDocType, ArDocType, ArDocument, Company, DocumentItem, PartySnapshot, Vendor,
 } from '@/accounting-lib/types';
@@ -9,7 +9,8 @@ const AR_SELECT = `
   customer:customers(id, display_name, company_name, tax_id, branch_code, branch_name,
                      billing_address, address, phone),
   sales_user:users!ar_documents_sales_user_id_fkey(id, name),
-  project:projects(id, project_code, project_name)
+  tag:document_tags(id, name, color),
+  project:projects(id, project_number, product_category)
 `;
 
 export interface ArDocumentFull extends ArDocument {
@@ -17,20 +18,27 @@ export interface ArDocumentFull extends ArDocument {
               branch_code: string | null; branch_name: string | null;
               billing_address: string | null; address: string | null; phone: string | null } | null;
   sales_user?: { id: string; name: string } | null;
-  project?: { id: string; project_code: string; project_name: string | null } | null;
+  project?: { id: string; project_number: string; product_category: string | null } | null;
+  tag?: DocTag | null;
   items?: DocumentItem[];
 }
+
+export interface DocTag { id: string; name: string; color: string }
 
 // ------------------------------------------------------------------ อ่าน
 
 export async function listArDocuments(opts: {
-  docType?: ArDocType; search?: string; status?: string; companyId?: string; limit?: number;
+  docType?: ArDocType; search?: string; status?: string; companyId?: string;
+  tagId?: string; from?: string; to?: string; limit?: number;
 } = {}): Promise<ArDocumentFull[]> {
   let q = supabase.from('ar_documents').select(AR_SELECT).order('doc_date', { ascending: false })
     .order('created_at', { ascending: false });
   if (opts.docType) q = q.eq('doc_type', opts.docType);
   if (opts.status) q = q.eq('status', opts.status);
   if (opts.companyId) q = q.eq('company_id', opts.companyId);
+  if (opts.tagId) q = q.eq('tag_id', opts.tagId);
+  if (opts.from) q = q.gte('doc_date', opts.from);
+  if (opts.to) q = q.lte('doc_date', opts.to);
   if (opts.search?.trim()) {
     const s = opts.search.trim();
     q = q.or(`doc_no.ilike.%${s}%,job_name.ilike.%${s}%`);
@@ -93,6 +101,7 @@ export interface SaveArInput {
   contact_phone?: string | null;
   sales_user_id?: string | null;
   fulfilment_type?: 'install' | 'delivery';
+  tag_id?: string | null;
   price_include_vat: boolean;
   vat_rate: number;
   wht_rate: number;
@@ -111,7 +120,12 @@ export interface SaveArInput {
 export async function saveArDocument(input: SaveArInput, userId: string): Promise<string> {
   const items = input.items
     .filter((i) => i.description.trim())
-    .map((i, idx) => ({ ...i, line_no: idx + 1, line_total: lineTotal(i) }));
+    .map((i, idx) => ({
+      ...i, line_no: idx + 1,
+      // แปลง % เป็นจำนวนเงินตอนบันทึก เพื่อให้เอกสารที่ออกไปแล้วยอดไม่ขยับ
+      discount_amount: lineDiscount(i),
+      line_total: lineTotal(i),
+    }));
 
   const t = computeTotals(items, {
     priceIncludeVat: input.price_include_vat,
@@ -134,6 +148,7 @@ export async function saveArDocument(input: SaveArInput, userId: string): Promis
     contact_phone: input.contact_phone || null,
     sales_user_id: input.sales_user_id || null,
     fulfilment_type: input.fulfilment_type ?? 'install',
+    tag_id: input.tag_id || null,
     price_include_vat: input.price_include_vat,
     vat_rate: input.vat_rate,
     contract_total: input.contract_total ?? null,
@@ -178,6 +193,7 @@ export async function saveArDocument(input: SaveArInput, userId: string): Promis
       unit: i.unit || null,
       unit_price: i.unit_price,
       discount_amount: i.discount_amount,
+      discount_percent: i.discount_percent ?? null,
       line_total: i.line_total,
     }));
     const { error } = await supabase.from('ar_document_items').insert(rows);
@@ -257,6 +273,7 @@ export async function convertArDocument(
     contact_phone: src.contact_phone,
     sales_user_id: src.sales_user_id,
     fulfilment_type: src.fulfilment_type,
+    tag_id: src.tag_id,
     price_include_vat: src.price_include_vat,
     vat_rate: src.vat_rate,
     wht_rate: src.wht_rate,
@@ -270,13 +287,15 @@ export async function convertArDocument(
 
 // ================================================================= ฝั่งซื้อ
 
-const AP_SELECT = `*, vendor:vendors(*), project:projects(id, project_code, project_name)`;
+const AP_SELECT = `*, vendor:vendors(*), tag:document_tags(id, name, color),
+  project:projects(id, project_number, product_category)`;
 
 export interface ApDocumentFull {
   id: string; company_id: string; doc_type: ApDocType; doc_no: string | null;
   doc_date: string; due_date: string | null; expected_date: string | null; status: string;
   vendor_id: string | null; vendor_snapshot: PartySnapshot | null; company_snapshot: PartySnapshot | null;
   project_id: string | null; job_name: string | null; ship_to: string | null;
+  tag_id: string | null;
   contact_name: string | null; contact_phone: string | null;
   price_include_vat: boolean; vat_rate: number;
   subtotal: number; discount_total: number; vat_base: number; vat_exempt_base: number;
@@ -285,14 +304,20 @@ export interface ApDocumentFull {
   note_text: string | null; terms_text: string | null;
   purchase_request_id: string | null; created_at: string;
   vendor?: Vendor | null;
-  project?: { id: string; project_code: string; project_name: string | null } | null;
+  project?: { id: string; project_number: string; product_category: string | null } | null;
+  tag?: DocTag | null;
   items?: DocumentItem[];
 }
 
-export async function listApDocuments(opts: { docType?: ApDocType; search?: string; limit?: number } = {}) {
+export async function listApDocuments(opts: {
+  docType?: ApDocType; search?: string; tagId?: string; from?: string; to?: string; limit?: number;
+} = {}) {
   let q = supabase.from('ap_documents').select(AP_SELECT)
     .order('doc_date', { ascending: false }).order('created_at', { ascending: false });
   if (opts.docType) q = q.eq('doc_type', opts.docType);
+  if (opts.tagId) q = q.eq('tag_id', opts.tagId);
+  if (opts.from) q = q.gte('doc_date', opts.from);
+  if (opts.to) q = q.lte('doc_date', opts.to);
   if (opts.search?.trim()) q = q.or(`doc_no.ilike.%${opts.search.trim()}%,job_name.ilike.%${opts.search.trim()}%`);
   const { data, error } = await q.limit(opts.limit ?? 200);
   if (error) throw error;
@@ -320,6 +345,7 @@ export interface SaveApInput {
   purchase_request_id?: string | null;
   job_name?: string | null;
   ship_to?: string | null;
+  tag_id?: string | null;
   contact_name?: string | null;
   contact_phone?: string | null;
   price_include_vat: boolean;
@@ -333,7 +359,11 @@ export interface SaveApInput {
 export async function saveApDocument(input: SaveApInput, userId: string): Promise<string> {
   const items = input.items
     .filter((i) => i.description.trim())
-    .map((i, idx) => ({ ...i, line_no: idx + 1, line_total: lineTotal(i) }));
+    .map((i, idx) => ({
+      ...i, line_no: idx + 1,
+      discount_amount: lineDiscount(i),
+      line_total: lineTotal(i),
+    }));
 
   const t = computeTotals(items, {
     priceIncludeVat: input.price_include_vat,
@@ -352,6 +382,7 @@ export async function saveApDocument(input: SaveApInput, userId: string): Promis
     purchase_request_id: input.purchase_request_id || null,
     job_name: input.job_name || null,
     ship_to: input.ship_to || null,
+    tag_id: input.tag_id || null,
     contact_name: input.contact_name || null,
     contact_phone: input.contact_phone || null,
     price_include_vat: input.price_include_vat,
@@ -387,7 +418,8 @@ export async function saveApDocument(input: SaveApInput, userId: string): Promis
       document_id: docId, line_no: i.line_no, stock_item_id: i.stock_item_id || null,
       description: i.description, item_type: i.item_type, vat_type: i.vat_type,
       qty: i.qty, unit: i.unit || null, unit_price: i.unit_price,
-      discount_amount: i.discount_amount, line_total: i.line_total,
+      discount_amount: i.discount_amount, discount_percent: i.discount_percent ?? null,
+      line_total: i.line_total,
     }));
     const { error } = await supabase.from('ap_document_items').insert(rows);
     if (error) throw error;
@@ -437,5 +469,43 @@ export async function deleteApDraft(id: string) {
   if (readErr) throw readErr;
   if (data?.doc_no) throw new Error('เอกสารที่ออกเลขที่แล้วลบไม่ได้ ให้ใช้การยกเลิกแทน');
   const { error } = await supabase.from('ap_documents').delete().eq('id', id);
+  if (error) throw error;
+}
+
+
+export interface ChildDoc {
+  id: string; doc_type: string; doc_no: string | null; doc_date: string;
+  status: string; grand_total: number;
+}
+
+/**
+ * เอกสารที่แตกออกมาจากใบนี้ (ใบแจ้งหนี้/ใบกำกับที่อ้างใบเสนอราคา)
+ * ใช้ตอบว่า "ใบเสนอราคานี้ออกบิลไปแล้วเท่าไร เหลือเท่าไร"
+ */
+export async function listChildDocuments(sourceId: string): Promise<ChildDoc[]> {
+  const { data, error } = await supabase
+    .from('ar_documents')
+    .select('id, doc_type, doc_no, doc_date, status, grand_total')
+    .eq('source_document_id', sourceId)
+    .neq('status', 'cancelled')
+    .order('doc_date');
+  if (error) throw error;
+  return (data ?? []) as ChildDoc[];
+}
+
+export async function listDocumentTags(): Promise<DocTag[]> {
+  const { data, error } = await supabase
+    .from('document_tags').select('id, name, color')
+    .eq('is_active', true).order('sort_order');
+  if (error) throw error;
+  return (data ?? []) as DocTag[];
+}
+
+export async function saveDocumentTag(payload: { id?: string; name: string; color?: string }) {
+  const { id, ...rest } = payload;
+  const q = id
+    ? supabase.from('document_tags').update(rest).eq('id', id)
+    : supabase.from('document_tags').insert(rest);
+  const { error } = await q;
   if (error) throw error;
 }

@@ -6,11 +6,31 @@ import type { DocumentItem, VatType } from './types';
  */
 export const round2 = (n: number): number => Math.round((n + Number.EPSILON) * 100) / 100;
 
+/** ยอดก่อนหักส่วนลดของบรรทัด */
+export const lineGross = (item: Pick<DocumentItem, 'qty' | 'unit_price'>): number =>
+  (Number(item.qty) || 0) * (Number(item.unit_price) || 0);
+
+/**
+ * ส่วนลดที่หักจริงของบรรทัด
+ * ถ้ากรอกเป็น % ให้คิดจากยอดก่อนหักส่วนลดของบรรทัดนั้น
+ * ลดได้ไม่เกินมูลค่าบรรทัด (ค่าติดตั้งฟรี = ลด 100% เหลือ 0)
+ */
+export function lineDiscount(
+  item: Pick<DocumentItem, 'qty' | 'unit_price' | 'discount_amount' | 'discount_percent'>
+): number {
+  const gross = lineGross(item);
+  const pct = item.discount_percent;
+  const raw = pct != null && pct !== 0
+    ? (gross * Number(pct)) / 100
+    : Number(item.discount_amount) || 0;
+  return round2(Math.min(Math.max(0, raw), gross));
+}
+
 /** มูลค่าสุทธิของบรรทัด = จำนวน × ราคา − ส่วนลด (ไม่ต่ำกว่า 0) */
-export function lineTotal(item: Pick<DocumentItem, 'qty' | 'unit_price' | 'discount_amount'>): number {
-  const gross = (Number(item.qty) || 0) * (Number(item.unit_price) || 0);
-  const net = gross - (Number(item.discount_amount) || 0);
-  return round2(Math.max(0, net));
+export function lineTotal(
+  item: Pick<DocumentItem, 'qty' | 'unit_price' | 'discount_amount' | 'discount_percent'>
+): number {
+  return round2(Math.max(0, lineGross(item) - lineDiscount(item)));
 }
 
 export interface DocumentTotals {
@@ -57,8 +77,8 @@ export function computeTotals(
   let exemptGross = 0;    // ยอดของบรรทัดที่ยกเว้น/0%
 
   for (const it of items) {
-    const gross = (Number(it.qty) || 0) * (Number(it.unit_price) || 0);
-    const disc = Number(it.discount_amount) || 0;
+    const gross = lineGross(it);
+    const disc = lineDiscount(it);
     subtotal += gross;
     discountTotal += disc;
     const net = Math.max(0, gross - disc);

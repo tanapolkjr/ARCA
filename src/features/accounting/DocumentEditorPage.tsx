@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Copy, FileCheck2, Plus, Printer, Save, Trash2 } from 'lucide-react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Copy, FileCheck2, FileOutput, Plus, Printer, Save, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast.jsx';
 import { useUserId } from '@/hooks/useAuth.jsx';
 import { useQuery } from '@/hooks/useSourcingQuery';
-import { computeTotals, lineTotal, money } from '@/accounting-lib/calc';
+import { computeTotals, lineDiscount, lineTotal, money } from '@/accounting-lib/calc';
 import {
   AP_DOC_LABEL, AR_DOC_LABEL,
 } from '@/accounting-lib/types';
 import type { ApDocType, ArDocType, DocumentItem, VatType } from '@/accounting-lib/types';
 import { getDefaultCompany, listBankAccounts, listCompanies, listTemplates, listVendors } from '@/accounting-api/setup';
 import {
-  companySnapshot, customerSnapshotFrom, deleteApDraft, deleteArDraft,
-  getApDocument, getArDocument, issueApDocument, issueArDocument,
-  saveApDocument, saveArDocument,
+  companySnapshot, convertArDocument, customerSnapshotFrom, deleteApDraft, deleteArDraft,
+  getApDocument, getArDocument, issueApDocument, issueArDocument, listChildDocuments,
+  listDocumentTags, saveApDocument, saveArDocument,
 } from '@/accounting-api/documents';
 import { supabase } from '../../lib/supabaseClient.js';
 import { DocumentPrintView, type PrintableDoc } from './DocumentPrintView';
@@ -24,7 +24,8 @@ const isAr = (t: string): t is ArDocType => (AR_TYPES as string[]).includes(t);
 
 const blankItem = (): DocumentItem => ({
   line_no: 1, stock_item_id: null, description: '', item_type: 'goods',
-  vat_type: 'vat', qty: 1, unit: 'ชิ้น', unit_price: 0, discount_amount: 0, line_total: 0,
+  vat_type: 'vat', qty: 1, unit: 'ชิ้น', unit_price: 0,
+  discount_amount: 0, discount_percent: null, line_total: 0,
 });
 
 interface PartyOption { id: string; label: string; raw: Record<string, unknown> }
@@ -54,6 +55,7 @@ export function DocumentEditorPage() {
   const [vatRate, setVatRate] = useState(7);
   const [whtRate, setWhtRate] = useState(0);
   const [billingPercent, setBillingPercent] = useState<string>('');
+  const [tagId, setTagId] = useState('');
   const [note, setNote] = useState('');
   const [terms, setTerms] = useState('');
   const [items, setItems] = useState<DocumentItem[]>([blankItem()]);
@@ -67,12 +69,16 @@ export function DocumentEditorPage() {
   const banksQ = useQuery(
     () => (companyId ? listBankAccounts(companyId) : Promise.resolve([])), [companyId]);
   const templatesQ = useQuery(() => listTemplates(), []);
+  const tagsQ = useQuery(() => listDocumentTags(), []);
+  const childrenQ = useQuery(
+    () => (savedId && ar ? listChildDocuments(savedId) : Promise.resolve([])), [savedId, ar]);
   const usersQ = useQuery(
     async () => (await supabase.from('users').select('id, name').eq('is_active', true).order('name')).data ?? [],
     []);
-  const stockQ = useQuery(
-    async () => (await supabase.from('stock_items')
-      .select('id, model_code, description, unit, sale_price').order('model_code').limit(500)).data ?? [],
+  const stockQ = useQuery<StockOption[]>(
+    async () => ((await supabase.from('stock_items')
+      .select('id, model_code, description, unit, sale_price')
+      .order('model_code').limit(1000)).data ?? []) as StockOption[],
     []);
 
   // คู่ค้า: ลูกค้าสำหรับเอกสารขาย · ผู้ขายสำหรับเอกสารซื้อ
@@ -111,6 +117,7 @@ export function DocumentEditorPage() {
         setDocNo(d.doc_no);
         setStatus(d.status);
         setItems(d.items?.length ? d.items : [blankItem()]);
+        setTagId(d.tag_id ?? '');
         if (ar) {
           const a = d as Awaited<ReturnType<typeof getArDocument>>;
           setPartyId(a.customer_id ?? '');
@@ -206,6 +213,19 @@ export function DocumentEditorPage() {
     }
   }
 
+  /** แปลงเป็นเอกสารถัดไป โดยยกยอด ลูกค้า สินค้า และ Tag ตามไปทั้งชุด */
+  async function handleConvert(target: ArDocType) {
+    if (!savedId) return;
+    setBusy(true);
+    try {
+      const newId = await convertArDocument(savedId, target, userId);
+      toast(`สร้าง${AR_DOC_LABEL[target]}จากเอกสารนี้แล้ว`);
+      nav(`/accounting/${target}/${newId}`);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'แปลงเอกสารไม่สำเร็จ', 'error');
+    } finally { setBusy(false); }
+  }
+
   async function handleDelete() {
     if (!savedId) { nav(-1); return; }
     try {
@@ -243,6 +263,7 @@ export function DocumentEditorPage() {
     contact_name: contactName,
     contact_phone: contactPhone,
     sales_name: usersQ.data?.find((u) => u.id === salesUserId)?.name ?? null,
+    tag_name: tagsQ.data?.find((t) => t.id === tagId)?.name ?? null,
     price_include_vat: includeVat,
     vat_rate: vatRate,
     billing_percent: billingPercent ? Number(billingPercent) : null,
@@ -275,6 +296,16 @@ export function DocumentEditorPage() {
           <GhostButton onClick={() => setPreview((v) => !v)}>
             <Printer className="w-4 h-4" /> {preview ? 'กลับไปแก้ไข' : 'ดูตัวอย่าง / พิมพ์'}
           </GhostButton>
+          {locked && ar && docType === 'QT' && (
+            <>
+              <GhostButton onClick={() => void handleConvert('BL')} disabled={busy}>
+                <FileOutput className="w-4 h-4" /> สร้างใบแจ้งหนี้
+              </GhostButton>
+              <GhostButton onClick={() => void handleConvert('INV')} disabled={busy}>
+                <FileOutput className="w-4 h-4" /> สร้างใบกำกับ/ใบเสร็จ
+              </GhostButton>
+            </>
+          )}
           {!locked && (
             <>
               <GhostButton onClick={() => void handleSave()} disabled={busy}>
@@ -292,6 +323,34 @@ export function DocumentEditorPage() {
         <div className="no-print rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200
           dark:border-amber-800 px-4 py-2.5 text-sm text-amber-800 dark:text-amber-200">
           เอกสารออกเลขที่แล้ว แก้ไขไม่ได้ — ถ้าผิดต้องยกเลิกและออกใบใหม่ หรือออกใบลดหนี้
+        </div>
+      )}
+
+      {ar && docType === 'QT' && (childrenQ.data?.length ?? 0) > 0 && (
+        <div className="no-print bg-white dark:bg-slate-900 rounded-2xl border border-slate-100
+          dark:border-slate-800 p-4">
+          <div className="flex items-baseline gap-3 mb-2">
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+              ออกบิลจากใบนี้ไปแล้ว
+            </h3>
+            <span className="text-sm tabular-nums font-bold text-indigo-600">
+              {money((childrenQ.data ?? []).reduce((a, c) => a + Number(c.grand_total || 0), 0))}
+            </span>
+            <span className="text-xs text-slate-400">
+              จากยอดเอกสาร {money(totals.grandTotal)}
+            </span>
+          </div>
+          <div className="flex flex-col gap-1">
+            {childrenQ.data?.map((c) => (
+              <button key={c.id} onClick={() => nav(`/accounting/${c.doc_type}/${c.id}`)}
+                      className="flex items-center gap-3 text-xs text-left hover:text-indigo-600">
+                <span className="w-14 text-slate-400">{c.doc_type}</span>
+                <span className="font-medium">{c.doc_no ?? 'ร่าง'}</span>
+                <span className="text-slate-400">{c.doc_date}</span>
+                <span className="ml-auto tabular-nums">{money(c.grand_total)}</span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -368,6 +427,14 @@ export function DocumentEditorPage() {
               </Field>
             )}
 
+            <Field label="ประเภทงาน (Tag)"
+                   hint="ยึดจากใบเสนอราคา แล้วไหลตามไปทุกเอกสารที่แปลงต่อ">
+              <Select value={tagId} disabled={locked} onChange={(e) => setTagId(e.target.value)}>
+                <option value="">— ไม่ระบุ —</option>
+                {tagsQ.data?.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </Select>
+            </Field>
+
             <Field label="ผู้ติดต่อ">
               <TextInput value={contactName} disabled={locked}
                          onChange={(e) => setContactName(e.target.value)} />
@@ -413,7 +480,7 @@ export function DocumentEditorPage() {
                     <th className="px-2 py-2 w-20">จำนวน</th>
                     <th className="px-2 py-2 w-20">หน่วย</th>
                     <th className="px-2 py-2 w-28">ราคา/หน่วย</th>
-                    <th className="px-2 py-2 w-28">ส่วนลด</th>
+                    <th className="px-2 py-2 w-36">ส่วนลด</th>
                     <th className="px-2 py-2 w-28 text-right">มูลค่า</th>
                     <th className="w-8" />
                   </tr>
@@ -428,29 +495,17 @@ export function DocumentEditorPage() {
                           placeholder={'ชื่อรุ่น\n - สเปกย่อย'}
                           onChange={(e) => patchItem(i, { description: e.target.value })}
                         />
-                        <select
-                          className="mt-1 text-[11px] text-slate-500 bg-transparent"
-                          disabled={locked}
-                          value={it.stock_item_id ?? ''}
-                          onChange={(e) => {
-                            const s = stockQ.data?.find((x) => x.id === e.target.value);
-                            patchItem(i, s
-                              ? {
-                                  stock_item_id: s.id as string,
-                                  description: `${s.model_code}${s.description ? `\n${s.description}` : ''}`,
-                                  unit: (s.unit as string) ?? 'ชิ้น',
-                                  unit_price: Number(s.sale_price) || 0,
-                                }
-                              : { stock_item_id: null });
-                          }}
-                        >
-                          <option value="">+ ดึงจากคลังสินค้า</option>
-                          {stockQ.data?.map((s) => (
-                            <option key={s.id as string} value={s.id as string}>
-                              {s.model_code as string}
-                            </option>
-                          ))}
-                        </select>
+                        {!locked && (
+                          <StockPicker
+                            items={stockQ.data ?? []}
+                            onPick={(s) => patchItem(i, {
+                              stock_item_id: s.id,
+                              description: `${s.model_code}${s.description ? `\n${s.description}` : ''}`,
+                              unit: s.unit ?? 'ชิ้น',
+                              unit_price: s.sale_price ?? 0,
+                            })}
+                          />
+                        )}
                       </td>
                       <td className="px-2 py-2">
                         <Select value={it.item_type} disabled={locked}
@@ -480,8 +535,33 @@ export function DocumentEditorPage() {
                                      onChange={(e) => patchItem(i, { unit_price: Number(e.target.value) })} />
                       </td>
                       <td className="px-2 py-2">
-                        <NumberInput value={it.discount_amount} disabled={locked} step="0.01"
-                                     onChange={(e) => patchItem(i, { discount_amount: Number(e.target.value) })} />
+                        <div className="flex gap-1">
+                          <NumberInput
+                            className="!px-2"
+                            value={it.discount_percent != null ? it.discount_percent : it.discount_amount}
+                            disabled={locked} step="0.01"
+                            onChange={(e) => patchItem(i, it.discount_percent != null
+                              ? { discount_percent: Number(e.target.value) }
+                              : { discount_amount: Number(e.target.value) })}
+                          />
+                          <button
+                            type="button" disabled={locked}
+                            title="สลับระหว่างบาทและเปอร์เซ็นต์"
+                            onClick={() => patchItem(i, it.discount_percent != null
+                              ? { discount_percent: null, discount_amount: 0 }
+                              : { discount_percent: 0, discount_amount: 0 })}
+                            className="px-2 rounded-lg border border-slate-200 dark:border-slate-700
+                              text-xs text-slate-500 hover:text-indigo-600 shrink-0"
+                          >
+                            {it.discount_percent != null ? '%' : '฿'}
+                          </button>
+                        </div>
+                        {/* กรอกเป็น % ต้องเห็นด้วยว่าลดไปกี่บาท */}
+                        {it.discount_percent != null && it.discount_percent !== 0 && (
+                          <div className="text-[11px] text-slate-400 text-right mt-0.5 tabular-nums">
+                            −{money(lineDiscount(it))}
+                          </div>
+                        )}
                       </td>
                       <td className="px-2 py-2 text-right tabular-nums font-medium">
                         {money(it.line_total)}
@@ -514,7 +594,8 @@ export function DocumentEditorPage() {
             <div className="flex justify-end mt-5">
               <div className="w-full max-w-sm text-sm">
                 <Sum k="รวมเป็นเงิน" v={totals.subtotal} />
-                {totals.discountTotal > 0 && <Sum k="ส่วนลด" v={totals.discountTotal} />}
+                <Sum k="ส่วนลด" v={-totals.discountTotal} />
+                <Sum k="จำนวนเงินหลังหักส่วนลด" v={totals.afterDiscount} />
                 <Sum k="มูลค่าที่ไม่มี/ยกเว้นภาษี" v={totals.vatExemptBase} />
                 <Sum k="มูลค่าที่คำนวณภาษี" v={totals.vatBase} />
                 <Sum k={`ภาษีมูลค่าเพิ่ม ${vatRate}%`} v={totals.vatAmount} />
@@ -570,6 +651,69 @@ export function DocumentEditorPage() {
             </div>
           )}
         </>
+      )}
+    </div>
+  );
+}
+
+interface StockOption {
+  id: string; model_code: string; description: string | null;
+  unit: string | null; sale_price: number | null;
+}
+
+/**
+ * ค้นหาสินค้าจากคลังด้วยการพิมพ์ แทน dropdown ที่ยาวเป็นร้อยบรรทัด
+ * ถ้าไม่เจอ ให้ลิงก์ไปเพิ่มที่หน้า Inventory — สินค้าต้องมีที่เดียว
+ */
+function StockPicker({
+  items, onPick,
+}: { items: StockOption[]; onPick: (s: StockOption) => void }) {
+  const [term, setTerm] = useState('');
+  const [open, setOpen] = useState(false);
+
+  const matches = term.trim()
+    ? items.filter((s) => {
+        const q = term.trim().toLowerCase();
+        return s.model_code?.toLowerCase().includes(q)
+            || (s.description ?? '').toLowerCase().includes(q);
+      }).slice(0, 8)
+    : [];
+
+  return (
+    <div className="relative mt-1">
+      <input
+        value={term}
+        placeholder="ค้นหาสินค้าจากคลัง…"
+        onChange={(e) => { setTerm(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => window.setTimeout(() => setOpen(false), 150)}
+        className="w-full text-[11px] px-2 py-1 rounded-lg border border-dashed
+          border-slate-200 dark:border-slate-700 bg-transparent
+          text-slate-600 dark:text-slate-300 focus:outline-none focus:border-indigo-400"
+      />
+      {open && term.trim() && (
+        <div className="absolute z-20 left-0 right-0 mt-1 bg-white dark:bg-slate-800
+          border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg overflow-hidden">
+          {matches.map((s) => (
+            <button
+              key={s.id} type="button"
+              onMouseDown={() => { onPick(s); setTerm(''); setOpen(false); }}
+              className="block w-full text-left px-3 py-1.5 text-xs
+                hover:bg-indigo-50 dark:hover:bg-slate-700"
+            >
+              <span className="font-medium">{s.model_code}</span>
+              {s.description && <span className="text-slate-400"> · {s.description}</span>}
+            </button>
+          ))}
+          {matches.length === 0 && (
+            <div className="px-3 py-2 text-xs text-slate-400">
+              ไม่พบสินค้านี้ —{' '}
+              <Link to="/stock" className="text-indigo-600 hover:underline">
+                ไปเพิ่มใน Inventory
+              </Link>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

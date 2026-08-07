@@ -18,6 +18,7 @@ export interface PrintableDoc {
   contact_phone?: string | null;
   sales_name?: string | null;
   reference_no?: string | null;
+  tag_name?: string | null;
   price_include_vat: boolean;
   vat_rate: number;
   contract_total?: number | null;
@@ -79,11 +80,89 @@ function PartyBlock({ label, party }: { label: string; party: PartySnapshot | nu
  * ให้เบราว์เซอร์ทำถูกต้องเสมอ ต่างจาก library สร้าง PDF ฝั่ง client
  * ที่ต้องทดสอบฟอนต์ก่อนถึงจะไว้ใจได้
  */
+/**
+ * จำนวนบรรทัดต่อหน้า — เลือกให้พอดี A4 หลังหักหัวเอกสาร สรุปยอด และลายเซ็น
+ * หน้าแรกมีบล็อกคู่ค้าจึงใส่ได้น้อยกว่าหน้าถัดไป
+ */
+const ROWS_FIRST_PAGE = 11;
+const ROWS_NEXT_PAGE = 20;
+
+function paginate<T>(rows: T[], first: number, rest: number): T[][] {
+  if (rows.length === 0) return [[]];
+  const pages: T[][] = [rows.slice(0, first)];
+  let i = first;
+  while (i < rows.length) {
+    pages.push(rows.slice(i, i + rest));
+    i += rest;
+  }
+  return pages;
+}
+
+/**
+ * เอกสารทั้งใบ — ตัดหน้าอัตโนมัติเมื่อรายการยาวเกิน A4
+ * หัวเอกสารซ้ำทุกหน้า สรุปยอดอยู่หน้าสุดท้ายของรายการ
+ * ส่วนหมายเหตุ/เงื่อนไขและลายเซ็นย้ายไปหน้าถัดไปเมื่อเอกสารยาวหลายหน้า
+ */
 export function DocumentPrintView({
   doc, copyLabel, bankAccounts = [],
 }: {
   doc: PrintableDoc;
-  copyLabel?: string;                 // "ต้นฉบับ" | "สำเนา"
+  copyLabel?: string;
+  bankAccounts?: BankAccount[];
+}) {
+  const chunks = paginate(doc.items, ROWS_FIRST_PAGE, ROWS_NEXT_PAGE);
+  const longNotes = ((doc.note_text?.length ?? 0) + (doc.terms_text?.length ?? 0)) > 500;
+  // เอกสารหลายหน้า หรือหมายเหตุยาว → แยกเงื่อนไขกับลายเซ็นไปหน้าสุดท้ายของตัวเอง
+  const tailOnOwnPage = chunks.length > 1 || longNotes;
+  const totalPages = chunks.length + (tailOnOwnPage ? 1 : 0);
+
+  return (
+    <>
+      {chunks.map((rows, idx) => (
+        <DocPage
+          key={idx}
+          doc={doc}
+          rows={rows}
+          startIndex={idx === 0 ? 0 : ROWS_FIRST_PAGE + (idx - 1) * ROWS_NEXT_PAGE}
+          copyLabel={copyLabel}
+          pageNo={idx + 1}
+          totalPages={totalPages}
+          showTotals={idx === chunks.length - 1}
+          showTail={!tailOnOwnPage && idx === chunks.length - 1}
+          bankAccounts={!tailOnOwnPage && idx === chunks.length - 1 ? bankAccounts : []}
+        />
+      ))}
+      {tailOnOwnPage && (
+        <DocPage
+          doc={doc}
+          rows={[]}
+          startIndex={0}
+          copyLabel={copyLabel}
+          pageNo={totalPages}
+          totalPages={totalPages}
+          showTotals={false}
+          showTail
+          hideTable
+          bankAccounts={bankAccounts}
+        />
+      )}
+    </>
+  );
+}
+
+function DocPage({
+  doc, rows, startIndex, copyLabel, pageNo, totalPages,
+  showTotals, showTail, hideTable, bankAccounts = [],
+}: {
+  doc: PrintableDoc;
+  rows: DocumentItem[];
+  startIndex: number;
+  copyLabel?: string;
+  pageNo: number;
+  totalPages: number;
+  showTotals: boolean;
+  showTail: boolean;
+  hideTable?: boolean;
   bankAccounts?: BankAccount[];
 }) {
   const color = DOC_COLOR[doc.doc_type] ?? '#5C6B7A';
@@ -112,6 +191,9 @@ export function DocumentPrintView({
           {isTaxInvoice && copyLabel === 'ต้นฉบับ' && (
             <div className="text-[9px] text-slate-500">(เอกสารออกเป็นชุด)</div>
           )}
+          {totalPages > 1 && (
+            <div className="text-[9px] text-slate-400">หน้าที่ {pageNo}/{totalPages}</div>
+          )}
         </div>
       </div>
 
@@ -130,12 +212,14 @@ export function DocumentPrintView({
           )}
           {doc.sales_name && <Row k="ผู้ขาย" v={doc.sales_name} />}
           {doc.reference_no && <Row k="อ้างอิง" v={doc.reference_no} />}
+          {doc.tag_name && <Row k="ประเภทงาน" v={doc.tag_name} />}
           {doc.job_name && <Row k="ชื่องาน" v={doc.job_name} />}
           {doc.contact_name && <Row k="ผู้ติดต่อ" v={doc.contact_name} />}
           {doc.contact_phone && <Row k="เบอร์โทร" v={doc.contact_phone} />}
         </div>
       </div>
 
+      {!hideTable && (
       <table className="w-full text-[11px] border-collapse mb-3">
         <thead>
           <tr style={{ borderTop: `1px solid ${color}`, borderBottom: `1px solid ${color}` }}>
@@ -150,9 +234,9 @@ export function DocumentPrintView({
           </tr>
         </thead>
         <tbody>
-          {doc.items.map((it, i) => (
+          {rows.map((it, i) => (
             <tr key={i} className="align-top border-b border-slate-100">
-              <td className="py-1.5 text-center">{i + 1}</td>
+              <td className="py-1.5 text-center">{startIndex + i + 1}</td>
               {/* รายละเอียดหลายบรรทัด: ชื่อรุ่นบรรทัดแรก สเปกย่อยบรรทัดถัดไป */}
               <td className="py-1.5 whitespace-pre-line pr-2">{it.description}</td>
               <td className="py-1.5 text-right tabular-nums">{money(it.qty).replace('.00', '')}</td>
@@ -167,13 +251,14 @@ export function DocumentPrintView({
               <td className="py-1.5 text-right tabular-nums">{money(it.line_total)}</td>
             </tr>
           ))}
-          {doc.items.length === 0 && (
+          {rows.length === 0 && (
             <tr><td colSpan={8} className="py-6 text-center text-slate-400">ยังไม่มีรายการ</td></tr>
           )}
         </tbody>
       </table>
+      )}
 
-      <div className="flex justify-end mb-2">
+      {showTotals && (<><div className="flex justify-end mb-2">
         <div className="w-[80mm] text-[11px]">
           <Total k="รวมเป็นเงิน" v={doc.subtotal} />
           {doc.discount_total > 0 && (
@@ -196,9 +281,9 @@ export function DocumentPrintView({
         </div>
       </div>
 
-      <div className="text-[11px] italic mb-4">({bahtText(doc.net_payable)})</div>
+      <div className="text-[11px] italic mb-4">({bahtText(doc.net_payable)})</div></>)}
 
-      {(doc.note_text || doc.terms_text) && (
+      {showTail && (doc.note_text || doc.terms_text) && (
         <div className="text-[10px] leading-[1.65] mb-4">
           {doc.note_text && (
             <div className="mb-2">
@@ -215,7 +300,7 @@ export function DocumentPrintView({
         </div>
       )}
 
-      {(doc.doc_type === 'INV' || doc.doc_type === 'RC') && (
+      {showTail && (doc.doc_type === 'INV' || doc.doc_type === 'RC') && (
         <div className="text-[10px] border-t border-slate-200 pt-2 mb-4">
           <div className="mb-1">การชำระเงินจะสมบูรณ์เมื่อบริษัทได้รับเงินเรียบร้อยแล้ว</div>
           <div className="flex gap-5">
@@ -232,6 +317,7 @@ export function DocumentPrintView({
         </div>
       )}
 
+      {showTail && (
       <div className="flex justify-between gap-10 text-[10px] mt-8">
         <div className="flex-1 text-center">
           <div className="border-b border-slate-400 h-10" />
@@ -244,6 +330,7 @@ export function DocumentPrintView({
           <div className="text-slate-400">วันที่</div>
         </div>
       </div>
+      )}
 
       {bankAccounts.length > 0 && (
         <div className="mt-6 pt-3 border-t border-slate-200 text-[10px]">

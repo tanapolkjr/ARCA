@@ -81,8 +81,19 @@ export interface DocumentItem {
   qty: number;
   unit: string | null;
   unit_price: number;
+  /** จำนวนเงินที่ลดจริง — ใช้คำนวณเสมอ */
   discount_amount: number;
+  /** เก็บไว้ว่ากรอกมาเป็น % เท่าไร (null = กรอกเป็นบาท) */
+  discount_percent?: number | null;
   line_total: number;
+}
+
+export interface DocumentTag {
+  id: string;
+  name: string;
+  color: string;
+  sort_order: number;
+  is_active: boolean;
 }
 
 export interface ArDocument {
@@ -107,6 +118,7 @@ export interface ArDocument {
   contact_phone: string | null;
   sales_user_id: string | null;
   fulfilment_type: 'install' | 'delivery';
+  tag_id: string | null;
   price_include_vat: boolean;
   vat_rate: number;
   contract_total: number | null;
