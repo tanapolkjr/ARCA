@@ -90,3 +90,6 @@ export function useHasRole(roles) {
 
 /** Roles allowed into the Sourcing module (cost & margin figures). */
 export const SOURCING_ROLES = ["Super Admin", "Manager"];
+
+/** Roles allowed into Accounting and the cash book. */
+export const ACCOUNTING_ROLES = ["Super Admin", "Manager", "Admin"];

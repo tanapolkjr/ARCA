@@ -117,3 +117,43 @@ html, body, #root {
 
 @keyframes row-highlight { 0% { background: color-mix(in srgb, var(--accent) 14%, transparent); } 100% { background: transparent; } }
 .row-highlight { animation: row-highlight 1.2s ease-out; }
+
+/* ===========================================================================
+   Accounting — หน้าเอกสาร A4 และการพิมพ์
+   ---------------------------------------------------------------------------
+   ใช้ทั้งดูตัวอย่างบนจอและพิมพ์/บันทึกเป็น PDF ผ่านเบราว์เซอร์
+   (เบราว์เซอร์จัดวางสระ-วรรณยุกต์ไทยได้ถูกต้องเสมอ ต่างจาก library ฝั่ง client)
+   =========================================================================== */
+.doc-page {
+  position: relative;
+  font-family: 'Noto Sans Thai', Inter, system-ui, sans-serif;
+  box-sizing: border-box;
+}
+
+@media print {
+  @page { size: A4; margin: 0; }
+
+  /* ซ่อนทุกอย่างยกเว้นพื้นที่พิมพ์ */
+  body * { visibility: hidden !important; }
+  .print-root, .print-root * { visibility: visible !important; }
+  .print-root {
+    position: absolute !important;
+    inset: 0 auto auto 0;
+    width: 100%;
+    background: #fff;
+  }
+  .no-print { display: none !important; }
+
+  .doc-page {
+    page-break-after: always;
+    break-after: page;
+    box-shadow: none !important;
+    margin: 0 !important;
+  }
+  .doc-page:last-child { page-break-after: auto; break-after: auto; }
+
+  /* อย่าให้แถวในตารางถูกตัดกลางบรรทัด */
+  table { page-break-inside: auto; }
+  tr    { page-break-inside: avoid; break-inside: avoid; }
+  thead { display: table-header-group; }
+}

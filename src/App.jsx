@@ -31,6 +31,13 @@ import { ComparePage as SourcingCompare } from "./features/sourcing/compare/Comp
 import { ReportsPage as SourcingReports } from "./features/sourcing/reports/ReportsPage";
 import { SettingsPage as SourcingSettings } from "./features/sourcing/settings/SettingsPage";
 
+// --- Accounting + Cash book (Admin / Manager / Super Admin) ---
+import AccountingLayout from "./features/accounting/AccountingLayout.jsx";
+import { DocumentListPage } from "./features/accounting/DocumentListPage";
+import { DocumentEditorPage } from "./features/accounting/DocumentEditorPage";
+import { CompanySettingsPage } from "./features/accounting/CompanySettingsPage";
+import { CashBookPage } from "./features/cashbook/CashBookPage";
+
 export default function App() {
   return (
     <Routes>
@@ -70,6 +77,15 @@ export default function App() {
           <Route path="compare" element={<SourcingCompare />} />
           <Route path="reports" element={<SourcingReports />} />
           <Route path="settings" element={<SourcingSettings />} />
+        </Route>
+
+        <Route element={<AccountingLayout />}>
+          <Route path="/accounting" element={<CompanySettingsPage />} />
+          <Route path="/accounting/settings" element={<CompanySettingsPage />} />
+          <Route path="/accounting/:docType" element={<DocumentListPage />} />
+          <Route path="/accounting/:docType/new" element={<DocumentEditorPage />} />
+          <Route path="/accounting/:docType/:id" element={<DocumentEditorPage />} />
+          <Route path="/cashbook" element={<CashBookPage />} />
         </Route>
 
         <Route path="/report" element={<Placeholder title="Report" note="ต้องคุยว่ามีรายงานอะไรบ้าง, Export เป็น Excel/PDF ไหม — อยู่ใน Open Items ของ Spec" />} />
