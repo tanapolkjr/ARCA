@@ -19,6 +19,10 @@
   },
   "include": [
     "src/features/sourcing",
+    "src/features/accounting",
+    "src/features/cashbook",
+    "src/accounting-lib",
+    "src/accounting-api",
     "src/sourcing-lib",
     "src/sourcing-api",
     "src/components/sourcing-ui",
