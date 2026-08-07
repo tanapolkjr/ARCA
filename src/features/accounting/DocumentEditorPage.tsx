@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Copy, FileCheck2, FileOutput, Plus, Printer, Save, Trash2 } from 'lucide-react';
+import {
+  ArrowLeft, Ban, Copy, FileCheck2, FileOutput, HandCoins, Plus, Printer, Save, Trash2,
+} from 'lucide-react';
 import { useToast } from '@/hooks/useToast.jsx';
 import { useUserId } from '@/hooks/useAuth.jsx';
 import { useQuery } from '@/hooks/useSourcingQuery';
@@ -11,6 +13,7 @@ import {
 import type { ApDocType, ArDocType, DocumentItem, VatType } from '@/accounting-lib/types';
 import { getDefaultCompany, listBankAccounts, listCompanies, listTemplates, listVendors } from '@/accounting-api/setup';
 import {
+  cancelApDocument, cancelDocument,
   companySnapshot, convertArDocument, customerSnapshotFrom, deleteApDraft, deleteArDraft,
   getApDocument, getArDocument, getDocNo, issueApDocument, issueArDocument, listChildDocuments,
   listDocumentTags, saveApDocument, saveArDocument,
@@ -18,6 +21,7 @@ import {
 import { supabase } from '../../lib/supabaseClient.js';
 import { DocumentPrintView, type PrintableDoc } from './DocumentPrintView';
 import { Field, GhostButton, NumberInput, PrimaryButton, Select, TextArea, TextInput } from './ui';
+import { CancelDialog, PaymentHistory, ReceivePaymentModal } from './PaymentPanel';
 
 const AR_TYPES: ArDocType[] = ['QT', 'BL', 'INV', 'RC', 'CN', 'DN'];
 const isAr = (t: string): t is ArDocType => (AR_TYPES as string[]).includes(t);
@@ -74,6 +78,10 @@ function DocumentEditorInner() {
   const [sourceRef, setSourceRef] = useState<{ id: string; docNo: string | null } | null>(null);
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState(false);
+  const [showReceive, setShowReceive] = useState(false);
+  const [showCancel, setShowCancel] = useState(false);
+  const [paidAmount, setPaidAmount] = useState(0);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const companiesQ = useQuery(() => listCompanies(true), []);
   const banksQ = useQuery(
@@ -128,6 +136,7 @@ function DocumentEditorInner() {
         setTerms(d.terms_text ?? '');
         setDocNo(d.doc_no);
         setStatus(d.status);
+        setPaidAmount(Number(d.paid_amount) || 0);
         setItems(d.items?.length ? d.items : [blankItem()]);
         setTagId(d.tag_id ?? '');
         if (ar && d.source_document_id) {
@@ -150,7 +159,7 @@ function DocumentEditorInner() {
         toast(e instanceof Error ? e.message : 'โหลดเอกสารไม่สำเร็จ', 'error');
       }
     })();
-  }, [id, ar, toast]);
+  }, [id, ar, toast, reloadKey]);
 
   // เอกสารใหม่ → ใช้บริษัทตั้งต้น
   useEffect(() => {
@@ -323,6 +332,17 @@ function DocumentEditorInner() {
           <GhostButton onClick={() => setPreview((v) => !v)}>
             <Printer className="w-4 h-4" /> {preview ? 'กลับไปแก้ไข' : 'ดูตัวอย่าง / พิมพ์'}
           </GhostButton>
+          {locked && status !== 'cancelled' && ar && docType !== 'QT' && (
+            <GhostButton onClick={() => setShowReceive(true)} disabled={busy}>
+              <HandCoins className="w-4 h-4" /> รับชำระเงิน
+            </GhostButton>
+          )}
+          {locked && status !== 'cancelled' && (
+            <GhostButton onClick={() => setShowCancel(true)} disabled={busy}
+                         className="!text-rose-600 !border-rose-200 dark:!border-rose-900">
+              <Ban className="w-4 h-4" /> ยกเลิกเอกสาร
+            </GhostButton>
+          )}
           {locked && ar && docType === 'QT' && (
             <>
               <GhostButton onClick={() => void handleConvert('BL')} disabled={busy}>
@@ -346,11 +366,21 @@ function DocumentEditorInner() {
         </div>
       </div>
 
-      {locked && (
+      {status === 'cancelled' ? (
+        <div className="no-print rounded-xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200
+          dark:border-rose-800 px-4 py-2.5 text-sm text-rose-700 dark:text-rose-300">
+          เอกสารนี้ถูกยกเลิกแล้ว — เลขที่ยังถูกเก็บไว้ตามกฎหมาย นำกลับมาใช้ใหม่ไม่ได้
+        </div>
+      ) : locked && (
         <div className="no-print rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200
           dark:border-amber-800 px-4 py-2.5 text-sm text-amber-800 dark:text-amber-200">
           เอกสารออกเลขที่แล้ว แก้ไขไม่ได้ — ถ้าผิดต้องยกเลิกและออกใบใหม่ หรือออกใบลดหนี้
         </div>
+      )}
+
+      {ar && locked && docType !== 'QT' && savedId && (
+        <PaymentHistory documentId={savedId} grandTotal={totals.grandTotal}
+                        onChanged={() => setReloadKey((k) => k + 1)} />
       )}
 
       {ar && docType === 'QT' && (childrenQ.data?.length ?? 0) > 0 && (
@@ -383,6 +413,36 @@ function DocumentEditorInner() {
             ))}
           </div>
         </div>
+      )}
+
+      {showReceive && savedId && (
+        <ReceivePaymentModal
+          documentId={savedId}
+          companyId={companyId}
+          customerId={partyId || null}
+          docNo={docNo}
+          outstanding={Math.max(0, totals.grandTotal - paidAmount)}
+          onClose={() => setShowReceive(false)}
+          onSaved={() => { setShowReceive(false); setReloadKey((k) => k + 1); }}
+        />
+      )}
+
+      {showCancel && savedId && (
+        <CancelDialog
+          docNo={docNo}
+          onCancel={() => setShowCancel(false)}
+          onConfirm={async (reason) => {
+            try {
+              if (ar) await cancelDocument(savedId, reason);
+              else await cancelApDocument(savedId, reason);
+              toast('ยกเลิกเอกสารแล้ว');
+              setShowCancel(false);
+              setReloadKey((k) => k + 1);
+            } catch (e) {
+              toast(e instanceof Error ? e.message : 'ยกเลิกไม่สำเร็จ', 'error');
+            }
+          }}
+        />
       )}
 
       {preview ? (

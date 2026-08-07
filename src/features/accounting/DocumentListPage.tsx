@@ -5,7 +5,10 @@ import { useQuery } from '@/hooks/useSourcingQuery';
 import { docDate, money, round2 } from '@/accounting-lib/calc';
 import { AP_DOC_LABEL, AR_DOC_LABEL } from '@/accounting-lib/types';
 import type { ApDocType, ArDocType } from '@/accounting-lib/types';
-import { listApDocuments, listArDocuments, listDocumentTags } from '@/accounting-api/documents';
+import {
+  billingRollup, listApDocuments, listArDocuments, listDocumentTags,
+} from '@/accounting-api/documents';
+import type { BillingRollup } from '@/accounting-api/documents';
 import { EmptyRow, Field, PrimaryButton, Select, StatusPill, TextInput } from './ui';
 
 const AR_TYPES = ['QT', 'BL', 'INV', 'RC', 'CN', 'DN'];
@@ -17,6 +20,7 @@ interface DocRow {
   doc_date: string;
   job_name: string | null;
   grand_total: number;
+  paid_amount: number;
   status: string;
   tag_id: string | null;
   customer?: { company_name?: string | null; display_name?: string } | null;
@@ -66,6 +70,14 @@ export function DocumentListPage() {
   const rows = useMemo(
     () => (q.data ?? []).filter((d) => !status || d.status === status),
     [q.data, status]
+  );
+
+  // ใบเสนอราคาต้องบอกได้ว่าวางบิลไปแล้วเท่าไร เหลือเท่าไร แบบเดียวกับ FlowAccount
+  const rollupQ = useQuery<Map<string, BillingRollup>>(
+    () => (docType === 'QT' && rows.length
+      ? billingRollup(rows.map((r) => r.id))
+      : Promise.resolve(new Map())),
+    [docType, rows.map((r) => r.id).join(',')]
   );
 
   /** ผลรวมของรายการที่กรองอยู่ — ทุกหน้าในโมดูลต้องบอกยอดรวมได้ */
@@ -192,17 +204,33 @@ export function DocumentListPage() {
                   {g.rows.length} ใบ · {money(g.rows.reduce((a, r) => a + Number(r.grand_total || 0), 0))} บาท
                 </span>
               </div>
-              <DocTable rows={g.rows} ar={ar} docType={docType} loading={false} />
+              <DocTable rows={g.rows} ar={ar} docType={docType} loading={false}
+                        rollup={rollupQ.data ?? undefined} />
             </div>
           ))
-        : <DocTable rows={rows} ar={ar} docType={docType} loading={q.loading} />}
+        : <DocTable rows={rows} ar={ar} docType={docType} loading={q.loading}
+                    rollup={rollupQ.data ?? undefined} />}
     </div>
   );
 }
 
+/**
+ * สถานะที่แสดงบนใบเสนอราคาคิดจากยอดที่วางบิลและยอดที่ชำระจริง
+ * ไม่ได้เก็บเป็นคอลัมน์ เพราะมันเปลี่ยนตามเอกสารลูกตลอดเวลา
+ */
+function billingLabel(total: number, r?: BillingRollup) {
+  if (!r || r.billed <= 0) return null;
+  if (r.paid >= total - 0.01) return { text: 'ชำระแล้ว', tone: 'text-emerald-600' };
+  if (r.billed >= total - 0.01) return { text: 'วางบิลครบ', tone: 'text-sky-600' };
+  return { text: 'วางบิลบางส่วน', tone: 'text-pink-600' };
+}
+
 function DocTable({
-  rows, ar, docType, loading,
-}: { rows: DocRow[]; ar: boolean; docType: string; loading: boolean }) {
+  rows, ar, docType, loading, rollup,
+}: {
+  rows: DocRow[]; ar: boolean; docType: string; loading: boolean;
+  rollup?: Map<string, BillingRollup>;
+}) {
   const total = rows.reduce((a, r) => a + (Number(r.grand_total) || 0), 0);
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100
@@ -226,6 +254,9 @@ function DocTable({
               const partyName = ar
                 ? (d.customer?.company_name || d.customer?.display_name)
                 : d.vendor?.display_name;
+              const billing = docType === 'QT'
+                ? billingLabel(Number(d.grand_total) || 0, rollup?.get(d.id))
+                : null;
               return (
                 <tr key={d.id} className="border-t border-slate-50 dark:border-slate-800
                   hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
@@ -251,8 +282,24 @@ function DocTable({
                   <td className="px-4 py-3 text-right tabular-nums font-medium
                     text-slate-800 dark:text-slate-100">
                     {money(d.grand_total)}
+                    {billing && (
+                      <div className={`text-[11px] font-normal ${billing.tone}`}>
+                        {money(rollup?.get(d.id)?.billed ?? 0)}
+                      </div>
+                    )}
+                    {!billing && docType !== 'QT' && Number(d.paid_amount) > 0
+                      && Number(d.paid_amount) < Number(d.grand_total) && (
+                      <div className="text-[11px] font-normal text-emerald-600">
+                        ชำระแล้ว {money(d.paid_amount)}
+                      </div>
+                    )}
                   </td>
-                  <td className="px-4 py-3"><StatusPill status={d.status} /></td>
+                  <td className="px-4 py-3">
+                    <StatusPill status={d.status} />
+                    {billing && (
+                      <div className={`text-[11px] mt-0.5 ${billing.tone}`}>{billing.text}</div>
+                    )}
+                  </td>
                 </tr>
               );
             })}

@@ -243,7 +243,45 @@ export async function issueArDocument(id: string): Promise<string> {
     customer_snapshot: doc.customer ? customerSnapshotFrom(doc.customer) : null,
   }).eq('id', id);
   if (error) throw error;
+
+  // ใบเสร็จ/ใบกำกับออกได้ต่อเมื่อรับเงินแล้ว → ตัดยอดใบแจ้งหนี้ต้นทางให้เป็นชำระแล้ว
+  // ยังไม่ระบุกระเป๋าเงิน หน้าจอจะเตือนให้มาเติมภายหลัง
+  if ((doc.doc_type === 'INV' || doc.doc_type === 'RC') && doc.source_document_id) {
+    await settleSourceBill(doc.source_document_id, doc.id, doc.company_id, doc.customer_id,
+                           doc.doc_date, doc.grand_total, docNo as string);
+  }
   return docNo as string;
+}
+
+/** ตัดยอดใบแจ้งหนี้ต้นทางเมื่อออกใบเสร็จ — ตัดได้ไม่เกินยอดที่ยังค้าง */
+async function settleSourceBill(
+  billId: string, receiptId: string, companyId: string, customerId: string | null,
+  date: string, amount: number, receiptNo: string
+) {
+  const { data: bill, error } = await supabase
+    .from('ar_documents').select('doc_type, grand_total, paid_amount, status')
+    .eq('id', billId).single();
+  if (error) throw error;
+  if (!bill || bill.doc_type !== 'BL' || bill.status === 'cancelled') return;
+
+  const outstanding = (Number(bill.grand_total) || 0) - (Number(bill.paid_amount) || 0);
+  const allocate = Math.min(Math.max(0, outstanding), Number(amount) || 0);
+  if (allocate <= 0) return;
+
+  const { data: pay, error: payErr } = await supabase.from('ar_payments').insert({
+    company_id: companyId,
+    payment_date: date,
+    payment_method: 'transfer',
+    customer_id: customerId,
+    amount_received: allocate,
+    note: `ตัดยอดจากการออก ${receiptNo}`,
+    created_from_document_id: receiptId,
+  }).select('id').single();
+  if (payErr) throw payErr;
+
+  const { error: allocErr } = await supabase.from('ar_payment_allocations')
+    .insert({ payment_id: pay.id, document_id: billId, amount: allocate });
+  if (allocErr) throw allocErr;
 }
 
 export async function setArStatus(id: string, status: string) {
@@ -314,6 +352,7 @@ export interface ApDocumentFull {
   price_include_vat: boolean; vat_rate: number;
   subtotal: number; discount_total: number; vat_base: number; vat_exempt_base: number;
   vat_amount: number; grand_total: number; wht_rate: number; wht_amount: number; net_payable: number;
+  paid_amount: number;
   tax_invoice_received: boolean; receipt_received: boolean; vendor_doc_no: string | null;
   note_text: string | null; terms_text: string | null;
   purchase_request_id: string | null; created_at: string;
@@ -541,4 +580,173 @@ export async function getDocNo(id: string): Promise<string | null> {
     .from('ar_documents').select('doc_no').eq('id', id).maybeSingle();
   if (error) throw error;
   return (data?.doc_no as string | null) ?? null;
+}
+
+// ===========================================================================
+// รับชำระเงิน / ยกเลิกเอกสาร / สรุปยอดวางบิล
+// ===========================================================================
+
+export interface ArPayment {
+  id: string;
+  payment_date: string;
+  payment_method: 'cash' | 'transfer' | 'cheque' | 'credit_card' | 'other';
+  wallet_id: string | null;
+  amount_received: number;
+  wht_amount: number;
+  wht_cert_no: string | null;
+  fee_amount: number;
+  reference_no: string | null;
+  note: string | null;
+  created_from_document_id: string | null;
+  created_at: string;
+  wallet?: { id: string; name: string } | null;
+  allocations?: { id: string; document_id: string; amount: number }[];
+}
+
+/** ยอดที่ตัดหนี้ = เงินเข้าจริง + หัก ณ ที่จ่าย + ค่าธรรมเนียม */
+export const allocatedTotal = (p: {
+  amount_received: number; wht_amount: number; fee_amount: number;
+}): number =>
+  (Number(p.amount_received) || 0) + (Number(p.wht_amount) || 0) + (Number(p.fee_amount) || 0);
+
+export async function listPaymentsForDocument(documentId: string): Promise<ArPayment[]> {
+  const { data, error } = await supabase
+    .from('ar_payment_allocations')
+    .select(`amount, payment:ar_payments(*, wallet:wallets(id, name))`)
+    .eq('document_id', documentId);
+  if (error) throw error;
+  return ((data ?? []) as unknown as { amount: number; payment: ArPayment }[])
+    .map((r) => ({ ...r.payment, allocations: [{ id: '', document_id: documentId, amount: r.amount }] }))
+    .sort((a, b) => a.payment_date.localeCompare(b.payment_date));
+}
+
+export interface ReceivePaymentInput {
+  companyId: string;
+  documentId: string;
+  customerId: string | null;
+  paymentDate: string;
+  method: ArPayment['payment_method'];
+  walletId: string | null;
+  /** ยอดที่ตัดกับบิลใบนี้ */
+  allocate: number;
+  whtAmount: number;
+  whtCertNo?: string | null;
+  feeAmount: number;
+  referenceNo?: string | null;
+  note?: string | null;
+  /** บันทึกเงินเข้าสมุดรายรับ-รายจ่ายด้วย */
+  postToCashBook: boolean;
+}
+
+/**
+ * บันทึกรับชำระเงินหนึ่งครั้ง
+ *
+ * สถานะและ paid_amount ของเอกสารคำนวณโดย trigger ฝั่งฐานข้อมูล
+ * ไม่ได้อัปเดตจากตรงนี้ เพื่อให้ยอดไม่เพี้ยนไม่ว่าจะแก้จากทางไหน
+ */
+export async function receivePayment(input: ReceivePaymentInput, userId: string): Promise<string> {
+  const cash = Math.max(0, input.allocate - input.whtAmount - input.feeAmount);
+
+  let cashEntryId: string | null = null;
+  if (input.postToCashBook && input.walletId && cash > 0) {
+    const { data, error } = await supabase.from('cash_entries').insert({
+      company_id: input.companyId,
+      entry_date: input.paymentDate,
+      entry_type: 'in',
+      wallet_id: input.walletId,
+      description: input.note?.trim() || 'รับชำระจากลูกค้า',
+      amount: cash,
+      wht_type: input.whtAmount > 0 ? 'withheld_from_us' : 'none',
+      wht_amount: input.whtAmount,
+      wht_cert_no: input.whtCertNo || null,
+      ar_document_id: input.documentId,
+      created_by: userId,
+    }).select('id').single();
+    if (error) throw error;
+    cashEntryId = data.id as string;
+  }
+
+  const { data: pay, error: payErr } = await supabase.from('ar_payments').insert({
+    company_id: input.companyId,
+    payment_date: input.paymentDate,
+    payment_method: input.method,
+    wallet_id: input.walletId,
+    customer_id: input.customerId,
+    amount_received: cash,
+    wht_amount: input.whtAmount,
+    wht_cert_no: input.whtCertNo || null,
+    fee_amount: input.feeAmount,
+    reference_no: input.referenceNo || null,
+    note: input.note || null,
+    cash_entry_id: cashEntryId,
+    created_by: userId,
+  }).select('id').single();
+  if (payErr) throw payErr;
+
+  const { error: allocErr } = await supabase.from('ar_payment_allocations').insert({
+    payment_id: pay.id, document_id: input.documentId, amount: input.allocate,
+  });
+  if (allocErr) throw allocErr;
+
+  return pay.id as string;
+}
+
+export async function deletePayment(paymentId: string) {
+  // allocations ถูกลบตาม cascade แล้ว trigger จะคำนวณสถานะบิลใหม่ให้เอง
+  const { error } = await supabase.from('ar_payments').delete().eq('id', paymentId);
+  if (error) throw error;
+}
+
+/**
+ * ยกเลิกเอกสาร — เก็บเลขที่ไว้เสมอ ห้ามลบและห้ามนำเลขกลับมาใช้
+ * ยอดที่เคยตัดหนี้จากใบนี้ถูกถอนออกด้วย บิลต้นทางจึงกลับไปเป็นค้างชำระ
+ */
+export async function cancelDocument(id: string, reason: string) {
+  const { data: pays, error: pErr } = await supabase
+    .from('ar_payments').select('id').eq('created_from_document_id', id);
+  if (pErr) throw pErr;
+  if (pays?.length) {
+    const { error } = await supabase.from('ar_payments')
+      .delete().in('id', pays.map((p) => p.id));
+    if (error) throw error;
+  }
+
+  const { error } = await supabase.from('ar_documents').update({
+    status: 'cancelled',
+    cancelled_at: new Date().toISOString(),
+    cancelled_reason: reason,
+  }).eq('id', id);
+  if (error) throw error;
+}
+
+export async function cancelApDocument(id: string, reason: string) {
+  const { error } = await supabase.from('ap_documents').update({
+    status: 'cancelled',
+    cancelled_at: new Date().toISOString(),
+    cancelled_reason: reason,
+  }).eq('id', id);
+  if (error) throw error;
+}
+
+/** ยอดที่วางบิลไปแล้วและยอดที่ชำระแล้ว ของใบเสนอราคาหลายใบพร้อมกัน */
+export interface BillingRollup { billed: number; paid: number; count: number }
+
+export async function billingRollup(sourceIds: string[]): Promise<Map<string, BillingRollup>> {
+  const out = new Map<string, BillingRollup>();
+  if (sourceIds.length === 0) return out;
+  const { data, error } = await supabase
+    .from('ar_documents')
+    .select('source_document_id, grand_total, paid_amount, status')
+    .in('source_document_id', sourceIds)
+    .neq('status', 'cancelled');
+  if (error) throw error;
+  for (const r of data ?? []) {
+    const key = r.source_document_id as string;
+    const cur = out.get(key) ?? { billed: 0, paid: 0, count: 0 };
+    cur.billed += Number(r.grand_total) || 0;
+    cur.paid += Number(r.paid_amount) || 0;
+    cur.count += 1;
+    out.set(key, cur);
+  }
+  return out;
 }
