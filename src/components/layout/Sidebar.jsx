@@ -2,9 +2,9 @@ import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Home, LayoutGrid, Wrench, Users, Boxes, BarChart3, Settings,
-  LogOut, ChevronDown, ChevronRight, MessageSquare, Factory,
+  LogOut, ChevronDown, ChevronRight, MessageSquare, Factory, Receipt, Wallet,
 } from "lucide-react";
-import { useAuth, useHasRole, SOURCING_ROLES } from "../../hooks/useAuth.jsx";
+import { useAuth, useHasRole, SOURCING_ROLES, ACCOUNTING_ROLES } from "../../hooks/useAuth.jsx";
 
 function Item({ to, icon: Icon, label, badge, sub, end }) {
   return (
@@ -50,8 +50,10 @@ export default function Sidebar() {
   const [projectOpen, setProjectOpen] = useState(true);
   const [stockOpen, setStockOpen] = useState(false);
   const [sourcingOpen, setSourcingOpen] = useState(false);
+  const [acctOpen, setAcctOpen] = useState(false);
   const { signOut } = useAuth();
   const canSeeSourcing = useHasRole(SOURCING_ROLES);
+  const canSeeAccounting = useHasRole(ACCOUNTING_ROLES);
   const navigate = useNavigate();
 
   return (
@@ -98,6 +100,24 @@ export default function Sidebar() {
                 <Item to="/sourcing/reports" label="Decision Log" sub />
                 <Item to="/sourcing/settings" label="Sourcing Settings" sub />
               </Group>
+            )}
+
+            {canSeeAccounting && (
+              <>
+                <Group
+                  icon={Receipt}
+                  label="บัญชี"
+                  open={acctOpen}
+                  onToggle={() => setAcctOpen((v) => !v)}
+                >
+                  <Item to="/accounting/QT" label="ใบเสนอราคา" sub />
+                  <Item to="/accounting/BL" label="ใบแจ้งหนี้" sub />
+                  <Item to="/accounting/INV" label="ใบกำกับภาษี/ใบเสร็จ" sub />
+                  <Item to="/accounting/PO" label="ใบสั่งซื้อ" sub />
+                  <Item to="/accounting/settings" label="ตั้งค่าบริษัท" sub />
+                </Group>
+                <Item to="/cashbook" icon={Wallet} label="รายรับ-รายจ่าย" />
+              </>
             )}
 
             <Item to="/report" icon={BarChart3} label="Report" />

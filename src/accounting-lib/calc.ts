@@ -1,0 +1,176 @@
+import type { DocumentItem, VatType } from './types';
+
+/**
+ * ตัวเลขเงินทั้งหมดในโมดูลนี้ปัดที่ 2 ตำแหน่ง "ตอนสรุปยอด" เท่านั้น
+ * ไม่ปัดทีละบรรทัดระหว่างทาง เพราะจะทำให้ยอดรวมเพี้ยนจากที่ลูกค้าเห็น
+ */
+export const round2 = (n: number): number => Math.round((n + Number.EPSILON) * 100) / 100;
+
+/** มูลค่าสุทธิของบรรทัด = จำนวน × ราคา − ส่วนลด (ไม่ต่ำกว่า 0) */
+export function lineTotal(item: Pick<DocumentItem, 'qty' | 'unit_price' | 'discount_amount'>): number {
+  const gross = (Number(item.qty) || 0) * (Number(item.unit_price) || 0);
+  const net = gross - (Number(item.discount_amount) || 0);
+  return round2(Math.max(0, net));
+}
+
+export interface DocumentTotals {
+  /** ผลรวมก่อนหักส่วนลด */
+  subtotal: number;
+  discountTotal: number;
+  /** ยอดหลังหักส่วนลด */
+  afterDiscount: number;
+  /** ฐานที่คำนวณภาษี (ไม่รวม VAT เสมอ) */
+  vatBase: number;
+  /** มูลค่าที่ไม่มี/ยกเว้นภาษี */
+  vatExemptBase: number;
+  vatAmount: number;
+  grandTotal: number;
+  whtAmount: number;
+  netPayable: number;
+}
+
+/**
+ * สรุปยอดเอกสาร รองรับสองโหมดที่ใช้จริงทั้งคู่:
+ *
+ *  priceIncludeVat = true   ราคาที่กรอกรวม VAT แล้ว
+ *      ฐานภาษี = ยอดรวม ÷ 1.07 · VAT = ส่วนต่าง · ยอดรวมทั้งสิ้น = ยอดที่กรอก
+ *      ตัวอย่างจริง: 12,000 → ฐาน 11,214.95 + VAT 785.05
+ *
+ *  priceIncludeVat = false  ราคายังไม่รวม VAT
+ *      VAT บวกเพิ่มจากฐาน · ยอดรวมทั้งสิ้น = ฐาน + VAT
+ *      ตัวอย่างจริง: 128,372 → +7% = 137,358.04
+ *
+ * บรรทัดที่ vat_type เป็น exempt/zero ไม่เข้าฐานภาษีทั้งสองโหมด
+ *
+ * whtRate คิดจาก "ฐานที่คำนวณภาษี" (มูลค่าก่อน VAT) ตามหลักการหักภาษี ณ ที่จ่าย
+ * ซึ่งหักจากมูลค่าบริการ ไม่ใช่จากยอดที่รวม VAT แล้ว
+ */
+export function computeTotals(
+  items: DocumentItem[],
+  opts: { priceIncludeVat: boolean; vatRate: number; whtRate?: number; billingPercent?: number | null }
+): DocumentTotals {
+  const rate = (Number(opts.vatRate) || 0) / 100;
+
+  let subtotal = 0;
+  let discountTotal = 0;
+  let taxableGross = 0;   // ยอดของบรรทัดที่เสีย VAT (ตามโหมดที่กรอก)
+  let exemptGross = 0;    // ยอดของบรรทัดที่ยกเว้น/0%
+
+  for (const it of items) {
+    const gross = (Number(it.qty) || 0) * (Number(it.unit_price) || 0);
+    const disc = Number(it.discount_amount) || 0;
+    subtotal += gross;
+    discountTotal += disc;
+    const net = Math.max(0, gross - disc);
+    if (it.vat_type === 'vat') taxableGross += net;
+    else exemptGross += net;
+  }
+
+  // แบ่งชำระ: เรียกเก็บบางส่วนของยอดสัญญา ย่อทุกส่วนตามสัดส่วนเดียวกัน
+  const share =
+    opts.billingPercent != null && opts.billingPercent > 0 && opts.billingPercent < 100
+      ? opts.billingPercent / 100
+      : 1;
+  taxableGross *= share;
+  exemptGross *= share;
+
+  let vatBase: number;
+  let vatAmount: number;
+  let grandTotal: number;
+
+  if (opts.priceIncludeVat) {
+    // คิด VAT ก่อน แล้วถอยกลับหาฐาน เพื่อให้ ฐาน + VAT = ยอดรวมทั้งสิ้น เป๊ะเสมอ
+    // (ถ้าหารหาฐานก่อนแล้วปัด สองตัวจะบวกกันไม่ลงยอดในบางจำนวน)
+    vatAmount = round2((taxableGross * rate) / (1 + rate));
+    vatBase = round2(taxableGross - vatAmount);
+    grandTotal = round2(taxableGross + exemptGross);
+  } else {
+    vatBase = round2(taxableGross);
+    vatAmount = round2(vatBase * rate);
+    grandTotal = round2(vatBase + vatAmount + exemptGross);
+  }
+
+  const whtAmount = round2(vatBase * ((Number(opts.whtRate) || 0) / 100));
+
+  return {
+    subtotal: round2(subtotal),
+    discountTotal: round2(discountTotal),
+    afterDiscount: round2(subtotal - discountTotal),
+    vatBase,
+    vatExemptBase: round2(exemptGross),
+    vatAmount,
+    grandTotal,
+    whtAmount,
+    netPayable: round2(grandTotal - whtAmount),
+  };
+}
+
+export const VAT_TYPE_LABEL: Record<VatType, string> = {
+  vat: 'VAT 7%',
+  exempt: 'ยกเว้น VAT',
+  zero: 'VAT 0%',
+};
+
+// ---------------------------------------------------------------------------
+// จำนวนเงินเป็นตัวอักษรไทย
+// ---------------------------------------------------------------------------
+
+const DIGITS = ['ศูนย์', 'หนึ่ง', 'สอง', 'สาม', 'สี่', 'ห้า', 'หก', 'เจ็ด', 'แปด', 'เก้า'];
+const PLACES = ['', 'สิบ', 'ร้อย', 'พัน', 'หมื่น', 'แสน'];
+
+/** แปลงจำนวนเต็มไม่เกินหลักล้าน (ใช้ซ้ำแบบเรียกตัวเองสำหรับเลขใหญ่) */
+function readInteger(n: number): string {
+  if (n === 0) return DIGITS[0];
+  if (n >= 1_000_000) {
+    const millions = Math.floor(n / 1_000_000);
+    const rest = n % 1_000_000;
+    return readInteger(millions) + 'ล้าน' + (rest > 0 ? readInteger(rest) : '');
+  }
+
+  const s = String(n);
+  let out = '';
+  for (let i = 0; i < s.length; i++) {
+    const digit = Number(s[i]);
+    const place = s.length - i - 1;
+    if (digit === 0) continue;
+
+    if (place === 0) {
+      // หลักหน่วย: ...เอ็ด เมื่อมีหลักสิบนำหน้า
+      out += digit === 1 && s.length > 1 ? 'เอ็ด' : DIGITS[digit];
+    } else if (place === 1) {
+      // หลักสิบ: ยี่สิบ / สิบ / สามสิบ
+      out += digit === 1 ? 'สิบ' : digit === 2 ? 'ยี่สิบ' : DIGITS[digit] + 'สิบ';
+    } else {
+      out += DIGITS[digit] + PLACES[place];
+    }
+  }
+  return out;
+}
+
+/**
+ * `137358.04` → "หนึ่งแสนสามหมื่นเจ็ดพันสามร้อยห้าสิบแปดบาทสี่สตางค์"
+ * `12000`     → "หนึ่งหมื่นสองพันบาทถ้วน"
+ */
+export function bahtText(amount: number): string {
+  const negative = amount < 0;
+  const value = round2(Math.abs(amount));
+  const baht = Math.floor(value);
+  const satang = Math.round((value - baht) * 100);
+
+  let text = readInteger(baht) + 'บาท';
+  text += satang === 0 ? 'ถ้วน' : readInteger(satang) + 'สตางค์';
+  return (negative ? 'ลบ' : '') + text;
+}
+
+/** `1234.5` → "1,234.50" */
+export function money(n: number | null | undefined): string {
+  const v = Number(n) || 0;
+  return v.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/** `2026-08-04` → "04/08/2026" (รูปแบบเดียวกับเอกสารเดิม) */
+export function docDate(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const [y, m, d] = iso.slice(0, 10).split('-');
+  return `${d}/${m}/${y}`;
+}
