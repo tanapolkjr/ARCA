@@ -12,7 +12,7 @@ import type { ApDocType, ArDocType, DocumentItem, VatType } from '@/accounting-l
 import { getDefaultCompany, listBankAccounts, listCompanies, listTemplates, listVendors } from '@/accounting-api/setup';
 import {
   companySnapshot, convertArDocument, customerSnapshotFrom, deleteApDraft, deleteArDraft,
-  getApDocument, getArDocument, issueApDocument, issueArDocument, listChildDocuments,
+  getApDocument, getArDocument, getDocNo, issueApDocument, issueArDocument, listChildDocuments,
   listDocumentTags, saveApDocument, saveArDocument,
 } from '@/accounting-api/documents';
 import { supabase } from '../../lib/supabaseClient.js';
@@ -31,10 +31,19 @@ const blankItem = (): DocumentItem => ({
 interface PartyOption { id: string; label: string; raw: Record<string, unknown> }
 
 /**
- * หน้าสร้าง/แก้เอกสาร ใช้ร่วมกันทุกประเภท (QT/BL/INV/RC/CN/DN และ PO)
- * เอกสารขายกับเอกสารซื้อมีโครงเดียวกัน ต่างกันแค่คู่ค้าและตารางปลายทาง
+ * ตัวห่อที่บังคับให้ React สร้างหน้าใหม่ทุกครั้งที่ URL เปลี่ยนเอกสาร
+ *
+ * ทุกประเภทเอกสารใช้ route pattern เดียวกัน (/accounting/:docType/:id)
+ * React Router จึงไม่ remount ตอนกดแปลง QT → INV — state ทั้งหมดของหน้าเดิม
+ * (รวมถึงตัวชี้เอกสารที่กำลังแก้) ค้างข้ามใบ เคยทำให้ใบเสนอราคาถูกบันทึกทับ
+ * เป็นใบกำกับมาแล้ว key ตาม docType+id ตัดปัญหาทั้งตระกูลนี้ทิ้ง
  */
 export function DocumentEditorPage() {
+  const { docType = 'QT', id } = useParams();
+  return <DocumentEditorInner key={`${docType}:${id ?? 'new'}`} />;
+}
+
+function DocumentEditorInner() {
   const { docType = 'QT', id } = useParams();
   const nav = useNavigate();
   const { toast } = useToast();
@@ -62,6 +71,7 @@ export function DocumentEditorPage() {
   const [docNo, setDocNo] = useState<string | null>(null);
   const [status, setStatus] = useState('draft');
   const [savedId, setSavedId] = useState<string | undefined>(id);
+  const [sourceRef, setSourceRef] = useState<{ id: string; docNo: string | null } | null>(null);
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState(false);
 
@@ -99,6 +109,8 @@ export function DocumentEditorPage() {
 
   // โหลดเอกสารเดิม
   useEffect(() => {
+    setSavedId(id);
+    setPreview(false);
     if (!id) return;
     (async () => {
       try {
@@ -118,6 +130,12 @@ export function DocumentEditorPage() {
         setStatus(d.status);
         setItems(d.items?.length ? d.items : [blankItem()]);
         setTagId(d.tag_id ?? '');
+        if (ar && d.source_document_id) {
+          const no = await getDocNo(d.source_document_id);
+          setSourceRef({ id: d.source_document_id, docNo: no });
+        } else {
+          setSourceRef(null);
+        }
         if (ar) {
           const a = d as Awaited<ReturnType<typeof getArDocument>>;
           setPartyId(a.customer_id ?? '');
@@ -263,6 +281,7 @@ export function DocumentEditorPage() {
     contact_name: contactName,
     contact_phone: contactPhone,
     sales_name: usersQ.data?.find((u) => u.id === salesUserId)?.name ?? null,
+    reference_no: sourceRef?.docNo ?? null,
     tag_name: tagsQ.data?.find((t) => t.id === tagId)?.name ?? null,
     price_include_vat: includeVat,
     vat_rate: vatRate,
@@ -290,6 +309,14 @@ export function DocumentEditorPage() {
           <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">{label}</h1>
           <p className="text-xs text-slate-500">
             {docNo ? `เลขที่ ${docNo}` : 'ร่าง — ยังไม่ออกเลขที่'}
+            {sourceRef && (
+              <>
+                {' · อ้างอิง '}
+                <Link to={`/accounting/QT/${sourceRef.id}`} className="text-indigo-600 hover:underline">
+                  {sourceRef.docNo ?? 'ใบเสนอราคา'}
+                </Link>
+              </>
+            )}
           </p>
         </div>
         <div className="ml-auto flex gap-2">
@@ -337,7 +364,11 @@ export function DocumentEditorPage() {
               {money((childrenQ.data ?? []).reduce((a, c) => a + Number(c.grand_total || 0), 0))}
             </span>
             <span className="text-xs text-slate-400">
-              จากยอดเอกสาร {money(totals.grandTotal)}
+              จากยอดเอกสาร {money(totals.grandTotal)} · คงเหลือ{' '}
+              <span className="font-medium text-slate-600 dark:text-slate-300 tabular-nums">
+                {money(Math.max(0, totals.grandTotal
+                  - (childrenQ.data ?? []).reduce((a, c) => a + Number(c.grand_total || 0), 0)))}
+              </span>
             </span>
           </div>
           <div className="flex flex-col gap-1">

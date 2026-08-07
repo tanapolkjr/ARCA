@@ -169,7 +169,20 @@ export async function saveArDocument(input: SaveArInput, userId: string): Promis
 
   let docId = input.id;
   if (docId) {
-    const { error } = await supabase.from('ar_documents').update(header).eq('id', docId);
+    // กันเขียนทับข้ามใบ: เอกสารที่ออกเลขแล้วต้องนิ่ง และประเภทเอกสารเปลี่ยนไม่ได้
+    // (เคยมีบั๊ก state ค้างจากหน้าจอทำให้ใบเสนอราคาถูกบันทึกทับเป็นใบกำกับ —
+    // ชั้นนี้ทำให้ต่อให้หน้าจอพลาดอีก ข้อมูลก็ไม่พัง)
+    const { data: existing, error: exErr } = await supabase
+      .from('ar_documents').select('doc_no, doc_type').eq('id', docId).single();
+    if (exErr) throw exErr;
+    if (existing.doc_no) {
+      throw new Error(`เอกสาร ${existing.doc_no} ออกเลขที่แล้ว แก้ไขไม่ได้ — ถ้าผิดต้องยกเลิกแล้วออกใบใหม่`);
+    }
+    if (existing.doc_type !== input.doc_type) {
+      throw new Error('ประเภทเอกสารของใบเดิมเปลี่ยนไม่ได้ กรุณาสร้างเอกสารใหม่แทน');
+    }
+    const { doc_type: _omit, ...updateHeader } = header;
+    const { error } = await supabase.from('ar_documents').update(updateHeader).eq('id', docId);
     if (error) throw error;
     const { error: delErr } = await supabase
       .from('ar_document_items').delete().eq('document_id', docId);
@@ -293,6 +306,7 @@ const AP_SELECT = `*, vendor:vendors(*), tag:document_tags(id, name, color),
 export interface ApDocumentFull {
   id: string; company_id: string; doc_type: ApDocType; doc_no: string | null;
   doc_date: string; due_date: string | null; expected_date: string | null; status: string;
+  source_document_id: string | null;
   vendor_id: string | null; vendor_snapshot: PartySnapshot | null; company_snapshot: PartySnapshot | null;
   project_id: string | null; job_name: string | null; ship_to: string | null;
   tag_id: string | null;
@@ -402,7 +416,17 @@ export async function saveApDocument(input: SaveApInput, userId: string): Promis
 
   let docId = input.id;
   if (docId) {
-    const { error } = await supabase.from('ap_documents').update(header).eq('id', docId);
+    const { data: existing, error: exErr } = await supabase
+      .from('ap_documents').select('doc_no, doc_type').eq('id', docId).single();
+    if (exErr) throw exErr;
+    if (existing.doc_no) {
+      throw new Error(`เอกสาร ${existing.doc_no} ออกเลขที่แล้ว แก้ไขไม่ได้ — ถ้าผิดต้องยกเลิกแล้วออกใบใหม่`);
+    }
+    if (existing.doc_type !== input.doc_type) {
+      throw new Error('ประเภทเอกสารของใบเดิมเปลี่ยนไม่ได้ กรุณาสร้างเอกสารใหม่แทน');
+    }
+    const { doc_type: _omit, ...updateHeader } = header;
+    const { error } = await supabase.from('ap_documents').update(updateHeader).eq('id', docId);
     if (error) throw error;
     const { error: delErr } = await supabase.from('ap_document_items').delete().eq('document_id', docId);
     if (delErr) throw delErr;
@@ -508,4 +532,13 @@ export async function saveDocumentTag(payload: { id?: string; name: string; colo
     : supabase.from('document_tags').insert(rest);
   const { error } = await q;
   if (error) throw error;
+}
+
+
+/** เลขที่ของเอกสารต้นทาง — ใช้แสดง "อ้างอิง" บนหน้าจอและบนเอกสารที่พิมพ์ */
+export async function getDocNo(id: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('ar_documents').select('doc_no').eq('id', id).maybeSingle();
+  if (error) throw error;
+  return (data?.doc_no as string | null) ?? null;
 }
