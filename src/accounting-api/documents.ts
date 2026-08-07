@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabaseClient.js';
-import { computeTotals, lineDiscount, lineTotal } from '@/accounting-lib/calc';
+import { computeTotals, lineDiscount, lineTotal, round2 } from '@/accounting-lib/calc';
 import type {
   ApDocType, ArDocType, ArDocument, Company, DocumentItem, PartySnapshot, Vendor,
 } from '@/accounting-lib/types';
@@ -173,9 +173,12 @@ export async function saveArDocument(input: SaveArInput, userId: string): Promis
     // (เคยมีบั๊ก state ค้างจากหน้าจอทำให้ใบเสนอราคาถูกบันทึกทับเป็นใบกำกับ —
     // ชั้นนี้ทำให้ต่อให้หน้าจอพลาดอีก ข้อมูลก็ไม่พัง)
     const { data: existing, error: exErr } = await supabase
-      .from('ar_documents').select('doc_no, doc_type').eq('id', docId).single();
+      .from('ar_documents').select('doc_no, doc_type, status').eq('id', docId).single();
     if (exErr) throw exErr;
-    if (existing.doc_no) {
+    // ใบเสนอราคาได้เลขตั้งแต่เป็นร่าง จึงแก้ได้ตราบใดที่ยังไม่อนุมัติ
+    // ส่วนใบแจ้งหนี้/ใบกำกับ ออกเลขแล้วคือปิดตาย
+    const editableDraftQt = existing.doc_type === 'QT' && existing.status === 'draft';
+    if (existing.doc_no && !editableDraftQt) {
       throw new Error(`เอกสาร ${existing.doc_no} ออกเลขที่แล้ว แก้ไขไม่ได้ — ถ้าผิดต้องยกเลิกแล้วออกใบใหม่`);
     }
     if (existing.doc_type !== input.doc_type) {
@@ -188,8 +191,18 @@ export async function saveArDocument(input: SaveArInput, userId: string): Promis
       .from('ar_document_items').delete().eq('document_id', docId);
     if (delErr) throw delErr;
   } else {
+    // ใบเสนอราคาได้เลขตั้งแต่ร่าง จะได้อ้างอิงและตามงานได้ทันทีโดยไม่ต้องรออนุมัติ
+    let docNo: string | null = null;
+    if (input.doc_type === 'QT') {
+      const { data: no, error: noErr } = await supabase.rpc('next_document_no', {
+        p_company: input.company_id, p_doc_type: 'QT', p_prefix: 'QT', p_date: input.doc_date,
+      });
+      if (noErr) throw noErr;
+      docNo = no as string;
+    }
     const { data, error } = await supabase
-      .from('ar_documents').insert({ ...header, created_by: userId }).select('id').single();
+      .from('ar_documents').insert({ ...header, doc_no: docNo, created_by: userId })
+      .select('id').single();
     if (error) throw error;
     docId = data.id as string;
   }
@@ -538,7 +551,7 @@ export async function deleteApDraft(id: string) {
 
 export interface ChildDoc {
   id: string; doc_type: string; doc_no: string | null; doc_date: string;
-  status: string; grand_total: number;
+  status: string; grand_total: number; paid_amount: number;
 }
 
 /**
@@ -548,7 +561,7 @@ export interface ChildDoc {
 export async function listChildDocuments(sourceId: string): Promise<ChildDoc[]> {
   const { data, error } = await supabase
     .from('ar_documents')
-    .select('id, doc_type, doc_no, doc_date, status, grand_total')
+    .select('id, doc_type, doc_no, doc_date, status, grand_total, paid_amount')
     .eq('source_document_id', sourceId)
     .neq('status', 'cancelled')
     .order('doc_date');
@@ -749,4 +762,123 @@ export async function billingRollup(sourceIds: string[]): Promise<Map<string, Bi
     out.set(key, cur);
   }
   return out;
+}
+
+
+// ---------------------------------------------------------------------------
+// ใบเสนอราคา: อนุมัติ · รีเซ็ตกลับเป็นร่าง · ลบ
+// ใบเสนอราคาไม่ใช่เอกสารทางภาษี จึงยืดหยุ่นกว่าใบแจ้งหนี้และใบกำกับ
+// ---------------------------------------------------------------------------
+
+export async function approveQuotation(id: string, userId: string) {
+  const { error } = await supabase.from('ar_documents').update({
+    status: 'approved', approved_by: userId, approved_at: new Date().toISOString(),
+  }).eq('id', id);
+  if (error) throw error;
+}
+
+export async function resetQuotationToDraft(id: string) {
+  const { data: children, error: cErr } = await supabase
+    .from('ar_documents').select('doc_no').eq('source_document_id', id).neq('status', 'cancelled');
+  if (cErr) throw cErr;
+  if (children?.length) {
+    throw new Error(
+      `ใบนี้ออกใบแจ้งหนี้ไปแล้ว (${children.map((c) => c.doc_no ?? 'ร่าง').join(', ')}) ` +
+      'ต้องยกเลิกใบลูกก่อนถึงจะกลับไปแก้เป็นร่างได้'
+    );
+  }
+  const { error } = await supabase.from('ar_documents').update({
+    status: 'draft', approved_by: null, approved_at: null,
+  }).eq('id', id);
+  if (error) throw error;
+}
+
+/**
+ * ลบเอกสาร
+ * - ใบเสนอราคา: ลบได้ ถ้ายังไม่มีเอกสารลูก (ไม่ใช่เอกสารทางภาษี เลขขาดได้)
+ * - ใบแจ้งหนี้ / ใบกำกับ / ใบเสร็จ: ลบได้เฉพาะใบที่ยกเลิกแล้วเท่านั้น
+ */
+export async function deleteArDocument(id: string) {
+  const { data: doc, error } = await supabase
+    .from('ar_documents').select('doc_type, doc_no, status').eq('id', id).single();
+  if (error) throw error;
+
+  if (doc.doc_type === 'QT') {
+    const { data: children, error: cErr } = await supabase
+      .from('ar_documents').select('doc_no').eq('source_document_id', id);
+    if (cErr) throw cErr;
+    if (children?.length) {
+      throw new Error('ใบนี้มีเอกสารลูกอยู่ ต้องลบหรือยกเลิกใบลูกก่อน');
+    }
+  } else if (doc.status !== 'cancelled') {
+    throw new Error('ลบได้เฉพาะเอกสารที่ยกเลิกแล้วเท่านั้น — กดยกเลิกเอกสารก่อน');
+  }
+
+  const { error: delErr } = await supabase.from('ar_documents').delete().eq('id', id);
+  if (delErr) throw delErr;
+}
+
+// ---------------------------------------------------------------------------
+// ช่องอ้างอิง: ค้นหาเอกสารต้นทางด้วยเลขที่ แล้วดึงข้อมูลมาทั้งชุด
+// ---------------------------------------------------------------------------
+
+export interface SourceOption {
+  id: string;
+  doc_no: string | null;
+  doc_date: string;
+  job_name: string | null;
+  grand_total: number;
+  customer_name: string | null;
+}
+
+/** ค้นหาเอกสารที่ใช้อ้างอิงได้ (อนุมัติ/ออกแล้ว และยังไม่ถูกเรียกเก็บครบ) */
+export async function searchSourceDocuments(
+  docType: ArDocType, term: string
+): Promise<SourceOption[]> {
+  let q = supabase
+    .from('ar_documents')
+    .select('id, doc_no, doc_date, job_name, grand_total, customer:customers(company_name, display_name)')
+    .eq('doc_type', docType)
+    .not('doc_no', 'is', null)
+    .neq('status', 'cancelled')
+    .order('doc_date', { ascending: false })
+    .limit(20);
+  if (term.trim()) q = q.or(`doc_no.ilike.%${term.trim()}%,job_name.ilike.%${term.trim()}%`);
+  const { data, error } = await q;
+  if (error) throw error;
+  return ((data ?? []) as unknown as {
+    id: string; doc_no: string | null; doc_date: string; job_name: string | null;
+    grand_total: number; customer: { company_name: string | null; display_name: string } | null;
+  }[]).map((d) => ({
+    id: d.id, doc_no: d.doc_no, doc_date: d.doc_date, job_name: d.job_name,
+    grand_total: Number(d.grand_total) || 0,
+    customer_name: d.customer?.company_name || d.customer?.display_name || null,
+  }));
+}
+
+export interface SourceLoad {
+  source: ArDocumentFull;
+  /** ยอดที่ออกเอกสารลูกไปแล้ว (ไม่นับใบที่ยกเลิก) */
+  used: number;
+  /** ยอดที่ยังออกได้ */
+  remaining: number;
+}
+
+/**
+ * ดึงเอกสารต้นทางมาทั้งชุดพร้อมยอดคงเหลือ
+ * ใช้กันไม่ให้วางบิลเกินยอดที่เหลือของใบเสนอราคา
+ * และไม่ให้ออกใบกำกับเกินยอดที่วางบิลไว้
+ */
+export async function loadSource(sourceId: string, excludeDocId?: string): Promise<SourceLoad> {
+  const source = await getArDocument(sourceId);
+  let q = supabase
+    .from('ar_documents').select('id, grand_total')
+    .eq('source_document_id', sourceId).neq('status', 'cancelled');
+  if (excludeDocId) q = q.neq('id', excludeDocId);
+  const { data, error } = await q;
+  if (error) throw error;
+
+  const used = (data ?? []).reduce((a, r) => a + (Number(r.grand_total) || 0), 0);
+  const total = Number(source.grand_total) || 0;
+  return { source, used: round2(used), remaining: round2(Math.max(0, total - used)) };
 }

@@ -1,27 +1,32 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, Ban, Copy, FileCheck2, FileOutput, HandCoins, Plus, Printer, Save, Trash2,
+  ArrowLeft, Ban, BadgeCheck, Copy, FileOutput, HandCoins, Plus, Printer,
+  RotateCcw, Save, Trash2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast.jsx';
 import { useUserId } from '@/hooks/useAuth.jsx';
 import { useQuery } from '@/hooks/useSourcingQuery';
-import { computeTotals, lineDiscount, lineTotal, money } from '@/accounting-lib/calc';
+import { computeTotals, docDate as docDateTh, lineDiscount, lineTotal, money } from '@/accounting-lib/calc';
 import {
   AP_DOC_LABEL, AR_DOC_LABEL,
 } from '@/accounting-lib/types';
 import type { ApDocType, ArDocType, DocumentItem, VatType } from '@/accounting-lib/types';
 import { getDefaultCompany, listBankAccounts, listCompanies, listTemplates, listVendors } from '@/accounting-api/setup';
 import {
-  cancelApDocument, cancelDocument,
-  companySnapshot, convertArDocument, customerSnapshotFrom, deleteApDraft, deleteArDraft,
+  approveQuotation, cancelApDocument, cancelDocument,
+  companySnapshot, convertArDocument, customerSnapshotFrom, deleteApDraft, deleteArDocument,
+  loadSource, resetQuotationToDraft, saveDocumentTag,
   getApDocument, getArDocument, getDocNo, issueApDocument, issueArDocument, listChildDocuments,
   listDocumentTags, saveApDocument, saveArDocument,
 } from '@/accounting-api/documents';
 import { supabase } from '../../lib/supabaseClient.js';
 import { DocumentPrintView, type PrintableDoc } from './DocumentPrintView';
-import { Field, GhostButton, NumberInput, PrimaryButton, Select, TextArea, TextInput } from './ui';
+import {
+  Field, GhostButton, NumberInput, PrimaryButton, Select, StatusPill, TextArea, TextInput,
+} from './ui';
 import { CancelDialog, PaymentHistory, ReceivePaymentModal } from './PaymentPanel';
+import { SourceRefPicker } from './SourceRefPicker';
 
 const AR_TYPES: ArDocType[] = ['QT', 'BL', 'INV', 'RC', 'CN', 'DN'];
 const isAr = (t: string): t is ArDocType => (AR_TYPES as string[]).includes(t);
@@ -53,6 +58,9 @@ function DocumentEditorInner() {
   const { toast } = useToast();
   const userId = useUserId();
   const ar = isAr(docType);
+  // ใบแจ้งหนี้อ้างใบเสนอราคา · ใบกำกับ/ใบเสร็จอ้างใบแจ้งหนี้ — ต่อกันเป็นลูกโซ่
+  const sourceType: ArDocType | null =
+    docType === 'BL' ? 'QT' : (docType === 'INV' || docType === 'RC') ? 'BL' : null;
 
   const [companyId, setCompanyId] = useState('');
   const [partyId, setPartyId] = useState('');
@@ -75,7 +83,12 @@ function DocumentEditorInner() {
   const [docNo, setDocNo] = useState<string | null>(null);
   const [status, setStatus] = useState('draft');
   const [savedId, setSavedId] = useState<string | undefined>(id);
-  const [sourceRef, setSourceRef] = useState<{ id: string; docNo: string | null } | null>(null);
+  const [sourceRef, setSourceRef] = useState<
+    { id: string; docNo: string | null; jobName?: string | null } | null>(null);
+  // ยอดของใบต้นทางและยอดที่ยังออกได้ — ใช้กันไม่ให้วางบิลเกิน
+  const [sourceTotal, setSourceTotal] = useState<number | null>(null);
+  const [sourceRemaining, setSourceRemaining] = useState<number | null>(null);
+  const [newTag, setNewTag] = useState('');
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState(false);
   const [showReceive, setShowReceive] = useState(false);
@@ -142,8 +155,15 @@ function DocumentEditorInner() {
         if (ar && d.source_document_id) {
           const no = await getDocNo(d.source_document_id);
           setSourceRef({ id: d.source_document_id, docNo: no });
+          try {
+            const info = await loadSource(d.source_document_id, id);
+            setSourceTotal(info.source.grand_total);
+            setSourceRemaining(info.remaining);
+          } catch { /* ใบต้นทางอาจถูกลบไปแล้ว — ไม่ต้องขวางการเปิดเอกสาร */ }
         } else {
           setSourceRef(null);
+          setSourceTotal(null);
+          setSourceRemaining(null);
         }
         if (ar) {
           const a = d as Awaited<ReturnType<typeof getArDocument>>;
@@ -177,7 +197,10 @@ function DocumentEditorInner() {
     [items, includeVat, vatRate, whtRate, billingPercent]
   );
 
-  const locked = Boolean(docNo) || status === 'cancelled';
+  // ใบเสนอราคาได้เลขตั้งแต่ร่าง จึงล็อกตามสถานะ ไม่ใช่ตามการมีเลขที่
+  const isQt = ar && docType === 'QT';
+  const locked = status === 'cancelled'
+    || (isQt ? status !== 'draft' : Boolean(docNo));
   const label = ar
     ? AR_DOC_LABEL[docType as ArDocType]
     : AP_DOC_LABEL[docType as ApDocType];
@@ -194,6 +217,16 @@ function DocumentEditorInner() {
     if (!partyId) { toast(ar ? 'เลือกลูกค้าก่อน' : 'เลือกผู้ขายก่อน', 'error'); return null; }
     if (!items.some((i) => i.description.trim())) { toast('ใส่รายการอย่างน้อย 1 บรรทัด', 'error'); return null; }
 
+    // ห้ามวางบิลเกินยอดที่ใบต้นทางเหลือ
+    if (sourceRemaining != null && totals.grandTotal > sourceRemaining + 0.01) {
+      toast(
+        `ยอดเอกสาร ${money(totals.grandTotal)} เกินยอดคงเหลือของใบต้นทาง ` +
+        `(${money(sourceRemaining)}) — ลดยอดหรือลด % ที่เรียกเก็บลง`,
+        'error'
+      );
+      return null;
+    }
+
     setBusy(true);
     try {
       const common = {
@@ -207,7 +240,7 @@ function DocumentEditorInner() {
         ? await saveArDocument({
             ...common, doc_type: docType as ArDocType, customer_id: partyId,
             valid_until: validUntil || null, sales_user_id: salesUserId || null,
-            fulfilment_type: fulfilment,
+            fulfilment_type: fulfilment, source_document_id: sourceRef?.id ?? null,
             billing_percent: billingPercent ? Number(billingPercent) : null,
           }, userId)
         : await saveApDocument({
@@ -229,15 +262,75 @@ function DocumentEditorInner() {
     if (!savedDocId) return;
     setBusy(true);
     try {
-      const no = ar ? await issueArDocument(savedDocId) : await issueApDocument(savedDocId);
-      setDocNo(no);
-      setStatus(ar && docType === 'QT' ? 'approved' : 'issued');
-      toast(`ออกเอกสารเลขที่ ${no} แล้ว`);
+      if (isQt) {
+        // ใบเสนอราคามีเลขตั้งแต่ร่างแล้ว การอนุมัติจึงแค่เปลี่ยนสถานะ
+        await approveQuotation(savedDocId, userId);
+        setStatus('approved');
+        toast('อนุมัติใบเสนอราคาแล้ว');
+      } else {
+        const no = ar ? await issueArDocument(savedDocId) : await issueApDocument(savedDocId);
+        setDocNo(no);
+        setStatus('issued');
+        toast(`ออกเอกสารเลขที่ ${no} แล้ว`);
+      }
+      setReloadKey((k) => k + 1);
     } catch (e) {
-      toast(e instanceof Error ? e.message : 'ออกเลขที่ไม่สำเร็จ', 'error');
+      toast(e instanceof Error ? e.message : 'ทำรายการไม่สำเร็จ', 'error');
     } finally {
       setBusy(false);
     }
+  }
+
+  /** ปลดล็อกใบเสนอราคากลับไปแก้ได้ — ทำไม่ได้ถ้าออกใบแจ้งหนี้ไปแล้ว */
+  async function handleReset() {
+    if (!savedId) return;
+    setBusy(true);
+    try {
+      await resetQuotationToDraft(savedId);
+      setStatus('draft');
+      toast('กลับเป็นร่างแล้ว แก้ไขต่อได้');
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'รีเซ็ตไม่สำเร็จ', 'error');
+    } finally { setBusy(false); }
+  }
+
+  /**
+   * เลือกใบต้นทางจากช่องอ้างอิง แล้วดึงข้อมูลมาทั้งชุด
+   * ยอดที่ออกได้ถูกจำกัดไม่ให้เกินส่วนที่ใบต้นทางยังเหลือ
+   */
+  async function applySource(sourceId: string) {
+    setBusy(true);
+    try {
+      const info = await loadSource(sourceId, savedId);
+      const src = info.source;
+      setSourceRef({ id: src.id, docNo: src.doc_no, jobName: src.job_name });
+      setSourceTotal(src.grand_total);
+      setSourceRemaining(info.remaining);
+
+      setCompanyId(src.company_id);
+      setPartyId(src.customer_id ?? '');
+      setJobName(src.job_name ?? '');
+      setContactName(src.contact_name ?? '');
+      setContactPhone(src.contact_phone ?? '');
+      setSalesUserId(src.sales_user_id ?? '');
+      setTagId(src.tag_id ?? '');
+      setFulfilment(src.fulfilment_type ?? 'install');
+      setIncludeVat(src.price_include_vat);
+      setVatRate(Number(src.vat_rate));
+      setWhtRate(Number(src.wht_rate));
+      setNote(src.note_text ?? '');
+      setTerms(src.terms_text ?? '');
+      setItems(src.items?.length ? src.items.map((i) => ({ ...i, id: undefined })) : [blankItem()]);
+
+      // ตั้ง % เริ่มต้นให้พอดีกับยอดที่เหลือ ผู้ใช้ปรับลงได้แต่เกินไม่ได้
+      const full = Number(src.grand_total) || 0;
+      const pct = full > 0 ? Math.round((info.remaining / full) * 10000) / 100 : 100;
+      setBillingPercent(pct >= 100 ? '' : String(pct));
+
+      toast(`ดึงข้อมูลจาก ${src.doc_no ?? 'ใบต้นทาง'} แล้ว`);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'ดึงข้อมูลใบต้นทางไม่สำเร็จ', 'error');
+    } finally { setBusy(false); }
   }
 
   /** แปลงเป็นเอกสารถัดไป โดยยกยอด ลูกค้า สินค้า และ Tag ตามไปทั้งชุด */
@@ -256,8 +349,8 @@ function DocumentEditorInner() {
   async function handleDelete() {
     if (!savedId) { nav(-1); return; }
     try {
-      if (ar) await deleteArDraft(savedId); else await deleteApDraft(savedId);
-      toast('ลบร่างแล้ว');
+      if (ar) await deleteArDocument(savedId); else await deleteApDraft(savedId);
+      toast('ลบเอกสารแล้ว');
       nav(`/accounting/${docType}`);
     } catch (e) {
       toast(e instanceof Error ? e.message : 'ลบไม่สำเร็จ', 'error');
@@ -343,15 +436,10 @@ function DocumentEditorInner() {
               <Ban className="w-4 h-4" /> ยกเลิกเอกสาร
             </GhostButton>
           )}
-          {locked && ar && docType === 'QT' && (
-            <>
-              <GhostButton onClick={() => void handleConvert('BL')} disabled={busy}>
-                <FileOutput className="w-4 h-4" /> สร้างใบแจ้งหนี้
-              </GhostButton>
-              <GhostButton onClick={() => void handleConvert('INV')} disabled={busy}>
-                <FileOutput className="w-4 h-4" /> สร้างใบกำกับ/ใบเสร็จ
-              </GhostButton>
-            </>
+          {isQt && status === 'approved' && (
+            <GhostButton onClick={() => void handleConvert('BL')} disabled={busy}>
+              <FileOutput className="w-4 h-4" /> สร้างใบแจ้งหนี้
+            </GhostButton>
           )}
           {!locked && (
             <>
@@ -359,9 +447,14 @@ function DocumentEditorInner() {
                 <Save className="w-4 h-4" /> บันทึกร่าง
               </GhostButton>
               <PrimaryButton onClick={() => void handleIssue()} disabled={busy}>
-                <FileCheck2 className="w-4 h-4" /> ออกเอกสาร
+                <BadgeCheck className="w-4 h-4" /> {isQt ? 'อนุมัติ' : 'ออกเอกสาร'}
               </PrimaryButton>
             </>
+          )}
+          {isQt && status === 'approved' && (
+            <GhostButton onClick={() => void handleReset()} disabled={busy}>
+              <RotateCcw className="w-4 h-4" /> รีเซ็ตเป็นร่าง
+            </GhostButton>
           )}
         </div>
       </div>
@@ -383,37 +476,63 @@ function DocumentEditorInner() {
                         onChanged={() => setReloadKey((k) => k + 1)} />
       )}
 
-      {ar && docType === 'QT' && (childrenQ.data?.length ?? 0) > 0 && (
-        <div className="no-print bg-white dark:bg-slate-900 rounded-2xl border border-slate-100
-          dark:border-slate-800 p-4">
-          <div className="flex items-baseline gap-3 mb-2">
-            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-              ออกบิลจากใบนี้ไปแล้ว
-            </h3>
-            <span className="text-sm tabular-nums font-bold text-indigo-600">
-              {money((childrenQ.data ?? []).reduce((a, c) => a + Number(c.grand_total || 0), 0))}
-            </span>
-            <span className="text-xs text-slate-400">
-              จากยอดเอกสาร {money(totals.grandTotal)} · คงเหลือ{' '}
-              <span className="font-medium text-slate-600 dark:text-slate-300 tabular-nums">
-                {money(Math.max(0, totals.grandTotal
-                  - (childrenQ.data ?? []).reduce((a, c) => a + Number(c.grand_total || 0), 0)))}
-              </span>
-            </span>
+      {ar && (childrenQ.data?.length ?? 0) > 0 && (() => {
+        const kids = childrenQ.data ?? [];
+        const billed = kids.reduce((a, c) => a + Number(c.grand_total || 0), 0);
+        const left = Math.max(0, totals.grandTotal - billed);
+        return (
+          <div className="no-print bg-white dark:bg-slate-900 rounded-2xl border border-slate-100
+            dark:border-slate-800 overflow-hidden">
+            <div className="flex flex-wrap items-baseline gap-4 px-4 py-3
+              border-b border-slate-100 dark:border-slate-800">
+              <h3 className="text-sm font-semibold text-pink-600">
+                ประวัติการแบ่งจ่ายจากมูลค่าเอกสาร
+              </h3>
+              <div className="ml-auto flex gap-6 text-right">
+                <div>
+                  <div className="text-[11px] text-slate-400">เรียกเก็บแล้ว</div>
+                  <div className="text-sm font-bold tabular-nums text-pink-600">{money(billed)}</div>
+                </div>
+                <div>
+                  <div className="text-[11px] text-slate-400">ยังไม่ได้เรียกเก็บ</div>
+                  <div className="text-sm font-bold tabular-nums text-slate-700 dark:text-slate-200">
+                    {money(left)}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <table className="w-full text-xs">
+              <thead className="bg-pink-50 dark:bg-pink-900/20 text-slate-600 dark:text-slate-300">
+                <tr>
+                  <th className="text-left font-medium px-4 py-2 w-12">ลำดับ</th>
+                  <th className="text-left font-medium px-4 py-2 w-40">เลขที่อ้างอิง</th>
+                  <th className="text-left font-medium px-4 py-2 w-28">วันที่เอกสาร</th>
+                  <th className="text-right font-medium px-4 py-2">มูลค่าที่ต้องชำระ</th>
+                  <th className="text-right font-medium px-4 py-2 w-28">ชำระแล้ว</th>
+                  <th className="text-left font-medium px-4 py-2 w-32">สถานะ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {kids.map((c, i) => (
+                  <tr key={c.id}
+                      className="border-t border-slate-50 dark:border-slate-800
+                        hover:bg-slate-50/70 dark:hover:bg-slate-800/40 cursor-pointer"
+                      onClick={() => nav(`/accounting/${c.doc_type}/${c.id}`)}>
+                    <td className="px-4 py-2 text-slate-400">{i + 1}</td>
+                    <td className="px-4 py-2 font-medium text-indigo-600">{c.doc_no ?? 'ร่าง'}</td>
+                    <td className="px-4 py-2 text-slate-500 tabular-nums">{docDateTh(c.doc_date)}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{money(c.grand_total)}</td>
+                    <td className="px-4 py-2 text-right tabular-nums text-emerald-600">
+                      {money(c.paid_amount ?? 0)}
+                    </td>
+                    <td className="px-4 py-2"><StatusPill status={c.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="flex flex-col gap-1">
-            {childrenQ.data?.map((c) => (
-              <button key={c.id} onClick={() => nav(`/accounting/${c.doc_type}/${c.id}`)}
-                      className="flex items-center gap-3 text-xs text-left hover:text-indigo-600">
-                <span className="w-14 text-slate-400">{c.doc_type}</span>
-                <span className="font-medium">{c.doc_no ?? 'ร่าง'}</span>
-                <span className="text-slate-400">{c.doc_date}</span>
-                <span className="ml-auto tabular-nums">{money(c.grand_total)}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {showReceive && savedId && (
         <ReceivePaymentModal
@@ -518,12 +637,76 @@ function DocumentEditorInner() {
               </Field>
             )}
 
+            {sourceType && (
+              <Field
+                label={`อ้างอิง${sourceType === 'QT' ? 'ใบเสนอราคา' : 'ใบแจ้งหนี้'}`}
+                className="md:col-span-2"
+                hint={sourceType === 'QT'
+                  ? 'เลือกแล้วดึงลูกค้า รายการ และยอดมาให้ ออกได้ไม่เกินยอดคงเหลือ'
+                  : 'ใบกำกับ/ใบเสร็จออกต่อจากใบแจ้งหนี้ที่วางไปแล้ว'}
+              >
+                <SourceRefPicker
+                  sourceType={sourceType}
+                  value={sourceRef}
+                  remaining={sourceRemaining ?? undefined}
+                  sourceTotal={sourceTotal ?? undefined}
+                  disabled={locked}
+                  onPick={(opt) => void applySource(opt.id)}
+                  onClear={() => {
+                    setSourceRef(null); setSourceTotal(null); setSourceRemaining(null);
+                  }}
+                />
+              </Field>
+            )}
+
             <Field label="ประเภทงาน (Tag)"
                    hint="ยึดจากใบเสนอราคา แล้วไหลตามไปทุกเอกสารที่แปลงต่อ">
-              <Select value={tagId} disabled={locked} onChange={(e) => setTagId(e.target.value)}>
-                <option value="">— ไม่ระบุ —</option>
-                {tagsQ.data?.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </Select>
+              <div className="flex gap-1">
+                <Select value={tagId} disabled={locked} onChange={(e) => setTagId(e.target.value)}>
+                  <option value="">— ไม่ระบุ —</option>
+                  {tagsQ.data?.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </Select>
+                {!locked && (
+                  <button
+                    type="button" title="เพิ่มประเภทงานใหม่"
+                    onClick={() => setNewTag(newTag ? '' : ' ')}
+                    className="px-3 rounded-xl border border-slate-200 dark:border-slate-700
+                      text-slate-500 hover:text-indigo-600 shrink-0"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              {newTag !== '' && (
+                <div className="flex gap-1 mt-1">
+                  <TextInput
+                    autoFocus placeholder="ชื่อประเภทงานใหม่"
+                    value={newTag.trim()} onChange={(e) => setNewTag(e.target.value || ' ')}
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const name = newTag.trim();
+                      if (!name) return;
+                      try {
+                        await saveDocumentTag({ name });
+                        // refetch คืน void — อ่านรายการใหม่ตรงๆ เพื่อหา id ที่เพิ่งสร้าง
+                        const list = await listDocumentTags();
+                        const created = list.find((t) => t.name === name);
+                        if (created) setTagId(created.id);
+                        void tagsQ.refetch();
+                        setNewTag('');
+                        toast(`เพิ่มประเภทงาน "${name}" แล้ว`);
+                      } catch (e) {
+                        toast(e instanceof Error ? e.message : 'เพิ่มไม่สำเร็จ', 'error');
+                      }
+                    }}
+                    className="px-3 rounded-xl bg-indigo-600 text-white text-sm shrink-0"
+                  >
+                    เพิ่ม
+                  </button>
+                </div>
+              )}
             </Field>
 
             <Field label="ผู้ติดต่อ">
@@ -550,9 +733,21 @@ function DocumentEditorInner() {
                 <NumberInput value={vatRate} disabled={locked} step="0.01"
                              onChange={(e) => setVatRate(Number(e.target.value))} />
               </Field>
-              <Field label="หัก ณ ที่จ่าย %" className="w-32">
-                <NumberInput value={whtRate} disabled={locked} step="0.01"
-                             onChange={(e) => setWhtRate(Number(e.target.value))} />
+              <Field label="หัก ณ ที่จ่าย %" className="w-40" hint="ค่าบริการนิติบุคคล = 3%">
+                <div className="flex gap-1">
+                  <NumberInput value={whtRate} disabled={locked} step="0.01"
+                               onChange={(e) => setWhtRate(Number(e.target.value))} />
+                  <button
+                    type="button" disabled={locked}
+                    onClick={() => setWhtRate(whtRate === 3 ? 0 : 3)}
+                    className={`px-2 rounded-xl border text-xs shrink-0
+                      ${whtRate === 3
+                        ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-300 text-indigo-700 dark:text-indigo-300'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:text-indigo-600'}`}
+                  >
+                    3%
+                  </button>
+                </div>
               </Field>
               <Field label="แบ่งชำระ %" className="w-32" hint="ว่าง = เต็มจำนวน">
                 <NumberInput value={billingPercent} disabled={locked} placeholder="30"
@@ -733,11 +928,11 @@ function DocumentEditorInner() {
             </Field>
           </section>
 
-          {!locked && savedId && (
+          {savedId && (isQt || status === 'cancelled') && (
             <div>
               <button onClick={() => void handleDelete()}
                       className="text-xs text-rose-500 hover:underline">
-                ลบร่างนี้
+                {isQt ? 'ลบใบเสนอราคานี้' : 'ลบเอกสารที่ยกเลิกแล้วนี้'}
               </button>
             </div>
           )}
