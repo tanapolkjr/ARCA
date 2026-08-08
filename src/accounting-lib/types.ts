@@ -158,6 +158,8 @@ export interface CashEntry {
   wht_cert_no: string | null;
   project_id: string | null;
   vendor_id: string | null;
+  ar_document_id: string | null;
+  ap_document_id: string | null;
   attachment_path: string | null;
   created_at: string;
 }

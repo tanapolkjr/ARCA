@@ -79,10 +79,17 @@ export async function listCashEntries(f: EntryFilter = {}): Promise<CashEntryFul
   return (data ?? []) as unknown as CashEntryFull[];
 }
 
+/** ช่องที่มาจาก join — ต้องตัดทิ้งก่อน update ไม่งั้น Postgres ปฏิเสธทั้งคำสั่ง */
+const JOINED_FIELDS = [
+  'wallet', 'to_wallet', 'category', 'project', 'vendor', 'created_at', 'updated_at',
+] as const;
+
 export async function saveCashEntry(
   payload: Partial<CashEntry> & { id?: string }, userId: string
 ) {
-  const { id, ...rest } = payload;
+  const { id, ...raw } = payload;
+  const rest = { ...raw } as Record<string, unknown>;
+  for (const f of JOINED_FIELDS) delete rest[f];
   // ย้ายโอนไม่มีหมวดหมู่และไม่มี VAT — เงินไม่ได้ออกจากบริษัท แค่ย้ายกระเป๋า
   if (rest.entry_type === 'transfer') {
     rest.category_id = null;
@@ -90,8 +97,11 @@ export async function saveCashEntry(
     rest.vat_amount = 0;
     rest.wht_type = 'none';
     rest.wht_amount = 0;
+    rest.wht_cert_no = null;
   } else {
     rest.to_wallet_id = null;
+    if (!rest.has_vat) rest.vat_amount = 0;
+    if (rest.wht_type === 'none') { rest.wht_amount = 0; rest.wht_cert_no = null; }
   }
   const q = id
     ? supabase.from('cash_entries').update(rest).eq('id', id)
@@ -100,8 +110,46 @@ export async function saveCashEntry(
   if (error) throw error;
 }
 
+export interface EntryLinks {
+  /** มาจากการรับชำระเงินของเอกสารขาย */
+  paymentDocNo: string | null;
+}
+
+/** รายการนี้ผูกกับอะไรอยู่ — ใช้เตือนก่อนลบ */
+export async function cashEntryLinks(id: string): Promise<EntryLinks> {
+  const { data, error } = await supabase
+    .from('cash_entries')
+    .select('ar_document:ar_documents(doc_no)')
+    .eq('id', id).maybeSingle();
+  if (error) throw error;
+  const doc = (data as unknown as { ar_document?: { doc_no: string | null } } | null)?.ar_document;
+  return { paymentDocNo: doc?.doc_no ?? null };
+}
+
 export async function deleteCashEntry(id: string) {
   const { error } = await supabase.from('cash_entries').delete().eq('id', id);
+  if (error) throw error;
+}
+
+/** ทำซ้ำรายการเดิม สำหรับค่าใช้จ่ายประจำที่คีย์ทุกเดือน */
+export async function duplicateCashEntry(entry: CashEntry, userId: string) {
+  const { error } = await supabase.from('cash_entries').insert({
+    company_id: entry.company_id,
+    entry_date: new Date().toISOString().slice(0, 10),
+    entry_type: entry.entry_type,
+    wallet_id: entry.wallet_id,
+    to_wallet_id: entry.to_wallet_id,
+    description: entry.description,
+    amount: entry.amount,
+    has_vat: entry.has_vat,
+    vat_amount: entry.vat_amount,
+    category_id: entry.category_id,
+    wht_type: entry.wht_type,
+    wht_amount: entry.wht_amount,
+    project_id: entry.project_id,
+    vendor_id: entry.vendor_id,
+    created_by: userId,
+  });
   if (error) throw error;
 }
 

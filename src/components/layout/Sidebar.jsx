@@ -114,6 +114,8 @@ export default function Sidebar() {
                   <Item to="/accounting/BL" label="ใบแจ้งหนี้" sub />
                   <Item to="/accounting/INV" label="ใบกำกับภาษี/ใบเสร็จ" sub />
                   <Item to="/accounting/PO" label="ใบสั่งซื้อ" sub />
+                  <Item to="/accounting/vendors" label="ผู้ขาย / ผู้รับเหมา" sub />
+                  <Item to="/accounting/export" label="ส่งออกให้บัญชี" sub />
                   <Item to="/accounting/settings" label="ตั้งค่าบริษัท" sub />
                 </Group>
                 <Item to="/cashbook" icon={Wallet} label="รายรับ-รายจ่าย" />

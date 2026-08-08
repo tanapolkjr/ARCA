@@ -36,6 +36,8 @@ import AccountingLayout from "./features/accounting/AccountingLayout.jsx";
 import { DocumentListPage } from "./features/accounting/DocumentListPage";
 import { DocumentEditorPage } from "./features/accounting/DocumentEditorPage";
 import { CompanySettingsPage } from "./features/accounting/CompanySettingsPage";
+import { VendorsPage } from "./features/accounting/VendorsPage";
+import { ExportPage } from "./features/accounting/ExportPage";
 import { CashBookPage } from "./features/cashbook/CashBookPage";
 
 export default function App() {
@@ -82,6 +84,8 @@ export default function App() {
         <Route element={<AccountingLayout />}>
           <Route path="/accounting" element={<CompanySettingsPage />} />
           <Route path="/accounting/settings" element={<CompanySettingsPage />} />
+          <Route path="/accounting/vendors" element={<VendorsPage />} />
+          <Route path="/accounting/export" element={<ExportPage />} />
           <Route path="/accounting/:docType" element={<DocumentListPage />} />
           <Route path="/accounting/:docType/new" element={<DocumentEditorPage />} />
           <Route path="/accounting/:docType/:id" element={<DocumentEditorPage />} />

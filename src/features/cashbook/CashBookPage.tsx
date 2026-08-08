@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
-  ArrowDownLeft, ArrowUpRight, Plus, Repeat, Trash2, Wallet as WalletIcon,
+  AlertTriangle, ArrowDownLeft, ArrowUpRight, Copy, Link2, Pencil, Plus, Repeat, Search,
+  Trash2, Wallet as WalletIcon,
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast.jsx';
 import { useUserId } from '@/hooks/useAuth.jsx';
@@ -8,9 +9,10 @@ import { useQuery } from '@/hooks/useSourcingQuery';
 import { docDate, money, round2 } from '@/accounting-lib/calc';
 import type { CashEntry, Wallet } from '@/accounting-lib/types';
 import {
-  deleteCashEntry, listCashCategories, listCashEntries, listWallets,
-  monthlySummary, saveCashEntry, saveWallet, walletBalances,
+  cashEntryLinks, deleteCashEntry, duplicateCashEntry, listCashCategories, listCashEntries,
+  listWallets, monthlySummary, saveCashEntry, saveWallet, walletBalances,
 } from '@/accounting-api/cashbook';
+import type { CashEntryFull } from '@/accounting-api/cashbook';
 import { getDefaultCompany } from '@/accounting-api/setup';
 import {
   EmptyRow, Field, GhostButton, Modal, NumberInput, PrimaryButton, Select, TextArea, TextInput,
@@ -33,15 +35,26 @@ export function CashBookPage() {
   const [from, setFrom] = useState(firstOfMonth());
   const [to, setTo] = useState(today());
   const [walletFilter, setWalletFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState<'' | 'in' | 'out' | 'transfer'>('');
+  const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<Partial<CashEntry> | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<
+    { entry: CashEntryFull; linkedDoc: string | null } | null>(null);
   const [showWallets, setShowWallets] = useState(false);
 
   const walletsQ = useQuery(() => listWallets(), []);
   const catsQ = useQuery(() => listCashCategories(), []);
   const balancesQ = useQuery(() => walletBalances(), []);
   const entriesQ = useQuery(
-    () => listCashEntries({ from, to, walletId: walletFilter || undefined }),
-    [from, to, walletFilter]
+    () => listCashEntries({
+      from, to,
+      walletId: walletFilter || undefined,
+      categoryId: categoryFilter || undefined,
+      entryType: typeFilter || undefined,
+      search: search || undefined,
+    }),
+    [from, to, walletFilter, categoryFilter, typeFilter, search]
   );
   const summaryQ = useQuery(() => monthlySummary(from, to), [from, to]);
 
@@ -70,12 +83,21 @@ export function CashBookPage() {
             บันทึกเงินเข้า-ออกทุกกระเป๋า เพื่อประเมินรายได้ต่อเดือน
           </p>
         </div>
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex flex-wrap gap-2">
           <GhostButton onClick={() => setShowWallets(true)}>
             <WalletIcon className="w-4 h-4" /> จัดการกระเป๋าเงิน
           </GhostButton>
+          <GhostButton onClick={() => setEditing({ entry_type: 'transfer', entry_date: today() })}>
+            <Repeat className="w-4 h-4" /> ย้ายโอน
+          </GhostButton>
+          <GhostButton
+            className="!text-emerald-700 !border-emerald-200 dark:!border-emerald-900"
+            onClick={() => setEditing({ entry_type: 'in', entry_date: today() })}
+          >
+            <ArrowDownLeft className="w-4 h-4" /> รับเงิน
+          </GhostButton>
           <PrimaryButton onClick={() => setEditing({ entry_type: 'out', entry_date: today() })}>
-            <Plus className="w-4 h-4" /> บันทึกรายการ
+            <ArrowUpRight className="w-4 h-4" /> จ่ายเงิน
           </PrimaryButton>
         </div>
       </div>
@@ -102,11 +124,33 @@ export function CashBookPage() {
         <Field label="ถึง" className="w-40">
           <TextInput type="date" value={to} onChange={(e) => setTo(e.target.value)} />
         </Field>
-        <Field label="กระเป๋า" className="w-48">
+        <Field label="กระเป๋า" className="w-44">
           <Select value={walletFilter} onChange={(e) => setWalletFilter(e.target.value)}>
             <option value="">ทุกกระเป๋า</option>
             {walletsQ.data?.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
           </Select>
+        </Field>
+        <Field label="ประเภท" className="w-32">
+          <Select value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
+            <option value="">ทั้งหมด</option>
+            <option value="in">รับเงิน</option>
+            <option value="out">จ่ายเงิน</option>
+            <option value="transfer">ย้ายโอน</option>
+          </Select>
+        </Field>
+        <Field label="หมวดหมู่" className="w-44">
+          <Select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+            <option value="">ทุกหมวดหมู่</option>
+            {catsQ.data?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </Select>
+        </Field>
+        <Field label="ค้นหา" className="w-52">
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <TextInput className="pl-9" placeholder="รายละเอียด…"
+                       value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
         </Field>
         <div className="ml-auto flex gap-6 text-sm">
           <Stat label="รายรับ" value={period.income} tone="text-emerald-600" />
@@ -161,11 +205,24 @@ export function CashBookPage() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <button className="text-left hover:text-indigo-600"
-                            onClick={() => setEditing(e)}>{e.description}</button>
-                    {e.project && (
-                      <div className="text-[11px] text-slate-400">{e.project.project_code}</div>
-                    )}
+                    <div className="text-slate-700 dark:text-slate-200">{e.description}</div>
+                    <div className="flex flex-wrap gap-2 mt-0.5">
+                      {e.ar_document_id && (
+                        <span className="text-[11px] text-indigo-500 inline-flex items-center gap-1">
+                          <Link2 className="w-3 h-3" /> จากการรับชำระ
+                        </span>
+                      )}
+                      {e.has_vat && (
+                        <span className="text-[11px] text-slate-400">
+                          VAT {money(e.vat_amount)}
+                        </span>
+                      )}
+                      {e.wht_cert_no && (
+                        <span className="text-[11px] text-slate-400">
+                          หนังสือรับรอง {e.wht_cert_no}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-slate-500">{e.category?.name ?? '—'}</td>
                   <td className="px-4 py-3 text-slate-500">
@@ -180,21 +237,59 @@ export function CashBookPage() {
                   <td className="px-4 py-3 text-right tabular-nums text-slate-500">
                     {Number(e.wht_amount) > 0 ? money(e.wht_amount) : '—'}
                   </td>
-                  <td className="px-2">
-                    <button
-                      className="text-slate-300 hover:text-rose-500 p-1"
-                      onClick={async () => {
-                        await deleteCashEntry(e.id);
-                        toast('ลบรายการแล้ว');
-                        reload();
-                      }}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                  <td className="px-2 whitespace-nowrap">
+                    <div className="inline-flex items-center gap-0.5">
+                      <button title="แก้ไข" onClick={() => setEditing(e)}
+                              className="text-slate-400 hover:text-indigo-600 p-1.5">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        title="ทำซ้ำเป็นรายการวันนี้"
+                        onClick={async () => {
+                          try {
+                            await duplicateCashEntry(e, userId);
+                            toast('ทำซ้ำรายการแล้ว');
+                            reload();
+                          } catch (err) {
+                            toast(err instanceof Error ? err.message : 'ทำซ้ำไม่สำเร็จ', 'error');
+                          }
+                        }}
+                        className="text-slate-400 hover:text-indigo-600 p-1.5"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        title="ลบ"
+                        onClick={async () => {
+                          // ตรวจก่อนว่ารายการนี้มาจากการรับชำระไหม จะได้เตือนให้ตรงเรื่อง
+                          let linkedDoc: string | null = null;
+                          try { linkedDoc = (await cashEntryLinks(e.id)).paymentDocNo; } catch { /* ไม่สำคัญพอจะขวางการลบ */ }
+                          setConfirmDelete({ entry: e, linkedDoc });
+                        }}
+                        className="text-slate-400 hover:text-rose-500 p-1.5"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
+            {(entriesQ.data?.length ?? 0) > 0 && (
+              <tfoot>
+                <tr className="border-t-2 border-slate-100 dark:border-slate-700
+                  bg-slate-50/60 dark:bg-slate-800/40">
+                  <td colSpan={5} className="px-4 py-3 text-xs text-slate-500">
+                    รวม {entriesQ.data?.length} รายการ · รับ {money(period.income)} · จ่าย {money(period.expense)}
+                  </td>
+                  <td className={`px-4 py-3 text-right tabular-nums font-bold
+                    ${period.net < 0 ? 'text-rose-500' : 'text-slate-800 dark:text-slate-100'}`}>
+                    {money(period.net)}
+                  </td>
+                  <td colSpan={2} />
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       </div>
@@ -246,6 +341,53 @@ export function CashBookPage() {
           onSaved={() => { setEditing(null); reload(); }}
         />
       )}
+      {confirmDelete && (
+        <Modal title="ลบรายการนี้?" onClose={() => setConfirmDelete(null)}>
+          <div className="text-sm text-slate-600 dark:text-slate-300">
+            <div className="font-medium text-slate-800 dark:text-slate-100">
+              {confirmDelete.entry.description}
+            </div>
+            <div className="text-xs text-slate-400 mt-0.5">
+              {docDate(confirmDelete.entry.entry_date)} · {money(confirmDelete.entry.amount)} ·{' '}
+              {confirmDelete.entry.wallet?.name}
+            </div>
+          </div>
+
+          {confirmDelete.linkedDoc && (
+            <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200
+              dark:border-amber-800 px-4 py-3 text-xs text-amber-800 dark:text-amber-200
+              flex gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>
+                รายการนี้เกิดจากการรับชำระของเอกสาร <strong>{confirmDelete.linkedDoc}</strong> —
+                ลบแล้วเงินจะหายจากสมุดและยอดกระเป๋า แต่ <strong>ประวัติการรับชำระยังอยู่</strong>{' '}
+                และบิลยังเป็นชำระแล้วเหมือนเดิม
+                ถ้าต้องการยกเลิกการรับเงินจริงๆ ให้ไปลบที่ประวัติการรับชำระในเอกสารแทน
+              </span>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2">
+            <GhostButton onClick={() => setConfirmDelete(null)}>ไม่ลบ</GhostButton>
+            <button
+              onClick={async () => {
+                try {
+                  await deleteCashEntry(confirmDelete.entry.id);
+                  toast('ลบรายการแล้ว');
+                  setConfirmDelete(null);
+                  reload();
+                } catch (err) {
+                  toast(err instanceof Error ? err.message : 'ลบไม่สำเร็จ', 'error');
+                }
+              }}
+              className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-rose-600 hover:bg-rose-700"
+            >
+              ลบรายการ
+            </button>
+          </div>
+        </Modal>
+      )}
+
       {showWallets && (
         <WalletModal
           wallets={walletsQ.data ?? []}
@@ -290,7 +432,20 @@ function EntryModal({
   );
 
   return (
-    <Modal title={entry.id ? 'แก้ไขรายการ' : 'บันทึกรายการ'} onClose={onClose} wide>
+    <Modal
+      title={entry.id
+        ? 'แก้ไขรายการ'
+        : f.entry_type === 'in' ? 'บันทึกรับเงิน'
+          : f.entry_type === 'transfer' ? 'ย้ายโอนระหว่างกระเป๋า' : 'บันทึกจ่ายเงิน'}
+      onClose={onClose} wide
+    >
+      {entry.ar_document_id && (
+        <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 px-4 py-2.5 text-xs
+          text-slate-500 flex gap-2">
+          <Link2 className="w-4 h-4 shrink-0" />
+          รายการนี้เกิดจากการรับชำระเงินของเอกสารขาย แก้ไขที่นี่จะไม่ย้อนกลับไปแก้ยอดในบิล
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Field label="ประเภท" required>
           <Select value={f.entry_type} onChange={(e) => set('entry_type', e.target.value)}>
