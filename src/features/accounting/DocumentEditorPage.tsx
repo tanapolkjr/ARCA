@@ -410,6 +410,7 @@ function DocumentEditorInner() {
     vat_exempt_base: totals.vatExemptBase,
     vat_amount: totals.vatAmount,
     grand_total: totals.grandTotal,
+    wht_base: totals.whtBase,
     wht_amount: totals.whtAmount,
     net_payable: totals.netPayable,
     note_text: note,
@@ -885,7 +886,18 @@ function DocumentEditorInner() {
                 <div className="border-t border-slate-200 dark:border-slate-700 mt-1 pt-1">
                   <Sum k="จำนวนเงินรวมทั้งสิ้น" v={totals.grandTotal} bold />
                 </div>
-                {totals.whtAmount > 0 && <Sum k="หักภาษี ณ ที่จ่าย" v={-totals.whtAmount} />}
+                {totals.whtAmount > 0 && (
+                  <>
+                    <Sum k="หักภาษี ณ ที่จ่าย" v={-totals.whtAmount} />
+                    {/* บอกที่มาให้ตรวจได้ — ไม่งั้นเห็นแต่ยอดสุทธิแล้วเช็คไม่ได้ว่าถูกไหม */}
+                    <div className="text-[11px] text-slate-400 text-right -mt-1 mb-1">
+                      คิดจากมูลค่าก่อน VAT {money(totals.whtBase)} ของบรรทัดที่ตั้งอัตราหักไว้
+                      {items.filter((i) => Number(i.wht_rate) > 0).length > 0 && (
+                        <> · {items.filter((i) => Number(i.wht_rate) > 0).length} จาก {items.length} บรรทัด</>
+                      )}
+                    </div>
+                  </>
+                )}
                 <Sum k="ยอดชำระ" v={totals.netPayable} bold />
               </div>
             </div>

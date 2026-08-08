@@ -29,6 +29,7 @@ export interface PrintableDoc {
   vat_exempt_base: number;
   vat_amount: number;
   grand_total: number;
+  wht_base?: number;
   wht_amount: number;
   net_payable: number;
   note_text?: string | null;
@@ -277,6 +278,11 @@ function DocPage({
             <Total k="จำนวนเงินรวมทั้งสิ้น" v={doc.grand_total} bold />
           </div>
           <Total k="หักภาษี ณ ที่จ่ายทั้งสิ้น" v={doc.wht_amount} />
+          {doc.wht_amount > 0 && doc.wht_base != null && (
+            <div className="text-[9px] text-slate-500 text-right -mt-0.5">
+              (จากมูลค่าก่อนภาษี {money(doc.wht_base)})
+            </div>
+          )}
           <Total k="ยอดชำระ" v={doc.net_payable} bold />
         </div>
       </div>

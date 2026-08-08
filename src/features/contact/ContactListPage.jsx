@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, Users, Building2, MapPin, Trash2 } from "lucide-react";
+import { Plus, Search, Users, Building, Building2, MapPin, Trash2 } from "lucide-react";
 import { Pill, Card } from "../../components/ui/primitives.jsx";
 import { AddCustomerModal, AddSiteModal } from "../../components/ui/ContactModals.jsx";
 import { useQuery } from "../../hooks/useQuery.js";
