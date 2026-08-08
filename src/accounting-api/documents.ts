@@ -220,6 +220,7 @@ export async function saveArDocument(input: SaveArInput, userId: string): Promis
       unit_price: i.unit_price,
       discount_amount: i.discount_amount,
       discount_percent: i.discount_percent ?? null,
+      wht_rate: i.wht_rate ?? 0,
       line_total: i.line_total,
     }));
     const { error } = await supabase.from('ar_document_items').insert(rows);
@@ -495,7 +496,7 @@ export async function saveApDocument(input: SaveApInput, userId: string): Promis
       description: i.description, item_type: i.item_type, vat_type: i.vat_type,
       qty: i.qty, unit: i.unit || null, unit_price: i.unit_price,
       discount_amount: i.discount_amount, discount_percent: i.discount_percent ?? null,
-      line_total: i.line_total,
+      wht_rate: i.wht_rate ?? 0, line_total: i.line_total,
     }));
     const { error } = await supabase.from('ap_document_items').insert(rows);
     if (error) throw error;
@@ -881,4 +882,26 @@ export async function loadSource(sourceId: string, excludeDocId?: string): Promi
   const used = (data ?? []).reduce((a, r) => a + (Number(r.grand_total) || 0), 0);
   const total = Number(source.grand_total) || 0;
   return { source, used: round2(used), remaining: round2(Math.max(0, total - used)) };
+}
+
+
+/**
+ * ลบประเภทงาน — ทำได้เฉพาะเมื่อยังไม่มีเอกสารไหนใช้ Tag นี้
+ * ถ้ามีเอกสารใช้อยู่แล้วต้องแก้ที่เอกสารก่อน ไม่งั้นเอกสารเก่าจะไร้ประเภทกะทันหัน
+ */
+export async function deleteDocumentTag(id: string) {
+  const [{ count: arCount, error: arErr }, { count: apCount, error: apErr }] = await Promise.all([
+    supabase.from('ar_documents').select('id', { count: 'exact', head: true }).eq('tag_id', id),
+    supabase.from('ap_documents').select('id', { count: 'exact', head: true }).eq('tag_id', id),
+  ]);
+  if (arErr) throw arErr;
+  if (apErr) throw apErr;
+
+  const used = (arCount ?? 0) + (apCount ?? 0);
+  if (used > 0) {
+    throw new Error(`ลบไม่ได้ — มีเอกสาร ${used} ใบใช้ประเภทงานนี้อยู่ ต้องเปลี่ยนที่เอกสารก่อน`);
+  }
+
+  const { error } = await supabase.from('document_tags').delete().eq('id', id);
+  if (error) throw error;
 }

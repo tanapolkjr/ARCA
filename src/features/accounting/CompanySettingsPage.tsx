@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Building2, Check, Plus, Tag as TagIcon, Trash2 } from 'lucide-react';
+import { Building2, Check, Plus, Tag as TagIcon, Trash2, X } from 'lucide-react';
 import { useToast } from '@/hooks/useToast.jsx';
 import { useQuery } from '@/hooks/useSourcingQuery';
 import type { BankAccount, Company } from '@/accounting-lib/types';
@@ -7,7 +7,7 @@ import {
   deleteBankAccount, listBankAccounts, listCompanies,
   saveBankAccount, saveCompany, seedDocumentSequence, setDefaultCompany,
 } from '@/accounting-api/setup';
-import { listDocumentTags, saveDocumentTag } from '@/accounting-api/documents';
+import { deleteDocumentTag, listDocumentTags, saveDocumentTag } from '@/accounting-api/documents';
 import { Field, GhostButton, Modal, NumberInput, PrimaryButton, TextArea, TextInput } from './ui';
 
 const DOC_TYPES = ['QT', 'BL', 'INV', 'RC', 'PO'] as const;
@@ -127,14 +127,31 @@ function TagSettings() {
         <h2 className="font-semibold text-slate-800 dark:text-slate-100">ประเภทงาน (Tag)</h2>
       </div>
       <p className="text-xs text-slate-500 mb-3">
-        ใช้จัดกลุ่มและรวมยอดในทุกหน้าเอกสาร · ตั้งที่ใบเสนอราคาแล้วไหลตามไปทุกใบที่แปลงต่อ
+        ใช้จัดกลุ่มและรวมยอดในทุกหน้าเอกสาร · ตั้งที่ใบเสนอราคาแล้วไหลตามไปทุกใบที่แปลงต่อ ·
+        ลบได้เฉพาะประเภทที่ยังไม่มีเอกสารใช้อยู่
       </p>
 
       <div className="flex flex-wrap gap-2 mb-4">
         {tagsQ.data?.map((t) => (
-          <span key={t.id} className="px-3 py-1 rounded-full text-xs font-medium
-            bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+          <span key={t.id} className="group pl-3 pr-1.5 py-1 rounded-full text-xs font-medium
+            bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300
+            inline-flex items-center gap-1.5">
             {t.name}
+            <button
+              title="ลบประเภทงานนี้"
+              onClick={async () => {
+                try {
+                  await deleteDocumentTag(t.id);
+                  toast(`ลบ "${t.name}" แล้ว`);
+                  void tagsQ.refetch();
+                } catch (e) {
+                  toast(e instanceof Error ? e.message : 'ลบไม่สำเร็จ', 'error');
+                }
+              }}
+              className="text-slate-300 hover:text-rose-500"
+            >
+              <X className="w-3 h-3" />
+            </button>
           </span>
         ))}
         {(tagsQ.data?.length ?? 0) === 0 && (

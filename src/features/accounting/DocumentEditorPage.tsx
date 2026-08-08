@@ -34,7 +34,7 @@ const isAr = (t: string): t is ArDocType => (AR_TYPES as string[]).includes(t);
 const blankItem = (): DocumentItem => ({
   line_no: 1, stock_item_id: null, description: '', item_type: 'goods',
   vat_type: 'vat', qty: 1, unit: 'ชิ้น', unit_price: 0,
-  discount_amount: 0, discount_percent: null, line_total: 0,
+  discount_amount: 0, discount_percent: null, wht_rate: 0, line_total: 0,
 });
 
 interface PartyOption { id: string; label: string; raw: Record<string, unknown> }
@@ -248,6 +248,7 @@ function DocumentEditorInner() {
         id: savedId, company_id: companyId, doc_date: docDate,
         due_date: dueDate || null, price_include_vat: includeVat,
         vat_rate: vatRate, wht_rate: whtRate, job_name: jobName || null,
+        tag_id: tagId || null,
         contact_name: contactName || null, contact_phone: contactPhone || null,
         note_text: note || null, terms_text: terms || null, items,
       };
@@ -707,34 +708,40 @@ function DocumentEditorInner() {
                 <NumberInput value={vatRate} disabled={locked} step="0.01"
                              onChange={(e) => setVatRate(Number(e.target.value))} />
               </Field>
-              {/* ขายสินค้าอย่างเดียวไม่ต้องหัก ณ ที่จ่าย — หักได้เฉพาะค่าบริการ */}
-              <Field label="หัก ณ ที่จ่าย" className="w-44">
+              {/* ตั้งอัตราหัก ณ ที่จ่ายให้ทุกบรรทัดพร้อมกัน — ปรับรายบรรทัดได้ในตาราง */}
+              <Field label="ตั้งหัก ณ ที่จ่ายทุกบรรทัด" className="w-52"
+                     hint="สินค้าไม่ต้องหัก หักได้เฉพาะค่าบริการ">
                 <Select
-                  value={[0, 1, 2, 3, 5].includes(whtRate) ? String(whtRate) : 'custom'}
+                  value=""
                   disabled={locked}
                   onChange={(e) => {
-                    if (e.target.value === 'custom') { setWhtRate(0.01); return; }
-                    setWhtRate(Number(e.target.value));
+                    const r = Number(e.target.value);
+                    if (Number.isNaN(r)) return;
+                    setItems((prev) => prev.map((it) => ({
+                      ...it,
+                      // ตั้งอัตราให้เฉพาะบรรทัดบริการ ตามที่กฎหมายกำหนด
+                      wht_rate: it.item_type === 'service' ? r : 0,
+                    })));
+                    setWhtRate(r);
                   }}
                 >
-                  <option value="0">ไม่หัก</option>
-                  <option value="3">หัก 3% (ค่าบริการ / รับจ้างทำของ)</option>
-                  <option value="1">หัก 1% (ค่าขนส่ง)</option>
-                  <option value="5">หัก 5% (ค่าเช่า)</option>
-                  <option value="2">หัก 2% (ค่าโฆษณา)</option>
-                  <option value="custom">กำหนดเอง…</option>
+                  <option value="">— เลือกเพื่อตั้งทั้งใบ —</option>
+                  <option value="0">ไม่หัก ทุกบรรทัด</option>
+                  <option value="3">หัก 3% เฉพาะบรรทัดบริการ</option>
+                  <option value="1">หัก 1% เฉพาะบรรทัดบริการ (ค่าขนส่ง)</option>
+                  <option value="5">หัก 5% เฉพาะบรรทัดบริการ (ค่าเช่า)</option>
                 </Select>
               </Field>
-              {![0, 1, 2, 3, 5].includes(whtRate) && (
-                <Field label="อัตราที่กำหนดเอง %" className="w-32">
-                  <NumberInput value={whtRate} disabled={locked} step="0.01"
-                               onChange={(e) => setWhtRate(Number(e.target.value))} />
+
+              {/* แบ่งชำระอยู่คนละกลุ่มกับภาษี กันสับสน */}
+              <div className="ml-auto rounded-xl border border-slate-200 dark:border-slate-700
+                px-3 py-2">
+                <Field label="แบ่งชำระ % ของยอดเอกสาร" className="w-52"
+                       hint="ว่าง = เรียกเก็บเต็มจำนวน">
+                  <NumberInput value={billingPercent} disabled={locked} placeholder="30"
+                               onChange={(e) => setBillingPercent(e.target.value)} />
                 </Field>
-              )}
-              <Field label="แบ่งชำระ %" className="w-32" hint="ว่าง = เต็มจำนวน">
-                <NumberInput value={billingPercent} disabled={locked} placeholder="30"
-                             onChange={(e) => setBillingPercent(e.target.value)} />
-              </Field>
+              </div>
             </div>
 
             <div className="overflow-x-auto">
@@ -749,6 +756,7 @@ function DocumentEditorInner() {
                     <th className="px-2 py-2 w-20">หน่วย</th>
                     <th className="px-2 py-2 w-28">ราคา/หน่วย</th>
                     <th className="px-2 py-2 w-36">ส่วนลด</th>
+                    <th className="px-2 py-2 w-24">หัก ณ ที่จ่าย</th>
                     <th className="px-2 py-2 w-28 text-right">มูลค่า</th>
                     <th className="w-8" />
                   </tr>
@@ -777,7 +785,11 @@ function DocumentEditorInner() {
                       </td>
                       <td className="px-2 py-2">
                         <Select value={it.item_type} disabled={locked}
-                                onChange={(e) => patchItem(i, { item_type: e.target.value as 'goods' | 'service' })}>
+                                onChange={(e) => {
+                                  const t = e.target.value as 'goods' | 'service';
+                                  // ขายสินค้าไม่ต้องหัก ณ ที่จ่าย — เคลียร์ให้อัตโนมัติ
+                                  patchItem(i, t === 'goods' ? { item_type: t, wht_rate: 0 } : { item_type: t });
+                                }}>
                           <option value="goods">สินค้า</option>
                           <option value="service">บริการ</option>
                         </Select>
@@ -830,6 +842,18 @@ function DocumentEditorInner() {
                             −{money(lineDiscount(it))}
                           </div>
                         )}
+                      </td>
+                      <td className="px-2 py-2">
+                        <Select
+                          value={String(it.wht_rate ?? 0)} disabled={locked}
+                          onChange={(e) => patchItem(i, { wht_rate: Number(e.target.value) })}
+                        >
+                          <option value="0">ไม่หัก</option>
+                          <option value="1">1%</option>
+                          <option value="2">2%</option>
+                          <option value="3">3%</option>
+                          <option value="5">5%</option>
+                        </Select>
                       </td>
                       <td className="px-2 py-2 text-right tabular-nums font-medium">
                         {money(it.line_total)}

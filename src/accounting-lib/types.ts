@@ -85,6 +85,8 @@ export interface DocumentItem {
   discount_amount: number;
   /** เก็บไว้ว่ากรอกมาเป็น % เท่าไร (null = กรอกเป็นบาท) */
   discount_percent?: number | null;
+  /** อัตราหัก ณ ที่จ่ายของบรรทัดนี้ (%) — สินค้าปกติ 0 · ค่าบริการ 3 */
+  wht_rate?: number;
   line_total: number;
 }
 

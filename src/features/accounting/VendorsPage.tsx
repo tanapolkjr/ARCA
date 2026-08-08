@@ -31,7 +31,25 @@ const WHT_PRESET: { value: string; label: string; rate: number }[] = [
  * ส่วน `ticket_subcontractors` มีแค่ชื่อกับเบอร์ ซึ่งออกหนังสือรับรอง
  * หัก ณ ที่จ่ายไม่ได้เพราะไม่มีเลขประจำตัวผู้เสียภาษี
  */
+/** หน้าเดี่ยว — เก็บไว้เผื่อเข้าตรงจาก URL เดิม */
 export function VendorsPage() {
+  return (
+    <div className="flex flex-col gap-4">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
+          ผู้ขาย / ผู้รับเหมา
+        </h1>
+      </div>
+      <VendorsPanel />
+    </div>
+  );
+}
+
+/**
+ * ตารางผู้ขาย ใช้เป็นแท็บที่ 3 ของ Module Contact
+ * ฐานข้อมูลคู่ค้าทั้งหมด (ลูกค้า · สถานที่ · ผู้ขาย) อยู่ที่ Contact ที่เดียว
+ */
+export function VendorsPanel() {
   const { toast } = useToast();
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<Partial<Vendor> | null>(null);
@@ -40,14 +58,9 @@ export function VendorsPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
-            ผู้ขาย / ผู้รับเหมา
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            {q.data?.length ?? 0} ราย · ใช้ในใบสั่งซื้อและการหัก ณ ที่จ่าย
-          </p>
-        </div>
+        <p className="text-xs text-slate-500">
+          {q.data?.length ?? 0} ราย · ใช้ในใบสั่งซื้อและการหัก ณ ที่จ่าย
+        </p>
         <PrimaryButton className="ml-auto"
           onClick={() => setEditing({
             vendor_type: 'goods', legal_entity_type: 'company',

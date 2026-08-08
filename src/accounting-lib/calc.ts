@@ -67,7 +67,13 @@ export interface DocumentTotals {
  */
 export function computeTotals(
   items: DocumentItem[],
-  opts: { priceIncludeVat: boolean; vatRate: number; whtRate?: number; billingPercent?: number | null }
+  opts: {
+    priceIncludeVat: boolean;
+    vatRate: number;
+    /** อัตราสำรองเมื่อบรรทัดไม่ได้ระบุเอง (เอกสารเก่า) */
+    whtRate?: number;
+    billingPercent?: number | null;
+  }
 ): DocumentTotals {
   const rate = (Number(opts.vatRate) || 0) / 100;
 
@@ -75,6 +81,7 @@ export function computeTotals(
   let discountTotal = 0;
   let taxableGross = 0;   // ยอดของบรรทัดที่เสีย VAT (ตามโหมดที่กรอก)
   let exemptGross = 0;    // ยอดของบรรทัดที่ยกเว้น/0%
+  let whtBase = 0;        // ฐานหัก ณ ที่จ่ายก่อน VAT รวมทุกบรรทัด × อัตราของบรรทัดนั้น
 
   for (const it of items) {
     const gross = lineGross(it);
@@ -84,6 +91,16 @@ export function computeTotals(
     const net = Math.max(0, gross - disc);
     if (it.vat_type === 'vat') taxableGross += net;
     else exemptGross += net;
+
+    // หัก ณ ที่จ่ายคิดจากมูลค่าก่อน VAT ของบรรทัดนั้น
+    // (ขายสินค้าไม่ต้องหัก หักได้เฉพาะค่าบริการ จึงต้องแยกรายบรรทัด)
+    const lineRate = it.wht_rate != null ? Number(it.wht_rate) : 0;
+    if (lineRate > 0) {
+      const preVat = it.vat_type === 'vat' && opts.priceIncludeVat && rate > 0
+        ? net / (1 + rate)
+        : net;
+      whtBase += (preVat * lineRate) / 100;
+    }
   }
 
   // แบ่งชำระ: เรียกเก็บบางส่วนของยอดสัญญา ย่อทุกส่วนตามสัดส่วนเดียวกัน
@@ -93,6 +110,7 @@ export function computeTotals(
       : 1;
   taxableGross *= share;
   exemptGross *= share;
+  whtBase *= share;
 
   let vatBase: number;
   let vatAmount: number;
@@ -110,7 +128,11 @@ export function computeTotals(
     grandTotal = round2(vatBase + vatAmount + exemptGross);
   }
 
-  const whtAmount = round2(vatBase * ((Number(opts.whtRate) || 0) / 100));
+  // ถ้าไม่มีบรรทัดไหนตั้งอัตราไว้เลย ให้ถอยไปใช้อัตราของหัวเอกสาร (รองรับเอกสารเก่า)
+  const anyLineRate = items.some((i) => Number(i.wht_rate) > 0);
+  const whtAmount = anyLineRate
+    ? round2(whtBase)
+    : round2(vatBase * ((Number(opts.whtRate) || 0) / 100));
 
   return {
     subtotal: round2(subtotal),

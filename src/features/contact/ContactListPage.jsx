@@ -6,12 +6,13 @@ import { AddCustomerModal, AddSiteModal } from "../../components/ui/ContactModal
 import { useQuery } from "../../hooks/useQuery.js";
 import { listContacts, createCustomer, listSites, createSite, deleteCustomer, deleteSite } from "../../api/contacts.js";
 import { useToast } from "../../hooks/useToast.jsx";
+import { VendorsPanel } from "../accounting/VendorsPage";
 import { errMsg } from "../../lib/format.js";
 
 export default function ContactList() {
   const navigate = useNavigate();
   const toast = useToast();
-  const [tab, setTab] = useState("customer"); // "customer" | "project"
+  const [tab, setTab] = useState("customer"); // "customer" | "project" | "vendor"
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showSiteModal, setShowSiteModal] = useState(false);
   const [query, setQuery] = useState("");
@@ -86,9 +87,9 @@ export default function ContactList() {
           <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5">
             <span>E-Service</span><span>/</span><span className="text-indigo-600 font-medium">Contact</span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Contact — ฐานข้อมูลลูกค้า/โครงการ</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Contact — ฐานข้อมูลคู่ค้า</h1>
         </div>
-        {tab === "customer" ? (
+        {tab === "vendor" ? null : tab === "customer" ? (
           <button onClick={() => setShowCustomerModal(true)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm">
             <Plus className="w-4 h-4" /> เพิ่มลูกค้า/บริษัท
           </button>
@@ -112,9 +113,15 @@ export default function ContactList() {
         >
           <MapPin className="w-3.5 h-3.5" /> Project (Project Name)
         </button>
+        <button
+          onClick={() => setTab("vendor")}
+          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === "vendor" ? "bg-indigo-600 text-white shadow-sm" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"}`}
+        >
+          <Building className="w-3.5 h-3.5" /> ผู้ขาย / ผู้รับเหมา
+        </button>
       </div>
 
-      <div className="relative mb-5">
+      <div className={`relative mb-5 ${tab === "vendor" ? "hidden" : ""}`}>
         <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
         <input
           value={query}
@@ -124,7 +131,9 @@ export default function ContactList() {
         />
       </div>
 
-      {tab === "customer" ? (
+      {tab === "vendor" ? (
+        <VendorsPanel />
+      ) : tab === "customer" ? (
         <>
           {customerError && <div className="bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-300 text-sm rounded-xl p-4 mb-5">โหลดข้อมูลไม่สำเร็จ: {errMsg(customerError)}</div>}
           {customerLoading && <div className="text-center text-slate-400 py-10">กำลังโหลด...</div>}
