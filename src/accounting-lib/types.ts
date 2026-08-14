@@ -121,6 +121,10 @@ export interface ArDocument {
   sales_user_id: string | null;
   fulfilment_type: 'install' | 'delivery';
   tag_id: string | null;
+  customer_po_no: string | null;
+  extra_discount_type: 'amount' | 'percent';
+  extra_discount_value: number;
+  extra_discount_amount: number;
   price_include_vat: boolean;
   vat_rate: number;
   contract_total: number | null;

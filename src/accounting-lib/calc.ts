@@ -37,7 +37,9 @@ export interface DocumentTotals {
   /** ผลรวมก่อนหักส่วนลด */
   subtotal: number;
   discountTotal: number;
-  /** ยอดหลังหักส่วนลด */
+  /** ส่วนลดพิเศษท้ายบิล (จำนวนเงินที่หักจริง) */
+  extraDiscount: number;
+  /** ยอดหลังหักส่วนลดรายบรรทัดและส่วนลดพิเศษ */
   afterDiscount: number;
   /** ฐานที่คำนวณภาษี (ไม่รวม VAT เสมอ) */
   vatBase: number;
@@ -75,6 +77,9 @@ export function computeTotals(
     /** อัตราสำรองเมื่อบรรทัดไม่ได้ระบุเอง (เอกสารเก่า) */
     whtRate?: number;
     billingPercent?: number | null;
+    /** ส่วนลดพิเศษท้ายบิล — คีย์เป็นบาทหรือ % ของยอดหลังหักส่วนลดรายบรรทัด */
+    extraDiscountType?: 'amount' | 'percent';
+    extraDiscountValue?: number;
   }
 ): DocumentTotals {
   const rate = (Number(opts.vatRate) || 0) / 100;
@@ -117,6 +122,24 @@ export function computeTotals(
   whtBase *= share;
   whtAmountByLine *= share;
 
+  // ส่วนลดพิเศษท้ายบิล — หักจากยอดรวมแล้วย่อทุกส่วนตามสัดส่วนเดียวกัน
+  // ทำแบบนี้เพื่อให้ VAT และหัก ณ ที่จ่ายลดลงตามจริง ไม่ใช่หักแต่ยอดสุดท้าย
+  const beforeExtra = taxableGross + exemptGross;
+  let extraDiscount = 0;
+  if (beforeExtra > 0) {
+    const raw = opts.extraDiscountType === 'percent'
+      ? (beforeExtra * (Number(opts.extraDiscountValue) || 0)) / 100
+      : (Number(opts.extraDiscountValue) || 0);
+    extraDiscount = Math.min(Math.max(0, raw), beforeExtra);
+    if (extraDiscount > 0) {
+      const factor = (beforeExtra - extraDiscount) / beforeExtra;
+      taxableGross *= factor;
+      exemptGross *= factor;
+      whtBase *= factor;
+      whtAmountByLine *= factor;
+    }
+  }
+
   let vatBase: number;
   let vatAmount: number;
   let grandTotal: number;
@@ -143,7 +166,8 @@ export function computeTotals(
   return {
     subtotal: round2(subtotal),
     discountTotal: round2(discountTotal),
-    afterDiscount: round2(subtotal - discountTotal),
+    extraDiscount: round2(extraDiscount),
+    afterDiscount: round2(subtotal - discountTotal - extraDiscount),
     vatBase,
     vatExemptBase: round2(exemptGross),
     vatAmount,

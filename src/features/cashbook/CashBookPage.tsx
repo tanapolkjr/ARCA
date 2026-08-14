@@ -42,6 +42,7 @@ export function CashBookPage() {
   const [confirmDelete, setConfirmDelete] = useState<
     { entry: CashEntryFull; linkedDoc: string | null } | null>(null);
   const [showWallets, setShowWallets] = useState(false);
+  const [viewing, setViewing] = useState<CashEntryFull | null>(null);
 
   const walletsQ = useQuery(() => listWallets(), []);
   const catsQ = useQuery(() => listCashCategories(), []);
@@ -205,7 +206,10 @@ export function CashBookPage() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="text-slate-700 dark:text-slate-200">{e.description}</div>
+                    <button onClick={() => setViewing(e)}
+                            className="text-left text-slate-700 dark:text-slate-200 hover:text-indigo-600">
+                      {e.description}
+                    </button>
                     <div className="flex flex-wrap gap-2 mt-0.5">
                       {e.ar_document_id && (
                         <span className="text-[11px] text-indigo-500 inline-flex items-center gap-1">
@@ -341,6 +345,56 @@ export function CashBookPage() {
           onSaved={() => { setEditing(null); reload(); }}
         />
       )}
+      {viewing && (
+        <Modal title="รายละเอียดรายการ" onClose={() => setViewing(null)}>
+          <div className="flex items-baseline gap-3">
+            <span className={`text-2xl font-bold tabular-nums
+              ${viewing.entry_type === 'in' ? 'text-emerald-600'
+                : viewing.entry_type === 'out' ? 'text-rose-500' : 'text-slate-600'}`}>
+              {money(viewing.amount)}
+            </span>
+            <span className="text-sm text-slate-500">
+              {viewing.entry_type === 'in' ? 'รับเงิน'
+                : viewing.entry_type === 'out' ? 'จ่ายเงิน' : 'ย้ายโอน'}
+            </span>
+          </div>
+
+          <dl className="text-sm divide-y divide-slate-100 dark:divide-slate-800">
+            <Row2 k="วันที่" v={docDate(viewing.entry_date)} />
+            <Row2 k="รายละเอียด" v={viewing.description} />
+            {viewing.entry_type === 'transfer' ? (
+              <Row2 k="ย้ายเงิน"
+                    v={`${viewing.wallet?.name ?? '—'} → ${viewing.to_wallet?.name ?? '—'}`} />
+            ) : (
+              <>
+                <Row2 k="กระเป๋าเงิน" v={viewing.wallet?.name ?? '—'} />
+                <Row2 k="หมวดหมู่" v={viewing.category?.name ?? 'ไม่ระบุ'} />
+              </>
+            )}
+            {viewing.has_vat && <Row2 k="ภาษีมูลค่าเพิ่ม" v={money(viewing.vat_amount)} />}
+            {Number(viewing.wht_amount) > 0 && (
+              <>
+                <Row2 k="หัก ณ ที่จ่าย" v={money(viewing.wht_amount)} />
+                <Row2 k="เลขที่หนังสือรับรอง" v={viewing.wht_cert_no ?? 'ยังไม่ได้คีย์'} />
+              </>
+            )}
+            {viewing.project && (
+              <Row2 k="โปรเจกต์" v={viewing.project.project_number} />
+            )}
+            {viewing.vendor && <Row2 k="ผู้ขาย" v={viewing.vendor.display_name} />}
+            {viewing.ar_document_id && <Row2 k="ที่มา" v="เกิดจากการรับชำระเงินของเอกสารขาย" />}
+            <Row2 k="บันทึกเมื่อ" v={docDate(viewing.created_at?.slice(0, 10))} />
+          </dl>
+
+          <div className="flex justify-end gap-2">
+            <GhostButton onClick={() => setViewing(null)}>ปิด</GhostButton>
+            <PrimaryButton onClick={() => { setEditing(viewing); setViewing(null); }}>
+              <Pencil className="w-4 h-4" /> แก้ไข
+            </PrimaryButton>
+          </div>
+        </Modal>
+      )}
+
       {confirmDelete && (
         <Modal title="ลบรายการนี้?" onClose={() => setConfirmDelete(null)}>
           <div className="text-sm text-slate-600 dark:text-slate-300">
@@ -395,6 +449,15 @@ export function CashBookPage() {
           onSaved={() => { void walletsQ.refetch(); void balancesQ.refetch(); }}
         />
       )}
+    </div>
+  );
+}
+
+function Row2({ k, v }: { k: string; v: string }) {
+  return (
+    <div className="flex gap-4 py-2">
+      <dt className="w-40 shrink-0 text-slate-500">{k}</dt>
+      <dd className="flex-1 text-slate-800 dark:text-slate-100 break-words">{v}</dd>
     </div>
   );
 }

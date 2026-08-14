@@ -44,7 +44,7 @@ const ENTRY_SELECT = `
   wallet:wallets!cash_entries_wallet_id_fkey(id, name),
   to_wallet:wallets!cash_entries_to_wallet_id_fkey(id, name),
   category:cash_categories(id, name, direction),
-  project:projects(id, project_code, project_name),
+  project:projects(id, project_number, product_category),
   vendor:vendors(id, display_name)
 `;
 
@@ -52,7 +52,7 @@ export interface CashEntryFull extends CashEntry {
   wallet?: { id: string; name: string } | null;
   to_wallet?: { id: string; name: string } | null;
   category?: { id: string; name: string; direction: string } | null;
-  project?: { id: string; project_code: string; project_name: string | null } | null;
+  project?: { id: string; project_number: string; product_category: string | null } | null;
   vendor?: { id: string; display_name: string } | null;
 }
 

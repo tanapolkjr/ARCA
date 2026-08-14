@@ -19,6 +19,10 @@ export interface PrintableDoc {
   sales_name?: string | null;
   reference_no?: string | null;
   tag_name?: string | null;
+  customer_po_no?: string | null;
+  /** วันที่รับชำระล่าสุด — พิมพ์บนใบเสร็จ */
+  paid_on?: string | null;
+  extra_discount?: number;
   price_include_vat: boolean;
   vat_rate: number;
   contract_total?: number | null;
@@ -213,6 +217,10 @@ function DocPage({
           )}
           {doc.sales_name && <Row k="ผู้ขาย" v={doc.sales_name} />}
           {doc.reference_no && <Row k="อ้างอิง" v={doc.reference_no} />}
+          {doc.customer_po_no && <Row k="เลขที่ PO" v={doc.customer_po_no} />}
+          {doc.paid_on && (doc.doc_type === 'INV' || doc.doc_type === 'RC') && (
+            <Row k="วันที่รับชำระ" v={docDate(doc.paid_on)} />
+          )}
           {doc.tag_name && <Row k="ประเภทงาน" v={doc.tag_name} />}
           {doc.job_name && <Row k="ชื่องาน" v={doc.job_name} />}
           {doc.contact_name && <Row k="ผู้ติดต่อ" v={doc.contact_name} />}
@@ -262,11 +270,13 @@ function DocPage({
       {showTotals && (<><div className="flex justify-end mb-2">
         <div className="w-[80mm] text-[11px]">
           <Total k="รวมเป็นเงิน" v={doc.subtotal} />
-          {doc.discount_total > 0 && (
-            <>
-              <Total k="ส่วนลด" v={doc.discount_total} />
-              <Total k="จำนวนเงินหลังหักส่วนลด" v={doc.subtotal - doc.discount_total} />
-            </>
+          {doc.discount_total > 0 && <Total k="ส่วนลด" v={doc.discount_total} />}
+          {(doc.extra_discount ?? 0) > 0 && (
+            <Total k="ส่วนลดพิเศษ" v={doc.extra_discount ?? 0} />
+          )}
+          {(doc.discount_total > 0 || (doc.extra_discount ?? 0) > 0) && (
+            <Total k="จำนวนเงินหลังหักส่วนลด"
+                   v={doc.subtotal - doc.discount_total - (doc.extra_discount ?? 0)} />
           )}
           {doc.billing_percent != null && doc.billing_percent > 0 && doc.billing_percent < 100 && (
             <Total k={`แบ่งชำระ ${doc.billing_percent}%`} v={doc.grand_total} bold />

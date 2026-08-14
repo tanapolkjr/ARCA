@@ -17,7 +17,8 @@ import {
   approveQuotation, cancelApDocument, cancelDocument,
   companySnapshot, convertArDocument, customerSnapshotFrom, deleteApDraft, deleteArDocument,
   loadSource, resetQuotationToDraft,
-  getApDocument, getArDocument, getDocNo, issueApDocument, issueArDocument, listChildDocuments,
+  getApDocument, getArDocument, getDocNo, issueApDocument, issueArDocument,
+  latestPaymentDate, listChildDocuments,
   listDocumentTags, saveApDocument, saveArDocument,
 } from '@/accounting-api/documents';
 import { supabase } from '../../lib/supabaseClient.js';
@@ -78,6 +79,10 @@ function DocumentEditorInner() {
   const [whtRate, setWhtRate] = useState(0);
   const [billingPercent, setBillingPercent] = useState<string>('');
   const [tagId, setTagId] = useState('');
+  const [customerPoNo, setCustomerPoNo] = useState('');
+  const [extraDiscType, setExtraDiscType] = useState<'amount' | 'percent'>('amount');
+  const [extraDiscValue, setExtraDiscValue] = useState('');
+  const [paidOn, setPaidOn] = useState<string | null>(null);
   const [note, setNote] = useState('');
   const [terms, setTerms] = useState('');
   const [items, setItems] = useState<DocumentItem[]>([blankItem()]);
@@ -150,8 +155,12 @@ function DocumentEditorInner() {
         setDocNo(d.doc_no);
         setStatus(d.status);
         setPaidAmount(Number(d.paid_amount) || 0);
+        if (ar) { try { setPaidOn(await latestPaymentDate(id)); } catch { /* ไม่สำคัญพอจะขวางการเปิดเอกสาร */ } }
         setItems(d.items?.length ? d.items : [blankItem()]);
         setTagId(d.tag_id ?? '');
+        setCustomerPoNo(d.customer_po_no ?? '');
+        setExtraDiscType((d.extra_discount_type as 'amount' | 'percent') ?? 'amount');
+        setExtraDiscValue(Number(d.extra_discount_value) ? String(d.extra_discount_value) : '');
         if (ar && d.source_document_id) {
           const no = await getDocNo(d.source_document_id);
           setSourceRef({ id: d.source_document_id, docNo: no });
@@ -193,8 +202,10 @@ function DocumentEditorInner() {
       vatRate,
       whtRate,
       billingPercent: billingPercent ? Number(billingPercent) : null,
+      extraDiscountType: extraDiscType,
+      extraDiscountValue: Number(extraDiscValue) || 0,
     }),
-    [items, includeVat, vatRate, whtRate, billingPercent]
+    [items, includeVat, vatRate, whtRate, billingPercent, extraDiscType, extraDiscValue]
   );
 
   // ใบเสนอราคาได้เลขตั้งแต่ร่าง จึงล็อกตามสถานะ ไม่ใช่ตามการมีเลขที่
@@ -248,7 +259,9 @@ function DocumentEditorInner() {
         id: savedId, company_id: companyId, doc_date: docDate,
         due_date: dueDate || null, price_include_vat: includeVat,
         vat_rate: vatRate, wht_rate: whtRate, job_name: jobName || null,
-        tag_id: tagId || null,
+        tag_id: tagId || null, customer_po_no: customerPoNo || null,
+        extra_discount_type: extraDiscType,
+        extra_discount_value: Number(extraDiscValue) || 0,
         contact_name: contactName || null, contact_phone: contactPhone || null,
         note_text: note || null, terms_text: terms || null, items,
       };
@@ -330,6 +343,7 @@ function DocumentEditorInner() {
       setContactPhone(src.contact_phone ?? '');
       setSalesUserId(src.sales_user_id ?? '');
       setTagId(src.tag_id ?? '');
+      setCustomerPoNo(src.customer_po_no ?? '');
       setFulfilment(src.fulfilment_type ?? 'install');
       setIncludeVat(src.price_include_vat);
       setVatRate(Number(src.vat_rate));
@@ -400,6 +414,9 @@ function DocumentEditorInner() {
     contact_phone: contactPhone,
     sales_name: usersQ.data?.find((u) => u.id === salesUserId)?.name ?? null,
     reference_no: sourceRef?.docNo ?? null,
+    customer_po_no: customerPoNo || null,
+    paid_on: paidOn,
+    extra_discount: totals.extraDiscount,
     tag_name: tagsQ.data?.find((t) => t.id === tagId)?.name ?? null,
     price_include_vat: includeVat,
     vat_rate: vatRate,
@@ -604,11 +621,18 @@ function DocumentEditorInner() {
               </Select>
             </Field>
 
-            <Field label={ar ? 'ลูกค้า' : 'ผู้ขาย'} required className="md:col-span-2">
+            <Field label={ar ? 'ลูกค้า' : 'ผู้ขาย'} required className="md:col-span-2"
+                   hint={`ดึงจาก Contact — เพิ่มรายใหม่ได้ที่แท็บ${ar ? 'ลูกค้า' : 'ผู้ขาย / ผู้รับเหมา'}`}>
               <Select value={partyId} disabled={locked} onChange={(e) => setPartyId(e.target.value)}>
                 <option value="">— เลือก —</option>
                 {partiesQ.data?.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
               </Select>
+              {(partiesQ.data?.length ?? 0) === 0 && !partiesQ.loading && (
+                <p className="text-[11px] text-amber-600 mt-1">
+                  ยังไม่มี{ar ? 'ลูกค้า' : 'ผู้ขาย'}ในระบบ —{' '}
+                  <Link to="/contact" className="underline">ไปเพิ่มที่ Contact</Link>
+                </p>
+              )}
             </Field>
 
             <Field label="วันที่" required>
@@ -685,6 +709,12 @@ function DocumentEditorInner() {
               </Select>
             </Field>
 
+            <Field label={ar ? 'เลขที่ PO ของลูกค้า' : 'เลขที่ PO อ้างอิง'}
+                   hint="พิมพ์บนเอกสาร และไหลตามไปใบแจ้งหนี้/ใบกำกับ">
+              <TextInput value={customerPoNo} disabled={locked}
+                         onChange={(e) => setCustomerPoNo(e.target.value)} />
+            </Field>
+
             <Field label="ผู้ติดต่อ" required>
               <TextInput value={contactName} disabled={locked}
                          onChange={(e) => setContactName(e.target.value)} />
@@ -737,11 +767,29 @@ function DocumentEditorInner() {
               {/* แบ่งชำระอยู่คนละกลุ่มกับภาษี กันสับสน */}
               <div className="ml-auto rounded-xl border border-slate-200 dark:border-slate-700
                 px-3 py-2">
-                <Field label="แบ่งชำระ % ของยอดเอกสาร" className="w-52"
-                       hint="ว่าง = เรียกเก็บเต็มจำนวน">
-                  <NumberInput value={billingPercent} disabled={locked} placeholder="30"
-                               onChange={(e) => setBillingPercent(e.target.value)} />
-                </Field>
+                <div className="flex gap-3">
+                  <Field label="แบ่งชำระ % ของยอดเอกสาร" className="w-44"
+                         hint="ว่าง = เรียกเก็บเต็มจำนวน">
+                    <NumberInput value={billingPercent} disabled={locked} placeholder="30"
+                                 onChange={(e) => setBillingPercent(e.target.value)} />
+                  </Field>
+                  <Field label="ส่วนลดพิเศษท้ายบิล" className="w-44"
+                         hint="หักจากยอดรวม หลังส่วนลดรายบรรทัด">
+                    <div className="flex gap-1">
+                      <NumberInput value={extraDiscValue} disabled={locked} placeholder="0"
+                                   onChange={(e) => setExtraDiscValue(e.target.value)} />
+                      <button
+                        type="button" disabled={locked}
+                        title="สลับระหว่างบาทและเปอร์เซ็นต์"
+                        onClick={() => setExtraDiscType((t) => (t === 'amount' ? 'percent' : 'amount'))}
+                        className="px-2 rounded-lg border border-slate-200 dark:border-slate-700
+                          text-xs text-slate-500 hover:text-indigo-600 shrink-0"
+                      >
+                        {extraDiscType === 'percent' ? '%' : '฿'}
+                      </button>
+                    </div>
+                  </Field>
+                </div>
               </div>
             </div>
 
@@ -879,6 +927,9 @@ function DocumentEditorInner() {
               <div className="w-full max-w-sm text-sm">
                 <Sum k="รวมเป็นเงิน" v={totals.subtotal} />
                 <Sum k="ส่วนลด" v={-totals.discountTotal} />
+                {totals.extraDiscount > 0 && (
+                  <Sum k="ส่วนลดพิเศษท้ายบิล" v={-totals.extraDiscount} />
+                )}
                 <Sum k="จำนวนเงินหลังหักส่วนลด" v={totals.afterDiscount} />
                 <Sum k="มูลค่าที่ไม่มี/ยกเว้นภาษี" v={totals.vatExemptBase} />
                 <Sum k="มูลค่าที่คำนวณภาษี" v={totals.vatBase} />

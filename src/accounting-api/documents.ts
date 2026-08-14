@@ -102,6 +102,9 @@ export interface SaveArInput {
   sales_user_id?: string | null;
   fulfilment_type?: 'install' | 'delivery';
   tag_id?: string | null;
+  customer_po_no?: string | null;
+  extra_discount_type?: 'amount' | 'percent';
+  extra_discount_value?: number;
   price_include_vat: boolean;
   vat_rate: number;
   wht_rate: number;
@@ -132,6 +135,8 @@ export async function saveArDocument(input: SaveArInput, userId: string): Promis
     vatRate: input.vat_rate,
     whtRate: input.wht_rate,
     billingPercent: input.billing_percent,
+    extraDiscountType: input.extra_discount_type,
+    extraDiscountValue: input.extra_discount_value,
   });
 
   const header = {
@@ -149,6 +154,10 @@ export async function saveArDocument(input: SaveArInput, userId: string): Promis
     sales_user_id: input.sales_user_id || null,
     fulfilment_type: input.fulfilment_type ?? 'install',
     tag_id: input.tag_id || null,
+    customer_po_no: input.customer_po_no || null,
+    extra_discount_type: input.extra_discount_type ?? 'amount',
+    extra_discount_value: input.extra_discount_value ?? 0,
+    extra_discount_amount: t.extraDiscount,
     price_include_vat: input.price_include_vat,
     vat_rate: input.vat_rate,
     contract_total: input.contract_total ?? null,
@@ -166,6 +175,18 @@ export async function saveArDocument(input: SaveArInput, userId: string): Promis
     terms_text: input.terms_text || null,
     source_document_id: input.source_document_id || null,
   };
+
+  // ห้ามออกเอกสารลูกรวมกันเกินยอดของใบต้นทาง
+  // เช็คที่นี่ด้วยเพราะหน้าจอเช็คได้เฉพาะตอนที่โหลดยอดคงเหลือมาแล้ว
+  if (input.source_document_id) {
+    const info = await loadSource(input.source_document_id, input.id);
+    if (t.grandTotal > info.remaining + 0.01) {
+      throw new Error(
+        `ยอดเอกสาร ${t.grandTotal.toLocaleString()} เกินยอดคงเหลือของ ` +
+        `${info.source.doc_no ?? 'ใบต้นทาง'} (${info.remaining.toLocaleString()})`
+      );
+    }
+  }
 
   let docId = input.id;
   if (docId) {
@@ -326,6 +347,11 @@ export async function convertArDocument(
   sourceId: string, targetType: ArDocType, userId: string
 ): Promise<string> {
   const src = await getArDocument(sourceId);
+  // ตั้ง % เรียกเก็บให้พอดีกับยอดที่ใบต้นทางยังเหลือ
+  // ไม่งั้นใบที่สองจะตั้งต้นเป็นเต็มจำนวนแล้วชนกฎห้ามวางเกินทันที
+  const info = await loadSource(sourceId);
+  const full = Number(src.grand_total) || 0;
+  const pct = full > 0 ? Math.round((info.remaining / full) * 10000) / 100 : 100;
   return saveArDocument({
     company_id: src.company_id,
     doc_type: targetType,
@@ -339,10 +365,14 @@ export async function convertArDocument(
     sales_user_id: src.sales_user_id,
     fulfilment_type: src.fulfilment_type,
     tag_id: src.tag_id,
+    customer_po_no: src.customer_po_no,
+    extra_discount_type: src.extra_discount_type,
+    extra_discount_value: src.extra_discount_value,
     price_include_vat: src.price_include_vat,
     vat_rate: src.vat_rate,
     wht_rate: src.wht_rate,
     contract_total: src.grand_total,
+    billing_percent: pct >= 100 ? null : pct,
     note_text: src.note_text,
     terms_text: src.terms_text,
     source_document_id: src.id,
@@ -361,7 +391,9 @@ export interface ApDocumentFull {
   source_document_id: string | null;
   vendor_id: string | null; vendor_snapshot: PartySnapshot | null; company_snapshot: PartySnapshot | null;
   project_id: string | null; job_name: string | null; ship_to: string | null;
-  tag_id: string | null;
+  tag_id: string | null; customer_po_no: string | null;
+  extra_discount_type: 'amount' | 'percent';
+  extra_discount_value: number; extra_discount_amount: number;
   contact_name: string | null; contact_phone: string | null;
   price_include_vat: boolean; vat_rate: number;
   subtotal: number; discount_total: number; vat_base: number; vat_exempt_base: number;
@@ -413,6 +445,9 @@ export interface SaveApInput {
   job_name?: string | null;
   ship_to?: string | null;
   tag_id?: string | null;
+  customer_po_no?: string | null;
+  extra_discount_type?: 'amount' | 'percent';
+  extra_discount_value?: number;
   contact_name?: string | null;
   contact_phone?: string | null;
   price_include_vat: boolean;
@@ -436,6 +471,8 @@ export async function saveApDocument(input: SaveApInput, userId: string): Promis
     priceIncludeVat: input.price_include_vat,
     vatRate: input.vat_rate,
     whtRate: input.wht_rate,
+    extraDiscountType: input.extra_discount_type,
+    extraDiscountValue: input.extra_discount_value,
   });
 
   const header = {
@@ -450,6 +487,10 @@ export async function saveApDocument(input: SaveApInput, userId: string): Promis
     job_name: input.job_name || null,
     ship_to: input.ship_to || null,
     tag_id: input.tag_id || null,
+    customer_po_no: input.customer_po_no || null,
+    extra_discount_type: input.extra_discount_type ?? 'amount',
+    extra_discount_value: input.extra_discount_value ?? 0,
+    extra_discount_amount: t.extraDiscount,
     contact_name: input.contact_name || null,
     contact_phone: input.contact_phone || null,
     price_include_vat: input.price_include_vat,
@@ -659,6 +700,23 @@ export interface ReceivePaymentInput {
  * ไม่ได้อัปเดตจากตรงนี้ เพื่อให้ยอดไม่เพี้ยนไม่ว่าจะแก้จากทางไหน
  */
 export async function receivePayment(input: ReceivePaymentInput, userId: string): Promise<string> {
+  // ตรวจยอดค้างสดจากฐานข้อมูล ไม่เชื่อตัวเลขที่หน้าจอส่งมา
+  // (สองคนกดรับชำระบิลเดียวกันพร้อมกันได้ ยอดที่หน้าจอเห็นอาจเก่าไปแล้ว)
+  const { data: doc, error: docErr } = await supabase
+    .from('ar_documents').select('doc_no, grand_total, paid_amount, status')
+    .eq('id', input.documentId).single();
+  if (docErr) throw docErr;
+  if (doc.status === 'cancelled') {
+    throw new Error('เอกสารนี้ถูกยกเลิกแล้ว รับชำระไม่ได้');
+  }
+  const outstanding = round2((Number(doc.grand_total) || 0) - (Number(doc.paid_amount) || 0));
+  if (input.allocate > outstanding + 0.01) {
+    throw new Error(
+      `ยอดที่ตัด ${input.allocate.toLocaleString()} เกินยอดค้างชำระของ ${doc.doc_no ?? 'เอกสาร'} ` +
+      `(${outstanding.toLocaleString()}) — อาจมีคนบันทึกรับชำระไปแล้ว ลองรีเฟรชหน้า`
+    );
+  }
+
   const cash = Math.max(0, input.allocate - input.whtAmount - input.feeAmount);
 
   let cashEntryId: string | null = null;
@@ -706,9 +764,21 @@ export async function receivePayment(input: ReceivePaymentInput, userId: string)
 }
 
 export async function deletePayment(paymentId: string) {
-  // allocations ถูกลบตาม cascade แล้ว trigger จะคำนวณสถานะบิลใหม่ให้เอง
+  // เงินที่ลงสมุดรายรับ-รายจ่ายจากการรับชำระครั้งนี้ต้องถูกลบไปด้วย
+  // ไม่งั้นยอดในกระเป๋าและรายได้รายเดือนจะค้างอยู่ทั้งที่การรับชำระถูกยกเลิกแล้ว
+  const { data: pay, error: readErr } = await supabase
+    .from('ar_payments').select('cash_entry_id').eq('id', paymentId).maybeSingle();
+  if (readErr) throw readErr;
+
+  // ลบ payment ก่อน (allocations cascade → trigger คำนวณสถานะบิลใหม่)
   const { error } = await supabase.from('ar_payments').delete().eq('id', paymentId);
   if (error) throw error;
+
+  if (pay?.cash_entry_id) {
+    const { error: cashErr } = await supabase
+      .from('cash_entries').delete().eq('id', pay.cash_entry_id);
+    if (cashErr) throw cashErr;
+  }
 }
 
 /**
@@ -904,4 +974,17 @@ export async function deleteDocumentTag(id: string) {
 
   const { error } = await supabase.from('document_tags').delete().eq('id', id);
   if (error) throw error;
+}
+
+
+/** วันที่รับชำระล่าสุดของเอกสาร — พิมพ์บนใบเสร็จ/ใบกำกับ */
+export async function latestPaymentDate(documentId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('ar_payment_allocations')
+    .select('payment:ar_payments(payment_date)')
+    .eq('document_id', documentId);
+  if (error) throw error;
+  const dates = ((data ?? []) as unknown as { payment: { payment_date: string } | null }[])
+    .map((r) => r.payment?.payment_date).filter(Boolean) as string[];
+  return dates.length ? dates.sort().at(-1)! : null;
 }
