@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Ban, BadgeCheck, Copy, FileOutput, HandCoins, Plus, Printer,
-  RotateCcw, Save, Trash2,
+  RotateCcw, Save, Search, Trash2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast.jsx';
 import { useUserId } from '@/hooks/useAuth.jsx';
@@ -17,13 +17,14 @@ import {
   approveQuotation, cancelApDocument, cancelDocument,
   companySnapshot, convertArDocument, customerSnapshotFrom, deleteApDraft, deleteArDocument,
   loadSource, resetQuotationToDraft,
-  getApDocument, getArDocument, getDocNo, issueApDocument, issueArDocument, listChildDocuments,
+  getApDocument, getArDocument, getDocNo, issueApDocument, issueArDocument,
+  latestPaymentDate, listChildDocuments,
   listDocumentTags, saveApDocument, saveArDocument,
 } from '@/accounting-api/documents';
 import { supabase } from '../../lib/supabaseClient.js';
 import { DocumentPrintView, type PrintableDoc } from './DocumentPrintView';
 import {
-  Field, GhostButton, NumberInput, PrimaryButton, Select, StatusPill, TextArea, TextInput,
+  Field, GhostButton, NumberInput, PrimaryButton, Select, StatusPill, TextArea, TextInput, inputCls,
 } from './ui';
 import { CancelDialog, PaymentHistory, ReceivePaymentModal } from './PaymentPanel';
 import { SourceRefPicker } from './SourceRefPicker';
@@ -78,6 +79,10 @@ function DocumentEditorInner() {
   const [whtRate, setWhtRate] = useState(0);
   const [billingPercent, setBillingPercent] = useState<string>('');
   const [tagId, setTagId] = useState('');
+  const [customerPoNo, setCustomerPoNo] = useState('');
+  const [extraDiscType, setExtraDiscType] = useState<'amount' | 'percent'>('amount');
+  const [extraDiscValue, setExtraDiscValue] = useState('');
+  const [paidOn, setPaidOn] = useState<string | null>(null);
   const [note, setNote] = useState('');
   const [terms, setTerms] = useState('');
   const [items, setItems] = useState<DocumentItem[]>([blankItem()]);
@@ -150,8 +155,12 @@ function DocumentEditorInner() {
         setDocNo(d.doc_no);
         setStatus(d.status);
         setPaidAmount(Number(d.paid_amount) || 0);
+        if (ar) { try { setPaidOn(await latestPaymentDate(id)); } catch { /* ไม่สำคัญพอจะขวางการเปิดเอกสาร */ } }
         setItems(d.items?.length ? d.items : [blankItem()]);
         setTagId(d.tag_id ?? '');
+        setCustomerPoNo(d.customer_po_no ?? '');
+        setExtraDiscType((d.extra_discount_type as 'amount' | 'percent') ?? 'amount');
+        setExtraDiscValue(Number(d.extra_discount_value) ? String(d.extra_discount_value) : '');
         if (ar && d.source_document_id) {
           const no = await getDocNo(d.source_document_id);
           setSourceRef({ id: d.source_document_id, docNo: no });
@@ -193,8 +202,10 @@ function DocumentEditorInner() {
       vatRate,
       whtRate,
       billingPercent: billingPercent ? Number(billingPercent) : null,
+      extraDiscountType: extraDiscType,
+      extraDiscountValue: Number(extraDiscValue) || 0,
     }),
-    [items, includeVat, vatRate, whtRate, billingPercent]
+    [items, includeVat, vatRate, whtRate, billingPercent, extraDiscType, extraDiscValue]
   );
 
   // ใบเสนอราคาได้เลขตั้งแต่ร่าง จึงล็อกตามสถานะ ไม่ใช่ตามการมีเลขที่
@@ -248,7 +259,9 @@ function DocumentEditorInner() {
         id: savedId, company_id: companyId, doc_date: docDate,
         due_date: dueDate || null, price_include_vat: includeVat,
         vat_rate: vatRate, wht_rate: whtRate, job_name: jobName || null,
-        tag_id: tagId || null,
+        tag_id: tagId || null, customer_po_no: customerPoNo || null,
+        extra_discount_type: extraDiscType,
+        extra_discount_value: Number(extraDiscValue) || 0,
         contact_name: contactName || null, contact_phone: contactPhone || null,
         note_text: note || null, terms_text: terms || null, items,
       };
@@ -330,6 +343,7 @@ function DocumentEditorInner() {
       setContactPhone(src.contact_phone ?? '');
       setSalesUserId(src.sales_user_id ?? '');
       setTagId(src.tag_id ?? '');
+      setCustomerPoNo(src.customer_po_no ?? '');
       setFulfilment(src.fulfilment_type ?? 'install');
       setIncludeVat(src.price_include_vat);
       setVatRate(Number(src.vat_rate));
@@ -400,6 +414,9 @@ function DocumentEditorInner() {
     contact_phone: contactPhone,
     sales_name: usersQ.data?.find((u) => u.id === salesUserId)?.name ?? null,
     reference_no: sourceRef?.docNo ?? null,
+    customer_po_no: customerPoNo || null,
+    paid_on: paidOn,
+    extra_discount: totals.extraDiscount,
     tag_name: tagsQ.data?.find((t) => t.id === tagId)?.name ?? null,
     price_include_vat: includeVat,
     vat_rate: vatRate,
@@ -410,6 +427,7 @@ function DocumentEditorInner() {
     vat_exempt_base: totals.vatExemptBase,
     vat_amount: totals.vatAmount,
     grand_total: totals.grandTotal,
+    wht_base: totals.whtBase,
     wht_amount: totals.whtAmount,
     net_payable: totals.netPayable,
     note_text: note,
@@ -603,11 +621,18 @@ function DocumentEditorInner() {
               </Select>
             </Field>
 
-            <Field label={ar ? 'ลูกค้า' : 'ผู้ขาย'} required className="md:col-span-2">
+            <Field label={ar ? 'ลูกค้า' : 'ผู้ขาย'} required className="md:col-span-2"
+                   hint={`ดึงจาก Contact — เพิ่มรายใหม่ได้ที่แท็บ${ar ? 'ลูกค้า' : 'ผู้ขาย / ผู้รับเหมา'}`}>
               <Select value={partyId} disabled={locked} onChange={(e) => setPartyId(e.target.value)}>
                 <option value="">— เลือก —</option>
                 {partiesQ.data?.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
               </Select>
+              {(partiesQ.data?.length ?? 0) === 0 && !partiesQ.loading && (
+                <p className="text-[11px] text-amber-600 mt-1">
+                  ยังไม่มี{ar ? 'ลูกค้า' : 'ผู้ขาย'}ในระบบ —{' '}
+                  <Link to="/contact" className="underline">ไปเพิ่มที่ Contact</Link>
+                </p>
+              )}
             </Field>
 
             <Field label="วันที่" required>
@@ -684,6 +709,12 @@ function DocumentEditorInner() {
               </Select>
             </Field>
 
+            <Field label={ar ? 'เลขที่ PO ของลูกค้า' : 'เลขที่ PO อ้างอิง'}
+                   hint="พิมพ์บนเอกสาร และไหลตามไปใบแจ้งหนี้/ใบกำกับ">
+              <TextInput value={customerPoNo} disabled={locked}
+                         onChange={(e) => setCustomerPoNo(e.target.value)} />
+            </Field>
+
             <Field label="ผู้ติดต่อ" required>
               <TextInput value={contactName} disabled={locked}
                          onChange={(e) => setContactName(e.target.value)} />
@@ -736,140 +767,149 @@ function DocumentEditorInner() {
               {/* แบ่งชำระอยู่คนละกลุ่มกับภาษี กันสับสน */}
               <div className="ml-auto rounded-xl border border-slate-200 dark:border-slate-700
                 px-3 py-2">
-                <Field label="แบ่งชำระ % ของยอดเอกสาร" className="w-52"
-                       hint="ว่าง = เรียกเก็บเต็มจำนวน">
-                  <NumberInput value={billingPercent} disabled={locked} placeholder="30"
-                               onChange={(e) => setBillingPercent(e.target.value)} />
-                </Field>
+                <div className="flex gap-3">
+                  <Field label="แบ่งชำระ % ของยอดเอกสาร" className="w-44"
+                         hint="ว่าง = เรียกเก็บเต็มจำนวน">
+                    <NumberInput value={billingPercent} disabled={locked} placeholder="30"
+                                 onChange={(e) => setBillingPercent(e.target.value)} />
+                  </Field>
+                  <Field label="ส่วนลดพิเศษท้ายบิล" className="w-44"
+                         hint="หักจากยอดรวม หลังส่วนลดรายบรรทัด">
+                    <div className="flex gap-1">
+                      <NumberInput value={extraDiscValue} disabled={locked} placeholder="0"
+                                   onChange={(e) => setExtraDiscValue(e.target.value)} />
+                      <button
+                        type="button" disabled={locked}
+                        title="สลับระหว่างบาทและเปอร์เซ็นต์"
+                        onClick={() => setExtraDiscType((t) => (t === 'amount' ? 'percent' : 'amount'))}
+                        className="px-2 rounded-lg border border-slate-200 dark:border-slate-700
+                          text-xs text-slate-500 hover:text-indigo-600 shrink-0"
+                      >
+                        {extraDiscType === 'percent' ? '%' : '฿'}
+                      </button>
+                    </div>
+                  </Field>
+                </div>
               </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[900px]">
-                <thead>
-                  <tr className="text-xs text-slate-500 border-b border-slate-200 dark:border-slate-700">
-                    <th className="px-2 py-2 w-8">#</th>
-                    <th className="px-2 py-2 text-left">รายละเอียด</th>
-                    <th className="px-2 py-2 w-24">ประเภท</th>
-                    <th className="px-2 py-2 w-24">ภาษี</th>
-                    <th className="px-2 py-2 w-20">จำนวน</th>
-                    <th className="px-2 py-2 w-20">หน่วย</th>
-                    <th className="px-2 py-2 w-28">ราคา/หน่วย</th>
-                    <th className="px-2 py-2 w-36">ส่วนลด</th>
-                    <th className="px-2 py-2 w-24">หัก ณ ที่จ่าย</th>
-                    <th className="px-2 py-2 w-28 text-right">มูลค่า</th>
-                    <th className="w-8" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((it, i) => (
-                    <tr key={i} className="border-b border-slate-50 dark:border-slate-800 align-top">
-                      <td className="px-2 py-2 text-center text-slate-400">{i + 1}</td>
-                      <td className="px-2 py-2">
-                        <TextArea
-                          rows={2} value={it.description} disabled={locked}
-                          placeholder={'ชื่อรุ่น\n - สเปกย่อย'}
-                          onChange={(e) => patchItem(i, { description: e.target.value })}
+            {/* การ์ดต่อบรรทัด แทนตารางที่ต้องเลื่อนแนวนอน
+                overflow-x-auto ทำให้แกนตั้งกลายเป็น scroll ไปด้วยตามสเปก CSS
+                ตัวเลือกที่เด้งจากช่องค้นหาจึงถูกตัดและต้องเลื่อนลงไปกด */}
+            <div className="flex flex-col gap-2">
+              {items.map((it, i) => (
+                <div key={i}
+                     className="rounded-xl border border-slate-200 dark:border-slate-700 p-3">
+                  <div className="flex items-start gap-2">
+                    <span className="text-xs text-slate-400 pt-2 w-5 shrink-0">{i + 1}</span>
+                    <div className="flex-1 min-w-0">
+                      {/* ค้นหาสินค้าอยู่บนสุด — เป็นทางเข้าหลักของการเพิ่มรายการ */}
+                      {!locked && (
+                        <StockPicker
+                          items={stockQ.data ?? []}
+                          onPick={(sel) => patchItem(i, {
+                            stock_item_id: sel.id,
+                            description: `${sel.model_code}${sel.description ? `\n${sel.description}` : ''}`,
+                            unit: sel.unit ?? 'ชิ้น',
+                            unit_price: sel.sale_price ?? 0,
+                          })}
                         />
-                        {!locked && (
-                          <StockPicker
-                            items={stockQ.data ?? []}
-                            onPick={(s) => patchItem(i, {
-                              stock_item_id: s.id,
-                              description: `${s.model_code}${s.description ? `\n${s.description}` : ''}`,
-                              unit: s.unit ?? 'ชิ้น',
-                              unit_price: s.sale_price ?? 0,
-                            })}
-                          />
-                        )}
-                      </td>
-                      <td className="px-2 py-2">
-                        <Select value={it.item_type} disabled={locked}
-                                onChange={(e) => {
-                                  const t = e.target.value as 'goods' | 'service';
-                                  // ขายสินค้าไม่ต้องหัก ณ ที่จ่าย — เคลียร์ให้อัตโนมัติ
-                                  patchItem(i, t === 'goods' ? { item_type: t, wht_rate: 0 } : { item_type: t });
-                                }}>
-                          <option value="goods">สินค้า</option>
-                          <option value="service">บริการ</option>
-                        </Select>
-                      </td>
-                      <td className="px-2 py-2">
-                        <Select value={it.vat_type} disabled={locked}
-                                onChange={(e) => patchItem(i, { vat_type: e.target.value as VatType })}>
-                          <option value="vat">VAT</option>
-                          <option value="exempt">ยกเว้น</option>
-                          <option value="zero">0%</option>
-                        </Select>
-                      </td>
-                      <td className="px-2 py-2">
-                        <NumberInput value={it.qty} disabled={locked} step="0.001"
-                                     onChange={(e) => patchItem(i, { qty: Number(e.target.value) })} />
-                      </td>
-                      <td className="px-2 py-2">
-                        <TextInput value={it.unit ?? ''} disabled={locked}
-                                   onChange={(e) => patchItem(i, { unit: e.target.value })} />
-                      </td>
-                      <td className="px-2 py-2">
-                        <NumberInput value={it.unit_price} disabled={locked} step="0.01"
-                                     onChange={(e) => patchItem(i, { unit_price: Number(e.target.value) })} />
-                      </td>
-                      <td className="px-2 py-2">
-                        <div className="flex gap-1">
-                          <NumberInput
-                            className="!px-2"
-                            value={it.discount_percent != null ? it.discount_percent : it.discount_amount}
-                            disabled={locked} step="0.01"
-                            onChange={(e) => patchItem(i, it.discount_percent != null
-                              ? { discount_percent: Number(e.target.value) }
-                              : { discount_amount: Number(e.target.value) })}
-                          />
-                          <button
-                            type="button" disabled={locked}
-                            title="สลับระหว่างบาทและเปอร์เซ็นต์"
-                            onClick={() => patchItem(i, it.discount_percent != null
-                              ? { discount_percent: null, discount_amount: 0 }
-                              : { discount_percent: 0, discount_amount: 0 })}
-                            className="px-2 rounded-lg border border-slate-200 dark:border-slate-700
-                              text-xs text-slate-500 hover:text-indigo-600 shrink-0"
-                          >
-                            {it.discount_percent != null ? '%' : '฿'}
-                          </button>
-                        </div>
-                        {/* กรอกเป็น % ต้องเห็นด้วยว่าลดไปกี่บาท */}
-                        {it.discount_percent != null && it.discount_percent !== 0 && (
-                          <div className="text-[11px] text-slate-400 text-right mt-0.5 tabular-nums">
-                            −{money(lineDiscount(it))}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-2 py-2">
-                        <Select
-                          value={String(it.wht_rate ?? 0)} disabled={locked}
-                          onChange={(e) => patchItem(i, { wht_rate: Number(e.target.value) })}
-                        >
-                          <option value="0">ไม่หัก</option>
-                          <option value="1">1%</option>
-                          <option value="2">2%</option>
-                          <option value="3">3%</option>
-                          <option value="5">5%</option>
-                        </Select>
-                      </td>
-                      <td className="px-2 py-2 text-right tabular-nums font-medium">
+                      )}
+                      <TextArea
+                        rows={2} value={it.description} disabled={locked}
+                        className="mt-2"
+                        placeholder={'รายละเอียด — บรรทัดแรกชื่อรุ่น บรรทัดถัดไปสเปกย่อย'}
+                        onChange={(e) => patchItem(i, { description: e.target.value })}
+                      />
+                    </div>
+                    <div className="text-right shrink-0 w-32 pt-1">
+                      <div className="text-[11px] text-slate-400">มูลค่า</div>
+                      <div className="tabular-nums font-semibold text-slate-800 dark:text-slate-100">
                         {money(it.line_total)}
-                      </td>
-                      <td className="px-1">
-                        {!locked && items.length > 1 && (
-                          <button onClick={() => setItems((p) => p.filter((_, x) => x !== i))}
-                                  className="text-slate-300 hover:text-rose-500 p-1">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    </div>
+                    {!locked && items.length > 1 && (
+                      <button onClick={() => setItems((p) => p.filter((_, x) => x !== i))}
+                              title="ลบบรรทัดนี้"
+                              className="text-slate-300 hover:text-rose-500 p-1 shrink-0">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 mt-2 pl-7">
+                    <Field label="ประเภท" className="w-28">
+                      <Select value={it.item_type} disabled={locked}
+                              onChange={(e) => {
+                                const t = e.target.value as 'goods' | 'service';
+                                // ขายสินค้าไม่ต้องหัก ณ ที่จ่าย — เคลียร์ให้อัตโนมัติ
+                                patchItem(i, t === 'goods' ? { item_type: t, wht_rate: 0 } : { item_type: t });
+                              }}>
+                        <option value="goods">สินค้า</option>
+                        <option value="service">บริการ</option>
+                      </Select>
+                    </Field>
+                    <Field label="ภาษี" className="w-28">
+                      <Select value={it.vat_type} disabled={locked}
+                              onChange={(e) => patchItem(i, { vat_type: e.target.value as VatType })}>
+                        <option value="vat">VAT</option>
+                        <option value="exempt">ยกเว้น</option>
+                        <option value="zero">0%</option>
+                      </Select>
+                    </Field>
+                    <Field label="จำนวน" className="w-24">
+                      <NumberInput value={it.qty} disabled={locked} step="0.001"
+                                   onChange={(e) => patchItem(i, { qty: Number(e.target.value) })} />
+                    </Field>
+                    <Field label="หน่วย" className="w-24">
+                      <TextInput value={it.unit ?? ''} disabled={locked}
+                                 onChange={(e) => patchItem(i, { unit: e.target.value })} />
+                    </Field>
+                    <Field label="ราคา/หน่วย" className="w-32">
+                      <NumberInput value={it.unit_price} disabled={locked} step="0.01"
+                                   onChange={(e) => patchItem(i, { unit_price: Number(e.target.value) })} />
+                    </Field>
+                    <Field label="ส่วนลด" className="w-36">
+                      <div className="flex gap-1">
+                        <NumberInput
+                          className="!px-2"
+                          value={it.discount_percent != null ? it.discount_percent : it.discount_amount}
+                          disabled={locked} step="0.01"
+                          onChange={(e) => patchItem(i, it.discount_percent != null
+                            ? { discount_percent: Number(e.target.value) }
+                            : { discount_amount: Number(e.target.value) })}
+                        />
+                        <button
+                          type="button" disabled={locked}
+                          title="สลับระหว่างบาทและเปอร์เซ็นต์"
+                          onClick={() => patchItem(i, it.discount_percent != null
+                            ? { discount_percent: null, discount_amount: 0 }
+                            : { discount_percent: 0, discount_amount: 0 })}
+                          className="px-2 rounded-lg border border-slate-200 dark:border-slate-700
+                            text-xs text-slate-500 hover:text-indigo-600 shrink-0"
+                        >
+                          {it.discount_percent != null ? '%' : '฿'}
+                        </button>
+                      </div>
+                      {it.discount_percent != null && it.discount_percent !== 0 && (
+                        <div className="text-[11px] text-slate-400 text-right mt-0.5 tabular-nums">
+                          −{money(lineDiscount(it))}
+                        </div>
+                      )}
+                    </Field>
+                    <Field label="หัก ณ ที่จ่าย" className="w-28">
+                      <Select value={String(it.wht_rate ?? 0)} disabled={locked}
+                              onChange={(e) => patchItem(i, { wht_rate: Number(e.target.value) })}>
+                        <option value="0">ไม่หัก</option>
+                        <option value="1">1%</option>
+                        <option value="2">2%</option>
+                        <option value="3">3%</option>
+                        <option value="5">5%</option>
+                      </Select>
+                    </Field>
+                  </div>
+                </div>
+              ))}
             </div>
 
             {!locked && (
@@ -887,6 +927,9 @@ function DocumentEditorInner() {
               <div className="w-full max-w-sm text-sm">
                 <Sum k="รวมเป็นเงิน" v={totals.subtotal} />
                 <Sum k="ส่วนลด" v={-totals.discountTotal} />
+                {totals.extraDiscount > 0 && (
+                  <Sum k="ส่วนลดพิเศษท้ายบิล" v={-totals.extraDiscount} />
+                )}
                 <Sum k="จำนวนเงินหลังหักส่วนลด" v={totals.afterDiscount} />
                 <Sum k="มูลค่าที่ไม่มี/ยกเว้นภาษี" v={totals.vatExemptBase} />
                 <Sum k="มูลค่าที่คำนวณภาษี" v={totals.vatBase} />
@@ -894,7 +937,18 @@ function DocumentEditorInner() {
                 <div className="border-t border-slate-200 dark:border-slate-700 mt-1 pt-1">
                   <Sum k="จำนวนเงินรวมทั้งสิ้น" v={totals.grandTotal} bold />
                 </div>
-                {totals.whtAmount > 0 && <Sum k="หักภาษี ณ ที่จ่าย" v={-totals.whtAmount} />}
+                {totals.whtAmount > 0 && (
+                  <>
+                    <Sum k="หักภาษี ณ ที่จ่าย" v={-totals.whtAmount} />
+                    {/* บอกที่มาให้ตรวจได้ — ไม่งั้นเห็นแต่ยอดสุทธิแล้วเช็คไม่ได้ว่าถูกไหม */}
+                    <div className="text-[11px] text-slate-400 text-right -mt-1 mb-1">
+                      คิดจากมูลค่าก่อน VAT {money(totals.whtBase)} ของบรรทัดที่ตั้งอัตราหักไว้
+                      {items.filter((i) => Number(i.wht_rate) > 0).length > 0 && (
+                        <> · {items.filter((i) => Number(i.wht_rate) > 0).length} จาก {items.length} บรรทัด</>
+                      )}
+                    </div>
+                  </>
+                )}
                 <Sum k="ยอดชำระ" v={totals.netPayable} bold />
               </div>
             </div>
@@ -972,25 +1026,25 @@ function StockPicker({
     : [];
 
   return (
-    <div className="relative mt-1">
+    <div className="relative">
+      <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
       <input
         value={term}
-        placeholder="ค้นหา Model Number / Product Name จากคลัง…"
+        placeholder="ค้นหาสินค้าจากคลัง แล้วระบบจะเติมชื่อ หน่วย และราคาให้"
         onChange={(e) => { setTerm(e.target.value); setOpen(true); }}
         onFocus={() => setOpen(true)}
         onBlur={() => window.setTimeout(() => setOpen(false), 150)}
-        className="w-full text-[11px] px-2 py-1 rounded-lg border border-dashed
-          border-slate-200 dark:border-slate-700 bg-transparent
-          text-slate-600 dark:text-slate-300 focus:outline-none focus:border-indigo-400"
+        className={`${inputCls} pl-9`}
       />
       {open && term.trim() && (
-        <div className="absolute z-20 left-0 right-0 mt-1 bg-white dark:bg-slate-800
-          border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg overflow-hidden">
+        <div className="absolute z-30 left-0 right-0 mt-1 bg-white dark:bg-slate-800
+          border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg
+          max-h-64 overflow-y-auto">
           {matches.map((s) => (
             <button
               key={s.id} type="button"
               onMouseDown={() => { onPick(s); setTerm(''); setOpen(false); }}
-              className="block w-full text-left px-3 py-1.5 text-xs
+              className="block w-full text-left px-3 py-2 text-xs
                 hover:bg-indigo-50 dark:hover:bg-slate-700"
             >
               <div className="flex items-baseline gap-2">

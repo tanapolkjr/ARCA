@@ -37,7 +37,9 @@ export interface DocumentTotals {
   /** ผลรวมก่อนหักส่วนลด */
   subtotal: number;
   discountTotal: number;
-  /** ยอดหลังหักส่วนลด */
+  /** ส่วนลดพิเศษท้ายบิล (จำนวนเงินที่หักจริง) */
+  extraDiscount: number;
+  /** ยอดหลังหักส่วนลดรายบรรทัดและส่วนลดพิเศษ */
   afterDiscount: number;
   /** ฐานที่คำนวณภาษี (ไม่รวม VAT เสมอ) */
   vatBase: number;
@@ -45,6 +47,8 @@ export interface DocumentTotals {
   vatExemptBase: number;
   vatAmount: number;
   grandTotal: number;
+  /** ฐานที่ใช้คิดหัก ณ ที่จ่าย (มูลค่าก่อน VAT ของเฉพาะบรรทัดที่ตั้งอัตราไว้) */
+  whtBase: number;
   whtAmount: number;
   netPayable: number;
 }
@@ -73,6 +77,9 @@ export function computeTotals(
     /** อัตราสำรองเมื่อบรรทัดไม่ได้ระบุเอง (เอกสารเก่า) */
     whtRate?: number;
     billingPercent?: number | null;
+    /** ส่วนลดพิเศษท้ายบิล — คีย์เป็นบาทหรือ % ของยอดหลังหักส่วนลดรายบรรทัด */
+    extraDiscountType?: 'amount' | 'percent';
+    extraDiscountValue?: number;
   }
 ): DocumentTotals {
   const rate = (Number(opts.vatRate) || 0) / 100;
@@ -81,7 +88,8 @@ export function computeTotals(
   let discountTotal = 0;
   let taxableGross = 0;   // ยอดของบรรทัดที่เสีย VAT (ตามโหมดที่กรอก)
   let exemptGross = 0;    // ยอดของบรรทัดที่ยกเว้น/0%
-  let whtBase = 0;        // ฐานหัก ณ ที่จ่ายก่อน VAT รวมทุกบรรทัด × อัตราของบรรทัดนั้น
+  let whtBase = 0;        // มูลค่าก่อน VAT ของบรรทัดที่ตั้งอัตราหักไว้
+  let whtAmountByLine = 0; // ผลรวมยอดหักของแต่ละบรรทัด
 
   for (const it of items) {
     const gross = lineGross(it);
@@ -99,7 +107,8 @@ export function computeTotals(
       const preVat = it.vat_type === 'vat' && opts.priceIncludeVat && rate > 0
         ? net / (1 + rate)
         : net;
-      whtBase += (preVat * lineRate) / 100;
+      whtBase += preVat;
+      whtAmountByLine += (preVat * lineRate) / 100;
     }
   }
 
@@ -111,6 +120,25 @@ export function computeTotals(
   taxableGross *= share;
   exemptGross *= share;
   whtBase *= share;
+  whtAmountByLine *= share;
+
+  // ส่วนลดพิเศษท้ายบิล — หักจากยอดรวมแล้วย่อทุกส่วนตามสัดส่วนเดียวกัน
+  // ทำแบบนี้เพื่อให้ VAT และหัก ณ ที่จ่ายลดลงตามจริง ไม่ใช่หักแต่ยอดสุดท้าย
+  const beforeExtra = taxableGross + exemptGross;
+  let extraDiscount = 0;
+  if (beforeExtra > 0) {
+    const raw = opts.extraDiscountType === 'percent'
+      ? (beforeExtra * (Number(opts.extraDiscountValue) || 0)) / 100
+      : (Number(opts.extraDiscountValue) || 0);
+    extraDiscount = Math.min(Math.max(0, raw), beforeExtra);
+    if (extraDiscount > 0) {
+      const factor = (beforeExtra - extraDiscount) / beforeExtra;
+      taxableGross *= factor;
+      exemptGross *= factor;
+      whtBase *= factor;
+      whtAmountByLine *= factor;
+    }
+  }
 
   let vatBase: number;
   let vatAmount: number;
@@ -131,17 +159,20 @@ export function computeTotals(
   // ถ้าไม่มีบรรทัดไหนตั้งอัตราไว้เลย ให้ถอยไปใช้อัตราของหัวเอกสาร (รองรับเอกสารเก่า)
   const anyLineRate = items.some((i) => Number(i.wht_rate) > 0);
   const whtAmount = anyLineRate
-    ? round2(whtBase)
+    ? round2(whtAmountByLine)
     : round2(vatBase * ((Number(opts.whtRate) || 0) / 100));
+  const effectiveWhtBase = anyLineRate ? round2(whtBase) : vatBase;
 
   return {
     subtotal: round2(subtotal),
     discountTotal: round2(discountTotal),
-    afterDiscount: round2(subtotal - discountTotal),
+    extraDiscount: round2(extraDiscount),
+    afterDiscount: round2(subtotal - discountTotal - extraDiscount),
     vatBase,
     vatExemptBase: round2(exemptGross),
     vatAmount,
     grandTotal,
+    whtBase: effectiveWhtBase,
     whtAmount,
     netPayable: round2(grandTotal - whtAmount),
   };
