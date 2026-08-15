@@ -77,20 +77,36 @@ export async function bulkUpsertStockItems(items) {
  * that location). Warranty is intentionally NOT touched here — it only
  * starts once a unit is withdrawn to a project (see fulfillInstallJob).
  */
-export async function receiveStock({ stockItemId, locationId, serials, roundNo, purchaseRequestId, createdBy }) {
+/**
+ * รับสินค้าเข้าคลัง — ทางเดียวของทั้งระบบ
+ *
+ * referenceType/referenceId เปิดให้ผู้เรียกระบุที่มาเองได้ (เช่นล็อตขนส่ง)
+ * จะได้ไม่ต้องเขียนขาการรับเข้าที่สองซ้ำกับของเดิม ซึ่งเสี่ยงคำนวณยอดคนละแบบ
+ */
+export async function receiveStock({
+  stockItemId, locationId, serials, roundNo, purchaseRequestId, createdBy,
+  referenceType, referenceId, qty: qtyOverride, note: noteOverride,
+}) {
   const cleanSerials = (serials || []).map((s) => s.trim()).filter(Boolean);
-  const qty = cleanSerials.length || 1;
+  // ไม่มี serial ก็รับเป็นจำนวนได้ (ของที่ไม่ต้องยิงบาร์โค้ด)
+  const qty = cleanSerials.length || Number(qtyOverride) || 1;
+  const refType = referenceType || (purchaseRequestId ? "purchase_request" : "stock_in_round");
+  const refId = referenceId || purchaseRequestId || null;
 
-  for (const serial of cleanSerials.length ? cleanSerials : [null]) {
+  const rows = cleanSerials.length
+    ? cleanSerials.map((serial) => ({ serial, qty: 1 }))
+    : [{ serial: null, qty }];
+
+  for (const row of rows) {
     const { error: txnError } = await supabase.from("stock_transactions").insert({
       stock_item_id: stockItemId,
       location_id: locationId,
       transaction_type: "receive_in",
-      qty: 1,
-      reference_type: purchaseRequestId ? "purchase_request" : "stock_in_round",
-      reference_id: purchaseRequestId || null,
-      serial_no: serial,
-      note: roundNo ? `Round: ${roundNo}` : null,
+      qty: row.qty,
+      reference_type: refType,
+      reference_id: refId,
+      serial_no: row.serial,
+      note: noteOverride || (roundNo ? `Round: ${roundNo}` : null),
       created_by: createdBy,
     });
     if (txnError) throw txnError;

@@ -20,6 +20,8 @@
   "include": [
     "src/features/sourcing",
     "src/features/accounting",
+    "src/features/incoming",
+    "src/stock-api",
     "src/features/cashbook",
     "src/accounting-lib",
     "src/accounting-api",

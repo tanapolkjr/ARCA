@@ -39,6 +39,7 @@ import { CompanySettingsPage } from "./features/accounting/CompanySettingsPage";
 import { VendorsPage } from "./features/accounting/VendorsPage";
 import { ExportPage } from "./features/accounting/ExportPage";
 import { CashBookPage } from "./features/cashbook/CashBookPage";
+import { IncomingPage } from "./features/incoming/IncomingPage";
 
 export default function App() {
   return (
@@ -67,6 +68,7 @@ export default function App() {
         <Route path="/contact/site/:id" element={<SiteDetailPage />} />
 
         <Route path="/stock" element={<StockSummary />} />
+        <Route path="/stock/incoming" element={<IncomingPage />} />
         <Route path="/stock/transfer" element={<StockTransferPage />} />
         <Route path="/stock/borrow" element={<StockBorrowPage />} />
         <Route path="/stock/refund" element={<StockRefundPage />} />

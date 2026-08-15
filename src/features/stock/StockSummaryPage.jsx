@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Search, Download, RefreshCw, Plus, PackagePlus, Trash2, FileSpreadsheet, Upload, Pencil, Link2 } from "lucide-react";
 import { TextInput, Select, Pill, Card, Modal, Field, SearchSelect } from "../../components/ui/primitives.jsx";
 import { useQuery } from "../../hooks/useQuery.js";
+import { incomingQtyByItem } from "../../stock-api/incoming";
 import { listStockSummary, listLocations, listStockItems, createStockItem, updateStockItem, receiveStock, deleteStockItem, bulkUpsertStockItems } from "../../api/stock.js";
 import { useAuth } from "../../hooks/useAuth.jsx";
 import { useToast } from "../../hooks/useToast.jsx";
@@ -367,7 +368,10 @@ export default function StockSummary() {
   const [query, setQuery] = useState("");
   const [locationId, setLocationId] = useState("all");
   const [showProductModal, setShowProductModal] = useState(false);
+  // ยอด "กำลังมา" ดึงแยกจากสรุปสต็อก เพราะเป็นคนละโมดูล
+  useEffect(() => { incomingQtyByItem().then(setIncoming).catch(() => {}); }, []);
   const [editItem, setEditItem] = useState(null);
+  const [incoming, setIncoming] = useState(() => new Map());
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [page, setPage] = useState(1);
@@ -468,6 +472,7 @@ export default function StockSummary() {
               <th className="text-left font-medium px-4 py-3">Category</th>
               <th className="text-left font-medium px-4 py-3">Sub-Category</th>
               <th className="text-right font-medium px-4 py-3">ราคาขาย</th>
+              <th className="text-right font-medium px-4 py-3">กำลังมา</th>
               <th className="text-right font-medium px-4 py-3">On Hand</th>
               <th className="text-right font-medium px-4 py-3">Reserved</th>
               <th className="text-right font-medium px-4 py-3">Available</th>
@@ -475,9 +480,9 @@ export default function StockSummary() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-            {loading && <tr><td colSpan={9} className="text-center text-slate-400 py-10">กำลังโหลด...</td></tr>}
+            {loading && <tr><td colSpan={10} className="text-center text-slate-400 py-10">กำลังโหลด...</td></tr>}
             {!loading && (!rows || rows.length === 0) && (
-              <tr><td colSpan={9} className="text-center text-slate-400 py-10">ยังไม่มีสินค้าในระบบ — กด "เพิ่มสินค้าใหม่" ก่อน</td></tr>
+              <tr><td colSpan={10} className="text-center text-slate-400 py-10">ยังไม่มีสินค้าในระบบ — กด "เพิ่มสินค้าใหม่" ก่อน</td></tr>
             )}
             {pagedRows.map((r) => {
               const available = r.onHand - r.reserved;
@@ -498,6 +503,13 @@ export default function StockSummary() {
                     {r.salePrice != null
                       ? Number(r.salePrice).toLocaleString("th-TH", { minimumFractionDigits: 2 })
                       : <span className="text-slate-300">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums">
+                    {incoming.get(r.id) ? (
+                      <span className="text-sky-600 dark:text-sky-400 font-medium">
+                        +{Number(incoming.get(r.id)).toLocaleString("th-TH")}
+                      </span>
+                    ) : <span className="text-slate-300">—</span>}
                   </td>
                   <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-200">{r.onHand}</td>
                   <td className="px-4 py-3 text-right text-amber-600">{r.reserved}</td>

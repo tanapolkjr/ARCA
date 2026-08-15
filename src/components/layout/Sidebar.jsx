@@ -81,6 +81,7 @@ export default function Sidebar() {
 
             <Group icon={Boxes} label="Stock" open={stockOpen} onToggle={() => setStockOpen((v) => !v)}>
               <Item to="/stock" label="Inventory" sub end />
+              <Item to="/stock/incoming" label="On the way" sub />
               <Item to="/stock/transfer" label="ย้ายคลังสินค้า" sub />
               <Item to="/stock/borrow" label="ยืมคืนสินค้า" sub />
               <Item to="/stock/refund" label="Refund" sub />
