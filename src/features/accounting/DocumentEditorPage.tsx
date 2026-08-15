@@ -14,7 +14,7 @@ import {
 import type { ApDocType, ArDocType, DocumentItem, VatType } from '@/accounting-lib/types';
 import { getDefaultCompany, listBankAccounts, listCompanies, listTemplates, listVendors } from '@/accounting-api/setup';
 import {
-  approveQuotation, cancelApDocument, cancelDocument,
+  approveQuotation, cancelApDocument, cancelDocument, childBillingPercent, childExtraDiscount,
   companySnapshot, convertArDocument, customerSnapshotFrom, deleteApDraft, deleteArDocument,
   loadSource, resetQuotationToDraft,
   getApDocument, getArDocument, getDocNo, issueApDocument, issueArDocument,
@@ -344,6 +344,7 @@ function DocumentEditorInner() {
       setSalesUserId(src.sales_user_id ?? '');
       setTagId(src.tag_id ?? '');
       setCustomerPoNo(src.customer_po_no ?? '');
+
       setFulfilment(src.fulfilment_type ?? 'install');
       setIncludeVat(src.price_include_vat);
       setVatRate(Number(src.vat_rate));
@@ -352,10 +353,15 @@ function DocumentEditorInner() {
       setTerms(src.terms_text ?? '');
       setItems(src.items?.length ? src.items.map((i) => ({ ...i, id: undefined })) : [blankItem()]);
 
-      // ตั้ง % เริ่มต้นให้พอดีกับยอดที่เหลือ ผู้ใช้ปรับลงได้แต่เกินไม่ได้
-      const full = Number(src.grand_total) || 0;
-      const pct = full > 0 ? Math.round((info.remaining / full) * 10000) / 100 : 100;
-      setBillingPercent(pct >= 100 ? '' : String(pct));
+      // ตั้ง % ให้ยอดตรงกับส่วนที่ใบต้นทางยังเหลือพอดี ผู้ใช้ปรับลงได้แต่เกินไม่ได้
+      const pct = childBillingPercent(src, info.remaining);
+      setBillingPercent(pct == null ? '' : String(pct));
+
+      // ส่วนลดพิเศษต้องตามมาด้วย ไม่งั้นยอดใบลูกจะสูงกว่าใบต้นทางแล้วชนกฎห้ามวางเกิน
+      // และถ้าคีย์เป็นบาทต้องย่อตามสัดส่วน กันลดซ้ำเวลาแตกเป็นหลายใบ
+      setExtraDiscType((src.extra_discount_type as 'amount' | 'percent') ?? 'amount');
+      const childDisc = childExtraDiscount(src, pct);
+      setExtraDiscValue(childDisc ? String(childDisc) : '');
 
       toast(`ดึงข้อมูลจาก ${src.doc_no ?? 'ใบต้นทาง'} แล้ว`);
     } catch (e) {

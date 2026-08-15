@@ -247,3 +247,48 @@ export function docDate(iso: string | null | undefined): string {
   const [y, m, d] = iso.slice(0, 10).split('-');
   return `${d}/${m}/${y}`;
 }
+
+/**
+ * % เรียกเก็บที่เอกสารลูกต้องใช้ เพื่อให้ยอดตรงกับส่วนที่ใบต้นทางยังเหลือพอดี
+ *
+ * ต้องคูณ % ของใบต้นทางเข้าไปด้วย เพราะ billing_percent คิดจาก "ยอดรายการ"
+ * ไม่ใช่จาก "ยอดของใบต้นทาง" — ใบแจ้งหนี้ที่วางไว้ 30% มีรายการเต็มจำนวนอยู่ข้างใน
+ * ถ้าใบกำกับลอกรายการไปแล้วตั้ง 100% ยอดจะพองกลับเป็นยอดเต็มทันที
+ *
+ *   QT (100%) → BL ที่ยังไม่วางเลย     : 100 × (เต็ม/เต็ม)   = 100
+ *   QT (100%) → BL ใบสองหลังวางไป 30%  : 100 × 0.7          = 70
+ *   BL (30%)  → INV เต็มใบ             : 30  × 1            = 30   ← เดิมได้ 100 จึงพัง
+ *   BL (30%)  → INV ใบสองหลังออกไปครึ่ง : 30  × 0.5          = 15
+ */
+export function childBillingPercent(
+  source: { grand_total: number; billing_percent: number | null }, remaining: number
+): number | null {
+  const total = Number(source.grand_total) || 0;
+  const srcPct = source.billing_percent != null ? Number(source.billing_percent) : 100;
+  const share = total > 0 ? remaining / total : 1;
+  const pct = Math.round(srcPct * share * 10000) / 10000;
+  return pct >= 100 ? null : pct;
+}
+
+/**
+ * ส่วนลดพิเศษที่เอกสารลูกต้องใช้
+ *
+ * ส่วนลดที่คีย์เป็น **บาท** ต้องย่อตามสัดส่วนที่ลูกรับไป ไม่งั้นแตกใบแจ้งหนี้
+ * เป็นสองใบแล้วจะถูกลดซ้ำสองรอบ (ลด 5,000 สองใบ = ลดจริง 10,000)
+ * ส่วนที่คีย์เป็น **%** ไม่ต้องย่อ เพราะมันคิดจากยอดของใบนั้นอยู่แล้ว
+ */
+export function childExtraDiscount(
+  source: {
+    billing_percent: number | null;
+    extra_discount_type: 'amount' | 'percent';
+    extra_discount_value: number;
+  },
+  childPercent: number | null
+): number {
+  const value = Number(source.extra_discount_value) || 0;
+  if (value === 0 || source.extra_discount_type === 'percent') return value;
+
+  const srcPct = source.billing_percent != null ? Number(source.billing_percent) : 100;
+  const childPct = childPercent != null ? Number(childPercent) : 100;
+  return srcPct > 0 ? round2((value * childPct) / srcPct) : value;
+}

@@ -1,5 +1,7 @@
 import { supabase } from '../lib/supabaseClient.js';
-import { computeTotals, lineDiscount, lineTotal, round2 } from '@/accounting-lib/calc';
+import {
+  childBillingPercent, childExtraDiscount, computeTotals, lineDiscount, lineTotal, round2,
+} from '@/accounting-lib/calc';
 import type {
   ApDocType, ArDocType, ArDocument, Company, DocumentItem, PartySnapshot, Vendor,
 } from '@/accounting-lib/types';
@@ -350,8 +352,7 @@ export async function convertArDocument(
   // ตั้ง % เรียกเก็บให้พอดีกับยอดที่ใบต้นทางยังเหลือ
   // ไม่งั้นใบที่สองจะตั้งต้นเป็นเต็มจำนวนแล้วชนกฎห้ามวางเกินทันที
   const info = await loadSource(sourceId);
-  const full = Number(src.grand_total) || 0;
-  const pct = full > 0 ? Math.round((info.remaining / full) * 10000) / 100 : 100;
+  const pct = childBillingPercent(src, info.remaining);
   return saveArDocument({
     company_id: src.company_id,
     doc_type: targetType,
@@ -367,12 +368,12 @@ export async function convertArDocument(
     tag_id: src.tag_id,
     customer_po_no: src.customer_po_no,
     extra_discount_type: src.extra_discount_type,
-    extra_discount_value: src.extra_discount_value,
+    extra_discount_value: childExtraDiscount(src, pct),
     price_include_vat: src.price_include_vat,
     vat_rate: src.vat_rate,
     wht_rate: src.wht_rate,
     contract_total: src.grand_total,
-    billing_percent: pct >= 100 ? null : pct,
+    billing_percent: pct,
     note_text: src.note_text,
     terms_text: src.terms_text,
     source_document_id: src.id,
@@ -926,6 +927,8 @@ export async function searchSourceDocuments(
     customer_name: d.customer?.company_name || d.customer?.display_name || null,
   }));
 }
+
+export { childBillingPercent, childExtraDiscount };
 
 export interface SourceLoad {
   source: ArDocumentFull;
