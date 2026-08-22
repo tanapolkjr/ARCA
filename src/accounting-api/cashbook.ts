@@ -12,13 +12,78 @@ export async function listWallets(activeOnly = true): Promise<Wallet[]> {
   return (data ?? []) as Wallet[];
 }
 
-export async function saveWallet(payload: Partial<Wallet> & { id?: string }) {
-  const { id, ...rest } = payload;
-  const q = id
-    ? supabase.from('wallets').update(rest).eq('id', id)
-    : supabase.from('wallets').insert(rest);
-  const { error } = await q;
+/** สร้างกระเป๋าใหม่ — การแก้ไขต้องไปทาง updateWallet เพราะมีรหัสล็อกอยู่ */
+export async function createWallet(payload: Partial<Wallet>) {
+  const { data, error } = await supabase.from('wallets').insert(payload).select('id').single();
   if (error) throw error;
+  return data.id as string;
+}
+
+export interface WalletPatch {
+  name: string;
+  wallet_type: Wallet['wallet_type'];
+  bank_name: string | null;
+  account_no: string | null;
+  opening_balance: number;
+  is_active: boolean;
+}
+
+/**
+ * แก้ไขกระเป๋าเงิน
+ *
+ * ผ่านฟังก์ชันฝั่งฐานข้อมูลที่ตรวจรหัสให้ก่อนเสมอ — แก้ตารางตรงๆ ไม่ได้แล้ว
+ * (policy update ถูกถอดออกใน migration 0024) รหัสจึงกันได้จริง ไม่ใช่แค่ซ่อนปุ่ม
+ */
+export async function updateWallet(id: string, pin: string, patch: WalletPatch) {
+  const { error } = await supabase.rpc('update_wallet_secure', {
+    p_wallet: id,
+    p_pin: pin || '',
+    p_name: patch.name,
+    p_wallet_type: patch.wallet_type,
+    p_bank_name: patch.bank_name,
+    p_account_no: patch.account_no,
+    p_opening_balance: patch.opening_balance,
+    p_is_active: patch.is_active,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteWallet(id: string, pin: string) {
+  const { error } = await supabase.rpc('delete_wallet_secure', { p_wallet: id, p_pin: pin || '' });
+  if (error) throw new Error(error.message);
+}
+
+/** กระเป๋านี้ล็อกรหัสไว้ไหม — ใช้ตัดสินว่าหน้าจอต้องถามรหัส */
+export async function walletHasPin(id: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('wallet_has_pin', { p_wallet: id });
+  if (error) throw error;
+  return Boolean(data);
+}
+
+export async function setWalletPin(id: string, newPin: string, oldPin?: string) {
+  const { error } = await supabase.rpc('set_wallet_pin', {
+    p_wallet: id, p_new_pin: newPin, p_old_pin: oldPin ?? null,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function clearWalletPin(id: string, pin: string) {
+  const { error } = await supabase.rpc('clear_wallet_pin', { p_wallet: id, p_pin: pin });
+  if (error) throw new Error(error.message);
+}
+
+export interface WalletAudit {
+  id: string; action: string; detail: string | null; changed_at: string;
+  user?: { name: string } | null;
+}
+
+export async function walletAudit(walletId: string): Promise<WalletAudit[]> {
+  const { data, error } = await supabase
+    .from('wallet_audit')
+    .select('id, action, detail, changed_at, user:users(name)')
+    .eq('wallet_id', walletId).order('changed_at', { ascending: false }).limit(20);
+  if (error) throw error;
+  return (data ?? []) as unknown as WalletAudit[];
 }
 
 export async function listCashCategories(): Promise<CashCategory[]> {

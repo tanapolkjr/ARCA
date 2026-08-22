@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
-  AlertTriangle, ArrowDownLeft, ArrowUpRight, Copy, Link2, Pencil, Plus, Repeat, Search,
-  Trash2, Wallet as WalletIcon,
+  AlertTriangle, ArrowDownLeft, ArrowUpRight, Copy, KeyRound, Link2, Lock, Pencil, Plus,
+  Repeat, Search, Trash2, Unlock, Wallet as WalletIcon,
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast.jsx';
 import { useUserId } from '@/hooks/useAuth.jsx';
@@ -9,10 +9,11 @@ import { useQuery } from '@/hooks/useSourcingQuery';
 import { docDate, money, round2 } from '@/accounting-lib/calc';
 import type { CashEntry, Wallet } from '@/accounting-lib/types';
 import {
-  cashEntryLinks, deleteCashEntry, duplicateCashEntry, listCashCategories, listCashEntries,
-  listWallets, monthlySummary, saveCashEntry, saveWallet, walletBalances,
+  cashEntryLinks, createWallet, deleteCashEntry, duplicateCashEntry,
+  listCashCategories, listCashEntries, deleteWallet, listWallets, monthlySummary, saveCashEntry,
+  setWalletPin, clearWalletPin, updateWallet, walletAudit, walletBalances, walletHasPin,
 } from '@/accounting-api/cashbook';
-import type { CashEntryFull } from '@/accounting-api/cashbook';
+import type { CashEntryFull, WalletPatch } from '@/accounting-api/cashbook';
 import { getDefaultCompany } from '@/accounting-api/setup';
 import {
   EmptyRow, Field, GhostButton, Modal, NumberInput, PrimaryButton, Select, TextArea, TextInput,
@@ -44,7 +45,8 @@ export function CashBookPage() {
   const [showWallets, setShowWallets] = useState(false);
   const [viewing, setViewing] = useState<CashEntryFull | null>(null);
 
-  const walletsQ = useQuery(() => listWallets(), []);
+  // หน้าจัดการต้องเห็นกระเป๋าที่ปิดใช้งานด้วย ไม่งั้นเปิดกลับมาใช้ไม่ได้
+  const walletsQ = useQuery(() => listWallets(false), []);
   const catsQ = useQuery(() => listCashCategories(), []);
   const balancesQ = useQuery(() => walletBalances(), []);
   const entriesQ = useQuery(
@@ -128,7 +130,8 @@ export function CashBookPage() {
         <Field label="กระเป๋า" className="w-44">
           <Select value={walletFilter} onChange={(e) => setWalletFilter(e.target.value)}>
             <option value="">ทุกกระเป๋า</option>
-            {walletsQ.data?.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+            {walletsQ.data?.filter((w) => w.is_active)
+              .map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
           </Select>
         </Field>
         <Field label="ประเภท" className="w-32">
@@ -475,7 +478,7 @@ function EntryModal({
   entry, wallets, categories, userId, onClose, onSaved,
 }: {
   entry: Partial<CashEntry>;
-  wallets: { id: string; name: string }[];
+  wallets: Wallet[];
   categories: { id: string; name: string; direction: string }[];
   userId: string;
   onClose: () => void;
@@ -529,7 +532,8 @@ function EntryModal({
         <Field label={isTransfer ? 'จากกระเป๋า' : 'กระเป๋า'} required>
           <Select value={f.wallet_id ?? ''} onChange={(e) => set('wallet_id', e.target.value)}>
             <option value="">— เลือก —</option>
-            {wallets.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+            {wallets.filter((w) => w.is_active)
+              .map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
           </Select>
         </Field>
 
@@ -537,7 +541,7 @@ function EntryModal({
           <Field label="ไปกระเป๋า" required>
             <Select value={f.to_wallet_id ?? ''} onChange={(e) => set('to_wallet_id', e.target.value)}>
               <option value="">— เลือก —</option>
-              {wallets.filter((w) => w.id !== f.wallet_id)
+              {wallets.filter((w) => w.is_active && w.id !== f.wallet_id)
                 .map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
             </Select>
           </Field>
@@ -620,32 +624,36 @@ function EntryModal({
   );
 }
 
+/**
+ * จัดการกระเป๋าเงิน
+ *
+ * แก้และลบต้องใส่รหัสของกระเป๋านั้น ตรวจที่ฐานข้อมูล ไม่ใช่ที่หน้าจอ —
+ * policy update/delete ของตาราง wallets ถูกถอดออกแล้ว (migration 0024)
+ * ทางเดียวที่แก้ได้คือผ่านฟังก์ชันที่ตรวจรหัสให้ก่อน
+ */
 function WalletModal({
   wallets, onClose, onSaved,
 }: {
-  wallets: { id: string; name: string; wallet_type: string; opening_balance: number }[];
+  wallets: Wallet[];
   onClose: () => void;
   onSaved: () => void;
 }) {
   const { toast } = useToast();
   const [draft, setDraft] = useState<{ name: string; wallet_type: Wallet['wallet_type']; opening_balance: number }>(
     { name: '', wallet_type: 'bank', opening_balance: 0 });
+  const [editing, setEditing] = useState<Wallet | null>(null);
 
   return (
-    <Modal title="กระเป๋าเงิน" onClose={onClose}>
+    <Modal title="กระเป๋าเงิน" onClose={onClose} wide>
       <div className="flex flex-col gap-2">
         {wallets.map((w) => (
-          <div key={w.id} className="flex items-center justify-between text-sm border
-            border-slate-100 dark:border-slate-800 rounded-xl px-3 py-2">
-            <span>{w.name}</span>
-            <span className="text-xs text-slate-400">
-              ยอดยกมา {money(w.opening_balance)}
-            </span>
-          </div>
+          <WalletRow key={w.id} wallet={w} onEdit={() => setEditing(w)} />
         ))}
+        {wallets.length === 0 && <p className="text-sm text-slate-400">ยังไม่มีกระเป๋าเงิน</p>}
       </div>
+
       <div className="grid grid-cols-3 gap-3 border-t border-slate-100 dark:border-slate-800 pt-4">
-        <Field label="ชื่อกระเป๋า">
+        <Field label="ชื่อกระเป๋าใหม่">
           <TextInput value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
         </Field>
         <Field label="ประเภท">
@@ -666,15 +674,234 @@ function WalletModal({
         <PrimaryButton
           onClick={async () => {
             if (!draft.name.trim()) { toast('ใส่ชื่อกระเป๋าก่อน', 'error'); return; }
-            const company = await getDefaultCompany();
-            await saveWallet({ ...draft, company_id: company?.id });
-            setDraft({ name: '', wallet_type: 'bank', opening_balance: 0 });
-            onSaved();
+            try {
+              const company = await getDefaultCompany();
+              await createWallet({ ...draft, company_id: company?.id ?? null });
+              setDraft({ name: '', wallet_type: 'bank', opening_balance: 0 });
+              toast('เพิ่มกระเป๋าแล้ว');
+              onSaved();
+            } catch (e) {
+              toast(e instanceof Error ? e.message : 'เพิ่มไม่สำเร็จ', 'error');
+            }
           }}
         >
           <Plus className="w-4 h-4" /> เพิ่มกระเป๋า
         </PrimaryButton>
       </div>
+
+      {editing && (
+        <WalletEditModal wallet={editing} onClose={() => setEditing(null)}
+                         onSaved={() => { setEditing(null); onSaved(); }} />
+      )}
+    </Modal>
+  );
+}
+
+function WalletRow({ wallet, onEdit }: { wallet: Wallet; onEdit: () => void }) {
+  const lockedQ = useQuery(() => walletHasPin(wallet.id), [wallet.id]);
+  return (
+    <div className="flex items-center justify-between text-sm border
+      border-slate-100 dark:border-slate-800 rounded-xl px-3 py-2">
+      <div className="flex items-center gap-2 min-w-0">
+        {lockedQ.data
+          ? <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+          : <Unlock className="w-3.5 h-3.5 text-slate-300 shrink-0" />}
+        <span className="truncate">{wallet.name}</span>
+        {!wallet.is_active && (
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800
+            text-slate-500">ปิดใช้งาน</span>
+        )}
+      </div>
+      <div className="flex items-center gap-3 shrink-0">
+        <span className="text-xs text-slate-400 tabular-nums">
+          ยอดยกมา {money(wallet.opening_balance)}
+        </span>
+        <button onClick={onEdit} className="text-slate-400 hover:text-indigo-600 p-1">
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function WalletEditModal({
+  wallet, onClose, onSaved,
+}: { wallet: Wallet; onClose: () => void; onSaved: () => void }) {
+  const { toast } = useToast();
+  const lockedQ = useQuery(() => walletHasPin(wallet.id), [wallet.id]);
+  const auditQ = useQuery(() => walletAudit(wallet.id), [wallet.id]);
+
+  const [pin, setPin] = useState('');
+  const [f, setF] = useState<WalletPatch>({
+    name: wallet.name,
+    wallet_type: wallet.wallet_type,
+    bank_name: wallet.bank_name,
+    account_no: wallet.account_no,
+    opening_balance: Number(wallet.opening_balance) || 0,
+    is_active: wallet.is_active,
+  });
+  const [newPin, setNewPin] = useState('');
+  const [busy, setBusy] = useState(false);
+  const locked = Boolean(lockedQ.data);
+
+  return (
+    <Modal title={`แก้ไขกระเป๋า — ${wallet.name}`} onClose={onClose} wide>
+      {locked ? (
+        <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200
+          dark:border-amber-800 px-4 py-3 flex gap-2 text-xs text-amber-800 dark:text-amber-200">
+          <Lock className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>
+            กระเป๋านี้ล็อกรหัสไว้ — ต้องใส่รหัสถึงจะบันทึกได้
+            ระบบตรวจรหัสที่ฐานข้อมูล ข้ามด้วยการแก้หน้าจอไม่ได้
+          </span>
+        </div>
+      ) : (
+        <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 px-4 py-3 flex gap-2
+          text-xs text-slate-500">
+          <Unlock className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>ยังไม่ได้ล็อกรหัส — ใครที่มีสิทธิ์บัญชีก็แก้ได้ ตั้งรหัสได้ที่ข้างล่าง</span>
+        </div>
+      )}
+
+      {locked && (
+        <Field label="รหัสกระเป๋าเงิน" required>
+          <TextInput type="password" value={pin} autoFocus
+                     placeholder="ใส่รหัสเพื่อยืนยัน"
+                     onChange={(e) => setPin(e.target.value)} />
+        </Field>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Field label="ชื่อกระเป๋า" required>
+          <TextInput value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+        </Field>
+        <Field label="ประเภท">
+          <Select value={f.wallet_type}
+                  onChange={(e) => setF({ ...f, wallet_type: e.target.value as Wallet['wallet_type'] })}>
+            <option value="bank">บัญชีธนาคาร</option>
+            <option value="cash">เงินสด</option>
+            <option value="promptpay">พร้อมเพย์</option>
+            <option value="credit_card">บัตรเครดิต</option>
+          </Select>
+        </Field>
+        <Field label="ธนาคาร">
+          <TextInput value={f.bank_name ?? ''} onChange={(e) => setF({ ...f, bank_name: e.target.value })} />
+        </Field>
+        <Field label="เลขที่บัญชี">
+          <TextInput value={f.account_no ?? ''} onChange={(e) => setF({ ...f, account_no: e.target.value })} />
+        </Field>
+        <Field label="ยอดยกมา" hint="แก้แล้วยอดคงเหลือขยับทันที และถูกบันทึกไว้ในประวัติ">
+          <NumberInput value={f.opening_balance} step="0.01"
+                       onChange={(e) => setF({ ...f, opening_balance: Number(e.target.value) })} />
+        </Field>
+        <Field label="สถานะ">
+          <Select value={f.is_active ? 'y' : 'n'}
+                  onChange={(e) => setF({ ...f, is_active: e.target.value === 'y' })}>
+            <option value="y">ใช้งาน</option>
+            <option value="n">ปิดใช้งาน</option>
+          </Select>
+        </Field>
+      </div>
+
+      <div className="flex justify-between gap-2">
+        <button
+          className="text-xs text-rose-500 hover:underline"
+          onClick={async () => {
+            try {
+              await deleteWallet(wallet.id, pin);
+              toast('ลบกระเป๋าแล้ว');
+              onSaved();
+            } catch (e) {
+              toast(e instanceof Error ? e.message : 'ลบไม่สำเร็จ', 'error');
+            }
+          }}
+        >
+          ลบกระเป๋านี้
+        </button>
+        <div className="flex gap-2">
+          <GhostButton onClick={onClose}>ยกเลิก</GhostButton>
+          <PrimaryButton
+            disabled={busy}
+            onClick={async () => {
+              if (!f.name.trim()) { toast('ใส่ชื่อกระเป๋าก่อน', 'error'); return; }
+              if (locked && !pin) { toast('ใส่รหัสกระเป๋าเงินก่อน', 'error'); return; }
+              setBusy(true);
+              try {
+                await updateWallet(wallet.id, pin, f);
+                toast('บันทึกแล้ว');
+                onSaved();
+              } catch (e) {
+                toast(e instanceof Error ? e.message : 'บันทึกไม่สำเร็จ', 'error');
+              } finally { setBusy(false); }
+            }}
+          >
+            บันทึก
+          </PrimaryButton>
+        </div>
+      </div>
+
+      <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
+        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-2
+          flex items-center gap-1.5">
+          <KeyRound className="w-4 h-4 text-slate-400" /> รหัสกระเป๋าเงิน
+        </h3>
+        <p className="text-xs text-slate-500 mb-2">
+          ตั้งไว้ให้เฉพาะคนที่ถือเงินรู้ · รหัสเก็บแบบเข้ารหัส ไม่มีใครอ่านตัวเลขจริงได้
+          {locked && ' · Super Admin รีเซ็ตให้ได้ถ้าลืม'}
+        </p>
+        <div className="flex gap-2 items-end">
+          <Field label={locked ? 'ตั้งรหัสใหม่' : 'ตั้งรหัส (อย่างน้อย 4 ตัว)'} className="w-56">
+            <TextInput type="password" value={newPin} onChange={(e) => setNewPin(e.target.value)} />
+          </Field>
+          <GhostButton
+            onClick={async () => {
+              try {
+                await setWalletPin(wallet.id, newPin, pin || undefined);
+                setNewPin('');
+                toast(locked ? 'เปลี่ยนรหัสแล้ว' : 'ตั้งรหัสแล้ว');
+                void lockedQ.refetch();
+                void auditQ.refetch();
+              } catch (e) {
+                toast(e instanceof Error ? e.message : 'ตั้งรหัสไม่สำเร็จ', 'error');
+              }
+            }}
+          >
+            {locked ? 'เปลี่ยนรหัส' : 'ตั้งรหัส'}
+          </GhostButton>
+          {locked && (
+            <GhostButton
+              onClick={async () => {
+                try {
+                  await clearWalletPin(wallet.id, pin);
+                  toast('ยกเลิกการล็อกแล้ว');
+                  void lockedQ.refetch();
+                  void auditQ.refetch();
+                } catch (e) {
+                  toast(e instanceof Error ? e.message : 'ยกเลิกไม่สำเร็จ', 'error');
+                }
+              }}
+            >
+              ยกเลิกการล็อก
+            </GhostButton>
+          )}
+        </div>
+      </div>
+
+      {(auditQ.data?.length ?? 0) > 0 && (
+        <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
+          <h3 className="text-xs font-semibold text-slate-500 mb-1.5">ประวัติการแก้ไข</h3>
+          <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
+            {auditQ.data?.map((a) => (
+              <div key={a.id} className="text-[11px] text-slate-400 flex gap-2">
+                <span className="w-20 shrink-0">{docDate(a.changed_at.slice(0, 10))}</span>
+                <span className="w-24 shrink-0">{a.action}</span>
+                <span className="flex-1">{a.detail ?? ''}</span>
+                <span>{a.user?.name ?? ''}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </Modal>
   );
 }

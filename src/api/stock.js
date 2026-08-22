@@ -518,6 +518,32 @@ export async function listStockSummary({ locationId, query } = {}) {
   }));
 }
 
+/** แก้ไขคลังสินค้า — ชื่อ ประเภท ที่อยู่ เบอร์ หมายเหตุ และเปิด/ปิดใช้งาน */
+export async function updateStockLocation(id, payload) {
+  const { data, error } = await supabase
+    .from("stock_locations").update(payload).eq("id", id).select().single();
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * ลบคลัง — ได้เฉพาะคลังที่ไม่เคยมีของและไม่เคยมีการเคลื่อนไหว
+ * ถ้าเคยใช้แล้วต้องปิดใช้งานแทน ไม่งั้นประวัติสต็อกจะชี้ไปที่คลังที่ไม่มีอยู่
+ */
+export async function deleteStockLocation(id) {
+  const [{ count: balCount, error: balErr }, { count: txnCount, error: txnErr }] = await Promise.all([
+    supabase.from("stock_balances").select("id", { count: "exact", head: true }).eq("location_id", id),
+    supabase.from("stock_transactions").select("id", { count: "exact", head: true }).eq("location_id", id),
+  ]);
+  if (balErr) throw balErr;
+  if (txnErr) throw txnErr;
+  if ((balCount ?? 0) > 0 || (txnCount ?? 0) > 0) {
+    throw new Error("คลังนี้เคยมีการเคลื่อนไหวสินค้าแล้ว ลบไม่ได้ — ให้ปิดใช้งานแทน");
+  }
+  const { error } = await supabase.from("stock_locations").delete().eq("id", id);
+  if (error) throw error;
+}
+
 export async function createStockLocation(payload) {
   // RLS restricts this to Manager/Store roles (see 0001_init.sql §8) —
   // Supabase will reject with a permissions error for anyone else.
