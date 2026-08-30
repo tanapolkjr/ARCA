@@ -128,6 +128,9 @@ html, body, #root {
   position: relative;
   font-family: 'Noto Sans Thai', Inter, system-ui, sans-serif;
   box-sizing: border-box;
+  /* ความสูงคงที่ + overflow hidden = หน้ากระดาษล้นไม่ได้เด็ดขาด
+     ตัวจัดหน้าวัดความสูงจริงก่อนแบ่ง จึงไม่มีอะไรถูกตัดหาย */
+  overflow: hidden;
 }
 
 @media print {
@@ -147,6 +150,8 @@ html, body, #root {
   .doc-page {
     page-break-after: always;
     break-after: page;
+    page-break-inside: avoid;
+    break-inside: avoid;
     box-shadow: none !important;
     margin: 0 !important;
   }
