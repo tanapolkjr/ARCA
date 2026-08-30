@@ -1,4 +1,4 @@
-import { bahtText, docDate, money } from '@/accounting-lib/calc';
+import { bahtText, docDate, lineDiscount, money } from '@/accounting-lib/calc';
 import {
   AP_DOC_LABEL, AP_DOC_LABEL_EN, AR_DOC_LABEL, AR_DOC_LABEL_EN, DOC_COLOR,
 } from '@/accounting-lib/types';
@@ -238,6 +238,7 @@ function DocPage({
             <th className="py-1.5 w-[16mm] text-left font-semibold pl-1">หน่วย</th>
             <th className="py-1.5 w-[24mm] text-right font-semibold">ราคาต่อหน่วย</th>
             <th className="py-1.5 w-[22mm] text-right font-semibold">ส่วนลด</th>
+            <th className="py-1.5 w-[24mm] text-right font-semibold">ราคาสุทธิ/หน่วย</th>
             <th className="py-1.5 w-[14mm] text-center font-semibold">ภาษี</th>
             <th className="py-1.5 w-[26mm] text-right font-semibold">มูลค่า</th>
           </tr>
@@ -251,8 +252,14 @@ function DocPage({
               <td className="py-1.5 text-right tabular-nums">{money(it.qty).replace('.00', '')}</td>
               <td className="py-1.5 pl-1">{it.unit ?? ''}</td>
               <td className="py-1.5 text-right tabular-nums">{money(it.unit_price)}</td>
+              {/* คิดจากตัวเดียวกับที่ใช้รวมยอด ไม่ใช่ค่าที่เก็บไว้ กันสองทางเพี้ยนจากกัน */}
               <td className="py-1.5 text-right tabular-nums">
-                {it.discount_amount > 0 ? money(it.discount_amount) : ''}
+                {lineDiscount(it) > 0 ? money(lineDiscount(it)) : ''}
+              </td>
+              {/* ราคาต่อหน่วยหลังหักส่วนลด — คิดจากมูลค่าจริงหารจำนวน
+                  จึงถูกต้องทุกโหมดส่วนลด (ต่อชิ้น / ทั้งบรรทัด / %) */}
+              <td className="py-1.5 text-right tabular-nums">
+                {Number(it.qty) > 0 ? money(it.line_total / Number(it.qty)) : ''}
               </td>
               <td className="py-1.5 text-center">
                 {it.vat_type === 'vat' ? `${doc.vat_rate}%` : it.vat_type === 'zero' ? '0%' : 'ยกเว้น'}
@@ -261,7 +268,7 @@ function DocPage({
             </tr>
           ))}
           {rows.length === 0 && (
-            <tr><td colSpan={8} className="py-6 text-center text-slate-400">ยังไม่มีรายการ</td></tr>
+            <tr><td colSpan={9} className="py-6 text-center text-slate-400">ยังไม่มีรายการ</td></tr>
           )}
         </tbody>
       </table>
@@ -284,6 +291,9 @@ function DocPage({
           <Total k="มูลค่าที่ไม่มี/ยกเว้นภาษี" v={doc.vat_exempt_base} />
           <Total k="มูลค่าที่คำนวณภาษี" v={doc.vat_base} />
           <Total k={`ภาษีมูลค่าเพิ่ม ${doc.vat_rate}%`} v={doc.vat_amount} />
+          <div className="text-[9px] text-slate-400 text-right -mt-0.5">
+            {doc.price_include_vat ? '(ราคาต่อหน่วยรวมภาษีแล้ว)' : '(ราคาต่อหน่วยยังไม่รวมภาษี)'}
+          </div>
           <div style={{ borderTop: `1px solid ${color}` }} className="mt-1 pt-1">
             <Total k="จำนวนเงินรวมทั้งสิ้น" v={doc.grand_total} bold />
           </div>

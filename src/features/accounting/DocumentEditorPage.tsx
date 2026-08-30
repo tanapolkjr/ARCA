@@ -233,7 +233,9 @@ function DocumentEditorInner() {
     setItems((prev) => prev.map((it, i) => {
       if (i !== idx) return it;
       const next = { ...it, ...patch };
-      return { ...next, line_total: lineTotal(next) };
+      // อัปเดตยอดส่วนลดที่หักจริงด้วย ไม่งั้นตอนดูตัวอย่างก่อนบันทึก
+      // คอลัมน์ "ส่วนลด" บนใบจะว่าง เพราะยังเป็นค่าเดิมจากตอนสร้างบรรทัด
+      return { ...next, discount_amount: lineDiscount(next), line_total: lineTotal(next) };
     }));
 
   async function handleSave(): Promise<string | null> {
@@ -915,6 +917,14 @@ function DocumentEditorInner() {
                           หักจริง −{money(lineDiscount(it))}
                         </div>
                       )}
+                    </Field>
+                    {/* ราคาสุทธิต่อหน่วย — ตัวเลขที่ใช้เทียบกับราคาที่ตกลงกับลูกค้าจริง */}
+                    <Field label="ราคาสุทธิ/หน่วย" className="w-32">
+                      <div className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60
+                        text-sm text-right tabular-nums font-medium
+                        text-slate-700 dark:text-slate-200">
+                        {Number(it.qty) > 0 ? money(it.line_total / Number(it.qty)) : '—'}
+                      </div>
                     </Field>
                     <Field label="หัก ณ ที่จ่าย" className="w-28">
                       <Select value={String(it.wht_rate ?? 0)} disabled={locked}
