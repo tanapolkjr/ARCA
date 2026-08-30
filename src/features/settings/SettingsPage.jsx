@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { Users, Boxes, Plus, Pencil, ShieldAlert, Trash2 } from "lucide-react";
+import { Users, Boxes, Plus, Pencil, Phone, ShieldAlert, Trash2 } from "lucide-react";
 import { Card, Select, TextInput, Field, Modal, Pill } from "../../components/ui/primitives.jsx";
 import { useQuery } from "../../hooks/useQuery.js";
-import { listUsers, updateUserRole } from "../../api/users.js";
+import { listUsers, updateUserRole, updateUserProfile } from "../../api/users.js";
 import { listLocations, createStockLocation, updateStockLocation, deleteStockLocation } from "../../api/stock.js";
 import { useAuth } from "../../hooks/useAuth.jsx";
 import { useToast } from "../../hooks/useToast.jsx";
@@ -15,6 +15,52 @@ const ROLES = ["Super Admin", "Manager", "Sale", "PM", "Admin", "Store"];
  * `location` เป็น null = สร้างใหม่ ไม่งั้นคือแก้คลังนั้น
  * ใช้ตัวเดียวกันทั้งสองโหมด ฟอร์มจะได้ไม่หลุดกัน
  */
+/**
+ * แก้ชื่อและเบอร์โทรของผู้ใช้
+ * เบอร์นี้ถูกดึงไปพิมพ์ใต้ชื่อผู้ขายบนเอกสาร ลูกค้าจะได้โทรกลับหาเซลล์คนที่ออกใบให้
+ */
+function UserProfileModal({ user, onClose, onSaved }) {
+  const [name, setName] = useState(user.name ?? "");
+  const [phone, setPhone] = useState(user.phone ?? "");
+  const [saving, setSaving] = useState(false);
+  const toast = useToast();
+
+  return (
+    <Modal title={`แก้ไขผู้ใช้ — ${user.email}`} onClose={onClose}>
+      <Field label="ชื่อที่แสดง" required>
+        <TextInput value={name} onChange={(e) => setName(e.target.value)} />
+      </Field>
+      <Field label="เบอร์โทร">
+        <TextInput value={phone} placeholder="0811111111"
+                   onChange={(e) => setPhone(e.target.value)} />
+        <p className="text-xs text-slate-400 mt-1">
+          ขึ้นบนใบเสนอราคา ใบแจ้งหนี้ และใบกำกับภาษี ใต้ชื่อผู้ขาย
+        </p>
+      </Field>
+      <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-slate-100 dark:border-slate-700">
+        <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">ยกเลิก</button>
+        <button
+          disabled={saving}
+          onClick={async () => {
+            if (!name.trim()) { toast.error("ใส่ชื่อก่อน"); return; }
+            setSaving(true);
+            try {
+              await updateUserProfile(user.id, { name, phone });
+              toast.success("บันทึกแล้ว");
+              onSaved();
+            } catch (err) {
+              toast.error("บันทึกไม่สำเร็จ: " + errMsg(err));
+            } finally { setSaving(false); }
+          }}
+          className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm disabled:opacity-60"
+        >
+          {saving ? "กำลังบันทึก..." : "บันทึก"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 function LocationModal({ location, onClose, onSaved }) {
   const editing = Boolean(location);
   const [f, setF] = useState({
@@ -97,6 +143,7 @@ function UserRoleSection() {
   const { profile } = useAuth();
   const toast = useToast();
   const canEdit = profile?.role === "Super Admin";
+  const [editUser, setEditUser] = useState(null);
 
   async function handleRoleChange(userId, role) {
     try {
@@ -126,10 +173,23 @@ function UserRoleSection() {
       <div className="space-y-2">
         {users?.map((u) => (
           <div key={u.id} className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-slate-100 dark:border-slate-700">
-            <div>
+            <div className="min-w-0">
               <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{u.name || "(ยังไม่ตั้งชื่อ)"}</p>
               <p className="text-xs text-slate-400">{u.email}</p>
+              <p className="text-xs mt-0.5 flex items-center gap-1">
+                <Phone className="w-3 h-3 text-slate-300" />
+                {u.phone
+                  ? <span className="text-slate-500">{u.phone}</span>
+                  : <span className="text-amber-600">ยังไม่ใส่เบอร์ — เอกสารจะไม่มีเบอร์ให้ลูกค้าโทรกลับ</span>}
+              </p>
             </div>
+            <div className="flex items-center gap-2 shrink-0">
+            {canEdit && (
+              <button onClick={() => setEditUser(u)} title="แก้ชื่อและเบอร์โทร"
+                      className="p-1.5 text-slate-400 hover:text-indigo-600">
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+            )}
             {canEdit ? (
               <select
                 value={u.role}
@@ -141,9 +201,14 @@ function UserRoleSection() {
             ) : (
               <Pill tone="indigo">{u.role}</Pill>
             )}
+            </div>
           </div>
         ))}
       </div>
+      {editUser && (
+        <UserProfileModal user={editUser} onClose={() => setEditUser(null)}
+                          onSaved={() => { setEditUser(null); refetch(); }} />
+      )}
     </Card>
   );
 }

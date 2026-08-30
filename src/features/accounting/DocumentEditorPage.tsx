@@ -122,7 +122,8 @@ function DocumentEditorInner() {
   const childrenQ = useQuery(
     () => (savedId && ar ? listChildDocuments(savedId) : Promise.resolve([])), [savedId, ar]);
   const usersQ = useQuery(
-    async () => (await supabase.from('users').select('id, name').eq('is_active', true).order('name')).data ?? [],
+    async () => (await supabase.from('users')
+      .select('id, name, phone').eq('is_active', true).order('name')).data ?? [],
     []);
   const stockQ = useQuery<StockOption[]>(
     async () => ((await supabase.from('stock_items')
@@ -435,6 +436,7 @@ function DocumentEditorInner() {
     contact_name: contactName,
     contact_phone: contactPhone,
     sales_name: usersQ.data?.find((u) => u.id === salesUserId)?.name ?? null,
+    sales_phone: usersQ.data?.find((u) => u.id === salesUserId)?.phone ?? null,
     reference_no: sourceRef?.docNo ?? null,
     customer_po_no: customerPoNo || null,
     paid_on: paidOn,

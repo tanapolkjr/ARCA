@@ -17,6 +17,7 @@ export interface PrintableDoc {
   contact_name?: string | null;
   contact_phone?: string | null;
   sales_name?: string | null;
+  sales_phone?: string | null;
   reference_no?: string | null;
   tag_name?: string | null;
   customer_po_no?: string | null;
@@ -206,6 +207,18 @@ function DocPage({
         <div className="flex-1 flex flex-col gap-3">
           <PartyBlock label="ผู้ออกเอกสาร" party={doc.company_snapshot} />
           <PartyBlock label={doc.party_label} party={doc.party_snapshot} />
+          {/* ผู้ติดต่อของลูกค้าอยู่ใต้บล็อกลูกค้า — เป็นข้อมูลของฝั่งเดียวกัน
+              ฝั่งขวาเหลือเฉพาะข้อมูลของตัวเอกสาร ทำให้สองคอลัมน์สูงใกล้กัน */}
+          {(doc.contact_name || doc.contact_phone) && (
+            <div className="text-[11px] leading-[1.6]">
+              {doc.contact_name && (
+                <div><span className="text-slate-500">ผู้ติดต่อ </span>{doc.contact_name}</div>
+              )}
+              {doc.contact_phone && (
+                <div><span className="text-slate-500">เบอร์โทร </span>{doc.contact_phone}</div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="w-[75mm] text-[11px] leading-[1.7] border-l border-slate-200 pl-3">
@@ -216,15 +229,13 @@ function DocPage({
             <Row k="ยืนราคาถึง" v={docDate(doc.valid_until)} />
           )}
           {doc.sales_name && <Row k="ผู้ขาย" v={doc.sales_name} />}
+          {doc.sales_phone && <Row k="เบอร์โทร" v={doc.sales_phone} />}
           {doc.reference_no && <Row k="อ้างอิง" v={doc.reference_no} />}
           {doc.customer_po_no && <Row k="เลขที่ PO" v={doc.customer_po_no} />}
           {doc.paid_on && (doc.doc_type === 'INV' || doc.doc_type === 'RC') && (
             <Row k="วันที่รับชำระ" v={docDate(doc.paid_on)} />
           )}
-          {doc.tag_name && <Row k="ประเภทงาน" v={doc.tag_name} />}
           {doc.job_name && <Row k="ชื่องาน" v={doc.job_name} />}
-          {doc.contact_name && <Row k="ผู้ติดต่อ" v={doc.contact_name} />}
-          {doc.contact_phone && <Row k="เบอร์โทร" v={doc.contact_phone} />}
         </div>
       </div>
 
@@ -234,12 +245,12 @@ function DocPage({
           <tr style={{ borderTop: `1px solid ${color}`, borderBottom: `1px solid ${color}` }}>
             <th className="py-1.5 w-[8mm] text-center font-semibold">#</th>
             <th className="py-1.5 text-left font-semibold">รายละเอียด</th>
-            <th className="py-1.5 w-[18mm] text-right font-semibold">จำนวน</th>
-            <th className="py-1.5 w-[16mm] text-left font-semibold pl-1">หน่วย</th>
-            <th className="py-1.5 w-[24mm] text-right font-semibold">ราคาต่อหน่วย</th>
-            <th className="py-1.5 w-[22mm] text-right font-semibold">ส่วนลด</th>
-            <th className="py-1.5 w-[24mm] text-right font-semibold">ราคาสุทธิ/หน่วย</th>
-            <th className="py-1.5 w-[14mm] text-center font-semibold">ภาษี</th>
+            <th className="py-1.5 w-[16mm] text-right font-semibold">จำนวน</th>
+            <th className="py-1.5 w-[12mm] text-left font-semibold pl-1">หน่วย</th>
+            <th className="py-1.5 w-[20mm] text-right font-semibold">ราคา/หน่วย</th>
+            <th className="py-1.5 w-[22mm] text-right font-semibold">ส่วนลด/หน่วย</th>
+            <th className="py-1.5 w-[20mm] text-right font-semibold">ราคาสุทธิ/หน่วย</th>
+            <th className="py-1.5 w-[12mm] text-center font-semibold">ภาษี</th>
             <th className="py-1.5 w-[26mm] text-right font-semibold">มูลค่า</th>
           </tr>
         </thead>
@@ -252,9 +263,19 @@ function DocPage({
               <td className="py-1.5 text-right tabular-nums">{money(it.qty).replace('.00', '')}</td>
               <td className="py-1.5 pl-1">{it.unit ?? ''}</td>
               <td className="py-1.5 text-right tabular-nums">{money(it.unit_price)}</td>
-              {/* คิดจากตัวเดียวกับที่ใช้รวมยอด ไม่ใช่ค่าที่เก็บไว้ กันสองทางเพี้ยนจากกัน */}
+              {/* ส่วนลดต่อหน่วยเป็นตัวหลัก เพื่อให้บวกลบในบรรทัดเดียวได้:
+                  ราคา/หน่วย − ส่วนลด/หน่วย = ราคาสุทธิ/หน่วย
+                  ยอดรวมของบรรทัดต่อท้ายไว้ให้กระทบกับยอดสรุปด้านล่าง
+                  คิดจาก lineDiscount() ตัวเดียวกับที่ใช้รวมยอด จึงถูกทุกโหมดส่วนลด */}
               <td className="py-1.5 text-right tabular-nums">
-                {lineDiscount(it) > 0 ? money(lineDiscount(it)) : ''}
+                {lineDiscount(it) > 0 && (
+                  <>
+                    {Number(it.qty) > 0 ? money(lineDiscount(it) / Number(it.qty)) : ''}
+                    <div className="text-[9px] text-slate-500">
+                      รวม {money(lineDiscount(it))}
+                    </div>
+                  </>
+                )}
               </td>
               {/* ราคาต่อหน่วยหลังหักส่วนลด — คิดจากมูลค่าจริงหารจำนวน
                   จึงถูกต้องทุกโหมดส่วนลด (ต่อชิ้น / ทั้งบรรทัด / %) */}
