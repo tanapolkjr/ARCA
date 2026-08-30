@@ -96,12 +96,12 @@ function NewTransferModal({ onClose, onCreated, locations, items }) {
           </div>
         ))}
       </div>
-      <button onClick={() => setLines((ls) => [...ls, { stockItemId: "", label: "", qty: 1 }])} className="text-sm font-medium text-indigo-600 hover:text-indigo-700 mb-4">+ เพิ่มสินค้าอีกรายการ</button>
+      <button onClick={() => setLines((ls) => [...ls, { stockItemId: "", label: "", qty: 1 }])} className="text-sm font-medium text-slate-900 hover:text-slate-900 mb-4">+ เพิ่มสินค้าอีกรายการ</button>
 
       <p className="text-xs text-slate-400 mb-2">ระบบจะตัด On Hand ออกจากคลังต้นทางทันทีที่สร้างใบย้าย และเพิ่มเข้าคลังปลายทางเมื่อกด "ยืนยันรับของ"</p>
       <div className="flex justify-end gap-2 mt-2 pt-4 border-t border-slate-100 dark:border-slate-700">
         <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">ยกเลิก</button>
-        <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm disabled:opacity-60">
+        <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
           {saving ? "กำลังสร้าง..." : "สร้างใบย้ายคลัง"}
         </button>
       </div>
@@ -147,10 +147,10 @@ export default function StockTransferPage() {
     <div>
       <div className="flex items-start justify-between mb-6">
         <div>
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5"><span>Stock</span><span>/</span><span className="text-indigo-600 font-medium">ย้ายคลังสินค้า</span></div>
+          <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5"><span>Stock</span><span>/</span><span className="text-slate-900 font-medium">ย้ายคลังสินค้า</span></div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">ย้ายคลังสินค้า</h1>
         </div>
-        <button onClick={() => setShowModal(true)} disabled={!canManage} title={!canManage ? "เฉพาะ Super Admin/Manager/Store" : ""} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+        <button onClick={() => setShowModal(true)} disabled={!canManage} title={!canManage ? "เฉพาะ Super Admin/Manager/Store" : ""} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           <Plus className="w-4 h-4" /> สร้างใบย้ายคลัง
         </button>
       </div>
@@ -177,7 +177,7 @@ export default function StockTransferPage() {
                   <td className="px-4 py-3 text-slate-400">
                     {expanded === t.id ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                   </td>
-                  <td className="px-4 py-3 font-medium text-indigo-600">{t.transfer_no}</td>
+                  <td className="px-4 py-3 font-medium text-slate-900">{t.transfer_no}</td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{t.from_location?.name}</td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{t.to_location?.name}</td>
                   <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-300">{t.items?.length ?? 0} รายการ</td>
@@ -187,7 +187,7 @@ export default function StockTransferPage() {
                   <td className="px-4 py-3 text-right">
                     <div className="inline-flex items-center gap-3">
                       {t.status !== "received" && canManage && (
-                        <button onClick={(e) => { e.stopPropagation(); handleReceive(t.id); }} className="text-xs font-medium text-indigo-600 hover:underline">ยืนยันรับของ</button>
+                        <button onClick={(e) => { e.stopPropagation(); handleReceive(t.id); }} className="text-xs font-medium text-slate-900 hover:underline">ยืนยันรับของ</button>
                       )}
                       {canManage && (
                         <button onClick={(e) => { e.stopPropagation(); handleDelete(t); }} className="text-slate-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>

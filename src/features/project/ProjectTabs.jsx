@@ -269,7 +269,7 @@ export function SoInfoTab({ projectId }) {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">ใบเสนอราคาที่เกี่ยวข้อง</h4>
-        <button onClick={() => setShowForm((v) => !v)} className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700">
+        <button onClick={() => setShowForm((v) => !v)} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-900 hover:text-slate-900">
           <Plus className="w-4 h-4" /> เพิ่มใบเสนอราคา
         </button>
       </div>
@@ -279,7 +279,7 @@ export function SoInfoTab({ projectId }) {
           <TextInput placeholder="เลขที่เอกสาร" value={docNo} onChange={(e) => setDocNo(e.target.value)} />
           <TextInput placeholder="ประเภทสินค้า" value={productType} onChange={(e) => setProductType(e.target.value)} />
           <TextInput placeholder="ราคา" type="number" value={price} onChange={(e) => setPrice(e.target.value)} />
-          <button onClick={handleAdd} disabled={saving} className="px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60">
+          <button onClick={handleAdd} disabled={saving} className="px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-60">
             {saving ? "..." : "บันทึก"}
           </button>
         </div>
@@ -303,7 +303,7 @@ export function SoInfoTab({ projectId }) {
               <tr key={r.id}>
                 <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{new Date(r.created_at).toLocaleString("th-TH")}</td>
                 <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.product_type || "-"}</td>
-                <td className="px-4 py-3 text-indigo-600 font-medium">{r.document_no}</td>
+                <td className="px-4 py-3 text-slate-900 font-medium">{r.document_no}</td>
                 <td className="px-4 py-3 text-right text-slate-800 dark:text-slate-100 font-medium">{r.price ? `฿${Number(r.price).toLocaleString()}` : "-"}</td>
                 <td className="px-4 py-3 text-right">
                   <button onClick={() => handleDelete(r.id)} className="text-slate-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
@@ -326,7 +326,7 @@ function JobHistoryPanel({ projectId, modelCode }) {
       {jobs.map((j) => (
         <div key={j.jobId} className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-900 rounded-lg px-3 py-2">
           <div>
-            <span className="font-medium text-indigo-600">{j.jobCode}</span>
+            <span className="font-medium text-slate-900">{j.jobCode}</span>
             <span className="text-slate-400 ml-2">{new Date(j.createdAt).toLocaleString("th-TH")}</span>
             <span className="text-slate-400 ml-2">— {j.serials.length} ชิ้น: {j.serials.join(", ")}</span>
           </div>
@@ -416,12 +416,12 @@ export function DeviceInstallTab({ projectId }) {
     <div>
       <div className="flex items-center justify-between mb-3">
         <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">รายการที่วางแผนใช้ (Estimate)</h4>
-        <button onClick={() => setShowForm((v) => !v)} className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700">
+        <button onClick={() => setShowForm((v) => !v)} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-900 hover:text-slate-900">
           <Plus className="w-4 h-4" /> เพิ่มรายการ
         </button>
       </div>
       <p className="text-xs text-slate-400 mb-4">
-        สลับปุ่ม "จองสต็อก" ได้ต่อรายการ — ถ้าเปิดไว้ จะขึ้นยอด <span className="font-medium text-indigo-500">Reserved</span> ในหน้า Stock ทันที (ไม่ตัด On Hand จริง) ถ้าปิดไว้ รายการนี้จะเป็นแค่ประมาณการ ไม่กันสต็อกให้
+        สลับปุ่ม "จองสต็อก" ได้ต่อรายการ — ถ้าเปิดไว้ จะขึ้นยอด <span className="font-medium text-slate-600">Reserved</span> ในหน้า Stock ทันที (ไม่ตัด On Hand จริง) ถ้าปิดไว้ รายการนี้จะเป็นแค่ประมาณการ ไม่กันสต็อกให้
       </p>
 
       {showForm && (
@@ -445,7 +445,7 @@ export function DeviceInstallTab({ projectId }) {
             <TextInput type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} />
           </Field>
           <div className="pt-6">
-            <button onClick={handleAdd} disabled={saving} className="w-full px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60">
+            <button onClick={handleAdd} disabled={saving} className="w-full px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-60">
               {saving ? "..." : "เพิ่ม"}
             </button>
           </div>
@@ -490,7 +490,7 @@ export function DeviceInstallTab({ projectId }) {
                     {r.withdrawn_qty > 0 && (
                       <button
                         onClick={() => setExpandedModel(expandedModel === r.model_code ? null : r.model_code)}
-                        className="text-xs font-medium text-indigo-600 hover:underline"
+                        className="text-xs font-medium text-slate-900 hover:underline"
                       >
                         {expandedModel === r.model_code ? "ซ่อน" : "ดู Job"}
                       </button>
@@ -678,11 +678,11 @@ function NewJobModal({ projectId, warrantyMonths, deviceInstallRows, existingJob
       <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-slate-100 dark:border-slate-700">
         <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">ยกเลิก</button>
         {canFulfill ? (
-          <button onClick={handleFulfill} disabled={saving || pending.length === 0} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm disabled:opacity-60">
+          <button onClick={handleFulfill} disabled={saving || pending.length === 0} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
             {saving ? "กำลังเบิก..." : "ยืนยันเบิกสินค้า"}
           </button>
         ) : (
-          <button onClick={handleSubmitRequest} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm disabled:opacity-60">
+          <button onClick={handleSubmitRequest} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
             {saving ? "กำลังส่ง..." : "ส่งคำขอเบิก"}
           </button>
         )}
@@ -716,7 +716,7 @@ export function InstallPeriodTab({ projectId, warrantyMonths }) {
     <div>
       <div className="flex items-center justify-between mb-2">
         <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">การเบิกสินค้าออกจากคลัง</h4>
-        <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-1.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg shadow-sm">
+        <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-1.5 text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white px-3 py-1.5 rounded-lg shadow-sm">
           <Plus className="w-4 h-4" /> New Jobs
         </button>
       </div>
@@ -740,7 +740,7 @@ export function InstallPeriodTab({ projectId, warrantyMonths }) {
             {!loading && jobs?.length === 0 && <tr><td colSpan={6} className="text-center text-slate-400 py-6">ยังไม่มีการเบิกสินค้า</td></tr>}
             {jobs?.map((j) => (
               <tr key={j.id}>
-                <td className="px-4 py-3 font-medium text-indigo-600">{j.job_code}</td>
+                <td className="px-4 py-3 font-medium text-slate-900">{j.job_code}</td>
                 <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{new Date(j.created_at).toLocaleString("th-TH")}</td>
                 <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{j.due_date || "-"}</td>
                 <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{j.requester?.name || "-"}</td>
@@ -755,7 +755,7 @@ export function InstallPeriodTab({ projectId, warrantyMonths }) {
                 </td>
                 <td className="px-4 py-3 text-right">
                   {j.status !== "เบิกสินค้าแล้ว" && j.status !== "ยกเลิกแล้ว" && (
-                    <button onClick={() => setFulfillJob(j)} className="text-xs font-medium text-indigo-600 hover:underline">ดำเนินการเบิก</button>
+                    <button onClick={() => setFulfillJob(j)} className="text-xs font-medium text-slate-900 hover:underline">ดำเนินการเบิก</button>
                   )}
                   {j.status === "เบิกสินค้าแล้ว" && canCancel && (
                     <button onClick={() => handleCancel(j)} className="text-xs font-medium text-rose-500 hover:underline">ยกเลิกการเบิก</button>
@@ -965,7 +965,7 @@ export function PaymentPeriodTab({ projectId }) {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">เงื่อนไขการชำระเงิน</h4>
-        <button onClick={() => setShowForm((v) => !v)} className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700">
+        <button onClick={() => setShowForm((v) => !v)} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-900 hover:text-slate-900">
           <Plus className="w-4 h-4" /> เพิ่มงวดชำระ
         </button>
       </div>
@@ -974,7 +974,7 @@ export function PaymentPeriodTab({ projectId }) {
         <div className="grid grid-cols-3 gap-2 mb-4 items-end">
           <TextInput placeholder="ยอดชำระ" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
           <TextInput placeholder="เงื่อนไข เช่น ชำระหลังส่งมอบงาน" value={condition} onChange={(e) => setCondition(e.target.value)} />
-          <button onClick={handleAdd} disabled={saving} className="px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60">
+          <button onClick={handleAdd} disabled={saving} className="px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-60">
             {saving ? "..." : "บันทึก"}
           </button>
         </div>
@@ -1005,7 +1005,7 @@ export function PaymentPeriodTab({ projectId }) {
                   {r.paid ? <Pill tone="green">ชำระแล้ว</Pill> : <Pill tone="amber">รอชำระ</Pill>}
                 </td>
                 <td className="px-4 py-3 text-right flex items-center justify-end gap-2">
-                  {!r.paid && <button onClick={() => handleMarkPaid(r)} className="text-xs font-medium text-indigo-600 hover:underline">แจ้งชำระแล้ว</button>}
+                  {!r.paid && <button onClick={() => handleMarkPaid(r)} className="text-xs font-medium text-slate-900 hover:underline">แจ้งชำระแล้ว</button>}
                   <button onClick={() => handleDelete(r.id)} className="text-slate-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
                 </td>
               </tr>
@@ -1096,7 +1096,7 @@ export function FileTab({ projectId, projectNumber }) {
       <div className="grid grid-cols-4 gap-2 mb-6">
         {docs.map((d) => (
           <label key={d} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-            <input type="checkbox" className="rounded accent-indigo-600" />
+            <input type="checkbox" className="rounded accent-slate-600" />
             {d}
           </label>
         ))}
@@ -1127,7 +1127,7 @@ export function FileTab({ projectId, projectNumber }) {
             className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-100"
           />
         </div>
-        <button onClick={handleAddLink} disabled={addingLink} className="px-3.5 py-2 rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60">
+        <button onClick={handleAddLink} disabled={addingLink} className="px-3.5 py-2 rounded-lg text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-60">
           {addingLink ? "..." : "เพิ่มลิงก์"}
         </button>
       </div>
@@ -1143,7 +1143,7 @@ export function FileTab({ projectId, projectNumber }) {
                 href={hrefFor(f)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 hover:underline min-w-0"
+                className="flex items-center gap-2 text-slate-900 hover:text-slate-900 hover:underline min-w-0"
               >
                 {isLink ? <LinkIcon className="w-4 h-4 shrink-0" /> : <FileText className="w-4 h-4 shrink-0" />}
                 <span className="truncate">{f.file_name}</span>
@@ -1201,7 +1201,7 @@ export function AppDataTab({ projectId }) {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">บัญชี Application ของโปรเจคนี้</h4>
-        <button onClick={() => setShowForm((v) => !v)} className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700">
+        <button onClick={() => setShowForm((v) => !v)} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-900 hover:text-slate-900">
           <Plus className="w-4 h-4" /> เพิ่มบัญชี
         </button>
       </div>
@@ -1212,7 +1212,7 @@ export function AppDataTab({ projectId }) {
           <TextInput placeholder="ID" value={form.account_id} onChange={(e) => setForm((f) => ({ ...f, account_id: e.target.value }))} />
           <TextInput placeholder="Password" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} />
           <TextInput placeholder="Email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
-          <button onClick={handleAdd} disabled={saving} className="px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60">
+          <button onClick={handleAdd} disabled={saving} className="px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-60">
             {saving ? "..." : "บันทึก"}
           </button>
         </div>
@@ -1239,7 +1239,7 @@ export function AppDataTab({ projectId }) {
                 <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
                   <div className="flex items-center gap-2">
                     <span className="font-mono">{visible[r.id] ? (r.password || "-") : "•".repeat((r.password || "").length || 8)}</span>
-                    <button onClick={() => setVisible((v) => ({ ...v, [r.id]: !v[r.id] }))} className="text-slate-400 hover:text-indigo-600">
+                    <button onClick={() => setVisible((v) => ({ ...v, [r.id]: !v[r.id] }))} className="text-slate-400 hover:text-slate-900">
                       {visible[r.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>

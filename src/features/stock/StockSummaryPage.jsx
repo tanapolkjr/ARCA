@@ -123,7 +123,7 @@ function ImportProductsModal({ onClose, onImported }) {
         ถ้า Model Number ในไฟล์ตรงกับสินค้าที่มีอยู่แล้ว ระบบจะ<strong>อัปเดต</strong>ข้อมูลแถวนั้นแทนการสร้างซ้ำ — นำเข้าไฟล์เดิมซ้ำได้อย่างปลอดภัย
       </p>
 
-      <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl py-6 cursor-pointer hover:border-indigo-300 mb-4">
+      <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl py-6 cursor-pointer hover:border-slate-400 mb-4">
         <Upload className="w-5 h-5 text-slate-400" />
         <span className="text-sm text-slate-500 dark:text-slate-400">{fileName || "คลิกเพื่อเลือกไฟล์ .xlsx / .xls"}</span>
         <input type="file" accept=".xlsx,.xls" onChange={handleFile} className="hidden" />
@@ -179,7 +179,7 @@ function ImportProductsModal({ onClose, onImported }) {
 
       <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-slate-100 dark:border-slate-700">
         <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">ยกเลิก</button>
-        <button onClick={handleImport} disabled={rows.length === 0 || importing} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm disabled:opacity-60">
+        <button onClick={handleImport} disabled={rows.length === 0 || importing} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
           {importing ? "กำลังนำเข้า..." : `นำเข้า ${rows.length || ""} รายการ`}
         </button>
       </div>
@@ -275,7 +275,7 @@ function ProductModal({ item, onClose, onSaved }) {
       </div>
       <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-slate-100 dark:border-slate-700">
         <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">ยกเลิก</button>
-        <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm disabled:opacity-60">
+        <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
           {saving ? "กำลังบันทึก..." : editing ? "บันทึกการแก้ไข" : "เพิ่มสินค้า"}
         </button>
       </div>
@@ -356,7 +356,7 @@ function ReceiveStockModal({ onClose, onCreated }) {
       <p className="text-xs text-slate-400 -mt-2.5">สินค้าจะเข้าเป็น On Hand สถานะ "สินค้าปกติ" ทันที — ยังไม่เริ่มนับประกัน จนกว่าจะถูกเบิกไปติดตั้งจริง</p>
       <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-slate-100 dark:border-slate-700">
         <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">ยกเลิก</button>
-        <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm disabled:opacity-60">
+        <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
           {saving ? "กำลังรับเข้า..." : "รับเข้าคลัง"}
         </button>
       </div>
@@ -414,7 +414,7 @@ export default function StockSummary() {
       <div className="flex items-start justify-between mb-6 flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5">
-            <span>E-Service</span><span>/</span><span>Stock</span><span>/</span><span className="text-indigo-600 font-medium">Inventory</span>
+            <span>E-Service</span><span>/</span><span>Stock</span><span>/</span><span className="text-slate-900 font-medium">Inventory</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Stock Summary</h1>
         </div>
@@ -429,7 +429,7 @@ export default function StockSummary() {
             onClick={() => setShowReceiveModal(true)}
             disabled={!canReceive}
             title={!canReceive ? "เฉพาะ Super Admin/Manager/Store" : ""}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <PackagePlus className="w-4 h-4" /> รับสินค้าเข้าคลัง
           </button>
@@ -455,7 +455,7 @@ export default function StockSummary() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={refetch} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm">ค้นหา</button>
+          <button onClick={refetch} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm">ค้นหา</button>
           <button onClick={refetch} className="p-2 rounded-xl text-slate-500 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"><RefreshCw className="w-4 h-4" /></button>
           <button className="p-2 rounded-xl text-slate-500 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"><Download className="w-4 h-4" /></button>
         </div>
@@ -492,7 +492,7 @@ export default function StockSummary() {
                     <span className="inline-flex items-center gap-1.5">
                       {r.model}
                       {r.sourceProductId && (
-                        <span title="ดึงมาจาก Sourcing" className="text-indigo-400"><Link2 className="w-3.5 h-3.5" /></span>
+                        <span title="ดึงมาจาก Sourcing" className="text-slate-400"><Link2 className="w-3.5 h-3.5" /></span>
                       )}
                     </span>
                   </td>
@@ -506,7 +506,7 @@ export default function StockSummary() {
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums">
                     {incoming.get(r.id) ? (
-                      <span className="text-sky-600 dark:text-sky-400 font-medium">
+                      <span className="text-slate-600 dark:text-slate-400 font-medium">
                         +{Number(incoming.get(r.id)).toLocaleString("th-TH")}
                       </span>
                     ) : <span className="text-slate-300">—</span>}
@@ -518,7 +518,7 @@ export default function StockSummary() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="inline-flex items-center gap-1">
-                      <button onClick={() => setEditItem(r)} title="แก้ไขข้อมูลสินค้า" className="text-slate-400 hover:text-indigo-600 p-1"><Pencil className="w-4 h-4" /></button>
+                      <button onClick={() => setEditItem(r)} title="แก้ไขข้อมูลสินค้า" className="text-slate-400 hover:text-slate-900 p-1"><Pencil className="w-4 h-4" /></button>
                       <button onClick={() => handleDeleteItem(r)} title="ลบสินค้า" className="text-slate-400 hover:text-rose-500 p-1"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   </td>

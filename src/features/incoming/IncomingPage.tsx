@@ -18,7 +18,7 @@ import {
 } from '../accounting/ui';
 
 const STATUS_TONE: Record<ShipmentStatus, string> = {
-  in_transit: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
+  in_transit: 'bg-slate-100 text-slate-700 dark:bg-slate-900/40 dark:text-slate-300',
   partial: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
   received: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
   cancelled: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
@@ -118,9 +118,9 @@ export function IncomingPage() {
             <div key={s.id} className="bg-white dark:bg-slate-900 rounded-2xl border
               border-slate-100 dark:border-slate-800 p-4">
               <div className="flex flex-wrap items-start gap-3">
-                <div className="w-9 h-9 rounded-xl bg-sky-50 dark:bg-sky-900/30
+                <div className="w-9 h-9 rounded-xl bg-slate-50 dark:bg-slate-900/30
                   flex items-center justify-center shrink-0">
-                  <Truck className="w-4 h-4 text-sky-600 dark:text-sky-300" />
+                  <Truck className="w-4 h-4 text-slate-600 dark:text-slate-300" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">

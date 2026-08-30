@@ -85,16 +85,16 @@ export default function ContactList() {
       <div className="flex items-start justify-between mb-6 flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5">
-            <span>E-Service</span><span>/</span><span className="text-indigo-600 font-medium">Contact</span>
+            <span>E-Service</span><span>/</span><span className="text-slate-900 font-medium">Contact</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Contact — ฐานข้อมูลคู่ค้า</h1>
         </div>
         {tab === "vendor" ? null : tab === "customer" ? (
-          <button onClick={() => setShowCustomerModal(true)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm">
+          <button onClick={() => setShowCustomerModal(true)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm">
             <Plus className="w-4 h-4" /> เพิ่มลูกค้า/บริษัท
           </button>
         ) : (
-          <button onClick={() => setShowSiteModal(true)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm">
+          <button onClick={() => setShowSiteModal(true)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm">
             <Plus className="w-4 h-4" /> เพิ่มโครงการ
           </button>
         )}
@@ -103,19 +103,19 @@ export default function ContactList() {
       <div className="flex gap-1 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-1.5 mb-5 w-fit">
         <button
           onClick={() => setTab("customer")}
-          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === "customer" ? "bg-indigo-600 text-white shadow-sm" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"}`}
+          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === "customer" ? "bg-slate-900 text-white shadow-sm" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"}`}
         >
           <Users className="w-3.5 h-3.5" /> Customer
         </button>
         <button
           onClick={() => setTab("project")}
-          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === "project" ? "bg-indigo-600 text-white shadow-sm" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"}`}
+          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === "project" ? "bg-slate-900 text-white shadow-sm" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"}`}
         >
           <MapPin className="w-3.5 h-3.5" /> Project (Project Name)
         </button>
         <button
           onClick={() => setTab("vendor")}
-          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === "vendor" ? "bg-indigo-600 text-white shadow-sm" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"}`}
+          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === "vendor" ? "bg-slate-900 text-white shadow-sm" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"}`}
         >
           <Building className="w-3.5 h-3.5" /> ผู้ขาย / ผู้รับเหมา
         </button>
@@ -127,7 +127,7 @@ export default function ContactList() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={tab === "customer" ? "ค้นหาชื่อลูกค้า/บริษัท..." : "ค้นหาชื่อโครงการ..."}
-          className="w-full max-w-md pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full max-w-md pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
         />
       </div>
 
@@ -144,7 +144,7 @@ export default function ContactList() {
               <div
                 key={c.id}
                 onClick={() => navigate(`/contact/customer/${c.id}`)}
-                className="relative text-left bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 hover:border-indigo-200 transition-colors cursor-pointer"
+                className="relative text-left bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 hover:border-slate-300 transition-colors cursor-pointer"
               >
                 <button
                   onClick={(e) => handleDeleteCustomer(e, c)}
@@ -154,7 +154,7 @@ export default function ContactList() {
                   <Trash2 className="w-4 h-4" />
                 </button>
                 <div className="flex items-start justify-between mb-3 pr-6">
-                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${c.customer_type === "company" ? "bg-indigo-500" : "bg-teal-500"}`}>
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${c.customer_type === "company" ? "bg-slate-800" : "bg-slate-500"}`}>
                     {c.customer_type === "company" ? <Building2 className="w-5 h-5 text-white" /> : <Users className="w-5 h-5 text-white" />}
                   </div>
                   <Pill tone={c.customer_type === "company" ? "indigo" : "green"}>{c.customer_type === "company" ? "นิติบุคคล" : "บุคคลธรรมดา"}</Pill>
@@ -179,7 +179,7 @@ export default function ContactList() {
               <div
                 key={s.id}
                 onClick={() => navigate(`/contact/site/${s.id}`)}
-                className="relative text-left bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 hover:border-indigo-200 transition-colors cursor-pointer"
+                className="relative text-left bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 hover:border-slate-300 transition-colors cursor-pointer"
               >
                 <button
                   onClick={(e) => handleDeleteSite(e, s)}

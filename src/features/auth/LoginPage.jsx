@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Lock, Mail, AlertCircle } from "lucide-react";
+import { Lock, Mail, AlertCircle } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth.jsx";
 import { errMsg } from "../../lib/format.js";
+import { ArcaSeal } from "../../components/brand/ArcaSeal";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -27,13 +28,14 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center px-4 font-sans">
+    <div className="min-h-screen bg-white dark:bg-[#0a0a0a] flex items-center justify-center px-4 font-sans">
       <div className="w-full max-w-sm">
-        <div className="flex items-center justify-center gap-2.5 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center">
-            <Home className="w-5 h-5 text-white" />
+        <div className="flex flex-col items-center gap-3 mb-8">
+          <ArcaSeal className="w-20 h-20 text-slate-900 dark:text-slate-100" />
+          <div className="text-center leading-none">
+            <div className="brand-wordmark text-slate-900 dark:text-slate-100 text-2xl">ARCA HAUS</div>
+            <div className="text-[10px] tracking-[0.25em] text-slate-400 mt-1.5">E-SERVICE</div>
           </div>
-          <span className="brand-wordmark text-slate-900 text-2xl">ARCA</span>
         </div>
 
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-7">
@@ -58,7 +60,7 @@ export default function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@company.com"
-                  className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900"
                 />
               </div>
             </div>
@@ -72,14 +74,14 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900"
                 />
               </div>
             </div>
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-2.5 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm disabled:opacity-60"
+              className="w-full py-2.5 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-60"
             >
               {submitting ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
             </button>

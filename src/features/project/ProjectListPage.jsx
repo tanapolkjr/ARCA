@@ -29,10 +29,10 @@ export default function ProjectList() {
   const statusCards = [
     { key: "all", label: "ทั้งหมด", chip: "bg-slate-400" },
     { key: "New Request", label: "New Request", chip: "bg-slate-400" },
-    { key: "Request Accepted", label: "Request Accepted", chip: "bg-indigo-500" },
+    { key: "Request Accepted", label: "Request Accepted", chip: "bg-slate-800" },
     { key: "Pending Scheduling", label: "Pending Scheduling", chip: "bg-amber-500" },
     { key: "Installation Completed", label: "Installation Completed", chip: "bg-emerald-500" },
-    { key: "Equipment Shipped", label: "Equipment Shipped", chip: "bg-blue-500" },
+    { key: "Equipment Shipped", label: "Equipment Shipped", chip: "bg-slate-500" },
   ];
 
   function resetFilters() {
@@ -66,13 +66,13 @@ export default function ProjectList() {
       <div className="flex items-start justify-between mb-6 flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5">
-            <span>E-Service</span><span>/</span><span>Service</span><span>/</span><span className="text-indigo-600 font-medium">Install</span>
+            <span>E-Service</span><span>/</span><span>Service</span><span>/</span><span className="text-slate-900 font-medium">Install</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Install — รายการ Project</h1>
         </div>
         <button
           onClick={() => navigate("/project/new")}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm"
         >
           <Plus className="w-4 h-4" /> สร้าง Project ใหม่
         </button>
@@ -116,7 +116,7 @@ export default function ProjectList() {
         </div>
 
         <div className="flex items-center gap-2.5 mt-3">
-          <button className="px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm">ค้นหา</button>
+          <button className="px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm">ค้นหา</button>
           <button onClick={resetFilters} className="px-4 py-2.5 rounded-xl text-sm font-medium text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">ล้างตัวกรอง</button>
           <button className="px-4 py-2.5 rounded-xl text-sm font-medium text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">Export</button>
         </div>
@@ -144,9 +144,9 @@ export default function ProjectList() {
               <tr><td colSpan={8} className="text-center text-slate-400 py-10">No data available in table</td></tr>
             )}
             {rows?.map((r) => (
-              <tr key={r.id} onClick={() => navigate(`/project/${r.id}`)} className="cursor-pointer hover:bg-indigo-50/50 dark:hover:bg-indigo-500/5 transition-colors">
+              <tr key={r.id} onClick={() => navigate(`/project/${r.id}`)} className="cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/5 transition-colors">
                 <td className="px-4 py-3 text-slate-500">{r.created_at ? new Date(r.created_at).toLocaleDateString("th-TH") : "-"}</td>
-                <td className="px-4 py-3 font-medium text-indigo-600">{r.project_number}</td>
+                <td className="px-4 py-3 font-medium text-slate-900">{r.project_number}</td>
                 <td className="px-4 py-3 text-slate-700 dark:text-slate-200">{r.site?.name || "-"}</td>
                 <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.customer?.display_name || "-"}</td>
                 <td className="px-4 py-3 text-slate-500">{r.plan || "-"}</td>

@@ -4,14 +4,14 @@ import { STATUS_LABEL } from '@/accounting-lib/types';
 
 /**
  * ชิ้นส่วนฟอร์มของโมดูลบัญชี
- * ใช้คลาส Tailwind ชุดเดียวกับหน้าจออื่นของแพลตฟอร์ม (indigo / rounded-xl / slate)
+ * ใช้คลาส Tailwind ชุดเดียวกับหน้าจออื่นของแพลตฟอร์ม (ธีมขาวดำ: slate / rounded-xl)
  * ไม่ใช้ design token ของโมดูล Sourcing เพื่อให้หน้าตากลมกลืนกับระบบเดิม
  */
 
 export const inputCls =
   'w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 ' +
   'bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-100 ' +
-  'focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 ' +
+  'focus:outline-none focus:ring-2 focus:ring-slate-900/40 focus:border-slate-400 ' +
   'disabled:bg-slate-50 dark:disabled:bg-slate-900 disabled:text-slate-400';
 
 export function Field({
@@ -60,7 +60,7 @@ export function PrimaryButton({
     <button
       {...rest}
       className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium
-        text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm
+        text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm
         disabled:opacity-60 disabled:cursor-not-allowed ${rest.className ?? ''}`}
     >
       {children}
@@ -88,14 +88,14 @@ const STATUS_TONE: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
   pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
   approved: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
-  sent: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
+  sent: 'bg-slate-100 text-slate-700 dark:bg-slate-900/40 dark:text-slate-300',
   accepted: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
   rejected: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
   expired: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
-  issued: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
+  issued: 'bg-slate-100 text-slate-700 dark:bg-slate-900/40 dark:text-slate-300',
   partial: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
   paid: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
-  ordered: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
+  ordered: 'bg-slate-100 text-slate-700 dark:bg-slate-900/40 dark:text-slate-300',
   received: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
   closed: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
   cancelled: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',

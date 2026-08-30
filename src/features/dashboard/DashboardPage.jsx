@@ -9,13 +9,13 @@ import { getOverdueItems, getWarrantyStats, getPendingPMRequestsByType, PM_DASHB
 
 const PROJECT_KEY_STATUSES = [
   { key: "New Request", chip: "bg-slate-400" },
-  { key: "Request Accepted", chip: "bg-indigo-500" },
+  { key: "Request Accepted", chip: "bg-slate-800" },
   { key: "Pending Scheduling", chip: "bg-amber-500" },
   { key: "Installation Completed", chip: "bg-emerald-500" },
 ];
 const TICKET_KEY_STATUSES = [
   { key: "ส่งเรื่อง", chip: "bg-slate-400" },
-  { key: "รับเรื่อง", chip: "bg-indigo-500" },
+  { key: "รับเรื่อง", chip: "bg-slate-800" },
   { key: "นัดหมายแล้ว", chip: "bg-amber-500" },
   { key: "ปิดงานแล้ว", chip: "bg-emerald-500" },
 ];
@@ -112,7 +112,7 @@ export default function Dashboard() {
               key={t}
               label={t}
               count={loadingPM ? "…" : (pmPending?.counts?.[t] || 0)}
-              chip={["bg-indigo-500", "bg-blue-500", "bg-amber-500", "bg-slate-400"][i]}
+              chip={["bg-slate-800", "bg-slate-500", "bg-amber-500", "bg-slate-400"][i]}
               onClick={() => navigate("/pm-request")}
             />
           ))}
@@ -129,7 +129,7 @@ export default function Dashboard() {
                     className="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-left"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <span className="text-sm font-medium text-indigo-600 whitespace-nowrap">{r.request_code}</span>
+                      <span className="text-sm font-medium text-slate-900 whitespace-nowrap">{r.request_code}</span>
                       <span className="text-xs text-slate-500 truncate">{PM_DASHBOARD_MAIN_TYPES.includes(r.request_type) ? r.request_type : `อื่นๆ — ${r.request_type}`}</span>
                     </div>
                     <div className="flex items-center gap-3 whitespace-nowrap">
@@ -148,7 +148,7 @@ export default function Dashboard() {
             </div>
             {pmPending.items.length > 8 && (
               <div className="px-5 py-2.5 border-t border-slate-100 dark:border-slate-700 text-right">
-                <button onClick={() => navigate("/pm-request")} className="text-xs font-medium text-indigo-600 hover:underline">
+                <button onClick={() => navigate("/pm-request")} className="text-xs font-medium text-slate-900 hover:underline">
                   ดูทั้งหมด {pmPending.total} รายการ <ArrowRight className="w-3 h-3 inline" />
                 </button>
               </div>

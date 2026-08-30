@@ -1,4 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ArcaSeal } from '@/components/brand/ArcaSeal';
 import { bahtText, docDate, lineDiscount, money } from '@/accounting-lib/calc';
 import {
   AP_DOC_LABEL, AP_DOC_LABEL_EN, AR_DOC_LABEL, AR_DOC_LABEL_EN, DOC_COLOR,
@@ -274,9 +275,11 @@ function DocPage({
   return (
     <div className="doc-page bg-white text-slate-900"
          style={{ width: '210mm', height: '297mm', padding: `${PAGE_PAD_MM}mm`, overflow: 'hidden' }}>
+      {/* ธีมขาวดำ: มุมกระดาษใช้เส้นบางแทนสามเหลี่ยมทึบ — สะอาดกว่าและประหยัดหมึก */}
       <div style={{
-        position: 'absolute', top: 0, right: 0, width: 0, height: 0,
-        borderTop: `26mm solid ${color}`, borderLeft: '26mm solid transparent',
+        position: 'absolute', top: `${PAGE_PAD_MM}mm`, right: `${PAGE_PAD_MM}mm`,
+        width: '18mm', height: '18mm',
+        borderTop: `1.5px solid ${color}`, borderRight: `1.5px solid ${color}`,
       }} />
 
       <DocHeader doc={doc} copyLabel={copyLabel} pageNo={pageNo} totalPages={totalPages} />
@@ -320,9 +323,12 @@ function DocHeader({
   return (
     <>
       <div className="flex justify-between items-start mb-4 relative">
-        <div className="text-[13px] font-bold leading-tight">
-          {doc.company_snapshot?.name ?? '—'}
-          <div className="text-[10px] font-normal text-slate-500">{labelEn(doc.doc_type)}</div>
+        <div className="flex items-center gap-2.5">
+          <ArcaSeal className="w-12 h-12 shrink-0 doc-seal" />
+          <div className="text-[13px] font-bold leading-tight">
+            {doc.company_snapshot?.name ?? '—'}
+            <div className="text-[10px] font-normal text-slate-500">{labelEn(doc.doc_type)}</div>
+          </div>
         </div>
         <div className="text-right pr-[22mm]">
           <div className="text-[17px] font-bold" style={{ color }}>{labelTh(doc.doc_type)}</div>

@@ -54,14 +54,14 @@ export default function TopBar() {
         <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
         <input
           placeholder="ค้นหา Project, Ticket, ลูกค้า..."
-          className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-slate-800 transition-colors"
+          className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white dark:focus:bg-slate-800 transition-colors"
         />
       </div>
       <div className="flex items-center gap-1.5">
         <button
           onClick={toggle}
           title={isDark ? "สลับเป็น Light Mode" : "สลับเป็น Dark Mode"}
-          className={`w-9 h-9 rounded-full flex items-center justify-center ${isDark ? "text-indigo-300 bg-indigo-500/10" : "text-amber-500 bg-amber-50"}`}
+          className={`w-9 h-9 rounded-full flex items-center justify-center ${isDark ? "text-slate-300 bg-slate-800/10" : "text-amber-500 bg-amber-50"}`}
         >
           {isDark ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
         </button>
@@ -91,7 +91,7 @@ export default function TopBar() {
                 {unreadCount > 0 && (
                   <button
                     onClick={async () => { await markAllRead(userId); refetch(); }}
-                    className="text-xs text-indigo-600 hover:underline"
+                    className="text-xs text-slate-900 hover:underline"
                   >
                     อ่านทั้งหมด
                   </button>
@@ -106,7 +106,7 @@ export default function TopBar() {
                     key={n.id}
                     onClick={() => openNotification(n)}
                     className={`w-full text-left px-4 py-3 border-b border-slate-50 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors ${
-                      !n.is_read ? "bg-indigo-50/40 dark:bg-indigo-500/5" : ""
+                      !n.is_read ? "bg-slate-100/40 dark:bg-slate-800/5" : ""
                     }`}
                   >
                     <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -124,7 +124,7 @@ export default function TopBar() {
       </div>
       <div className="relative" ref={menuRef}>
         <button onClick={() => setMenuOpen((v) => !v)} className="flex items-center gap-2.5 pl-3 border-l border-slate-200 dark:border-slate-700">
-          <div className="w-9 h-9 rounded-full bg-indigo-500 flex items-center justify-center text-white text-xs font-semibold">
+          <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center text-white text-xs font-semibold">
             {displayName.slice(0, 1).toUpperCase()}
           </div>
           <div className="hidden sm:block text-left">

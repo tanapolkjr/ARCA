@@ -162,7 +162,7 @@ function Stat({ label, value, strong }: { label: string; value: number; strong?:
       dark:border-slate-800 p-4">
       <div className="text-xs text-slate-500">{label}</div>
       <div className={`text-lg font-bold tabular-nums mt-1
-        ${strong ? 'text-indigo-600' : 'text-slate-800 dark:text-slate-100'}`}>
+        ${strong ? 'text-slate-900' : 'text-slate-800 dark:text-slate-100'}`}>
         {money(value)}
       </div>
     </div>

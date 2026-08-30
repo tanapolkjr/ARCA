@@ -472,7 +472,7 @@ function DocumentEditorInner() {
             {sourceRef && (
               <>
                 {' · อ้างอิง '}
-                <Link to={`/accounting/QT/${sourceRef.id}`} className="text-indigo-600 hover:underline">
+                <Link to={`/accounting/QT/${sourceRef.id}`} className="text-slate-900 hover:underline">
                   {sourceRef.docNo ?? 'ใบเสนอราคา'}
                 </Link>
               </>
@@ -543,13 +543,13 @@ function DocumentEditorInner() {
             dark:border-slate-800 overflow-hidden">
             <div className="flex flex-wrap items-baseline gap-4 px-4 py-3
               border-b border-slate-100 dark:border-slate-800">
-              <h3 className="text-sm font-semibold text-pink-600">
+              <h3 className="text-sm font-semibold text-slate-600">
                 ประวัติการแบ่งจ่ายจากมูลค่าเอกสาร
               </h3>
               <div className="ml-auto flex gap-6 text-right">
                 <div>
                   <div className="text-[11px] text-slate-400">เรียกเก็บแล้ว</div>
-                  <div className="text-sm font-bold tabular-nums text-pink-600">{money(billed)}</div>
+                  <div className="text-sm font-bold tabular-nums text-slate-600">{money(billed)}</div>
                 </div>
                 <div>
                   <div className="text-[11px] text-slate-400">ยังไม่ได้เรียกเก็บ</div>
@@ -560,7 +560,7 @@ function DocumentEditorInner() {
               </div>
             </div>
             <table className="w-full text-xs">
-              <thead className="bg-pink-50 dark:bg-pink-900/20 text-slate-600 dark:text-slate-300">
+              <thead className="bg-slate-50 dark:bg-slate-900/20 text-slate-600 dark:text-slate-300">
                 <tr>
                   <th className="text-left font-medium px-4 py-2 w-12">ลำดับ</th>
                   <th className="text-left font-medium px-4 py-2 w-40">เลขที่อ้างอิง</th>
@@ -577,7 +577,7 @@ function DocumentEditorInner() {
                         hover:bg-slate-50/70 dark:hover:bg-slate-800/40 cursor-pointer"
                       onClick={() => nav(`/accounting/${c.doc_type}/${c.id}`)}>
                     <td className="px-4 py-2 text-slate-400">{i + 1}</td>
-                    <td className="px-4 py-2 font-medium text-indigo-600">{c.doc_no ?? 'ร่าง'}</td>
+                    <td className="px-4 py-2 font-medium text-slate-900">{c.doc_no ?? 'ร่าง'}</td>
                     <td className="px-4 py-2 text-slate-500 tabular-nums">{docDateTh(c.doc_date)}</td>
                     <td className="px-4 py-2 text-right tabular-nums">{money(c.grand_total)}</td>
                     <td className="px-4 py-2 text-right tabular-nums text-emerald-600">
@@ -807,7 +807,7 @@ function DocumentEditorInner() {
                         title="สลับระหว่างบาทและเปอร์เซ็นต์"
                         onClick={() => setExtraDiscType((t) => (t === 'amount' ? 'percent' : 'amount'))}
                         className="px-2 rounded-lg border border-slate-200 dark:border-slate-700
-                          text-xs text-slate-500 hover:text-indigo-600 shrink-0"
+                          text-xs text-slate-500 hover:text-slate-900 shrink-0"
                       >
                         {extraDiscType === 'percent' ? '%' : '฿'}
                       </button>
@@ -908,7 +908,7 @@ function DocumentEditorInner() {
                             discount_mode: DISCOUNT_NEXT[it.discount_mode ?? 'unit'],
                           })}
                           className="px-2 rounded-lg border border-slate-200 dark:border-slate-700
-                            text-[11px] text-slate-500 hover:text-indigo-600 shrink-0 whitespace-nowrap"
+                            text-[11px] text-slate-500 hover:text-slate-900 shrink-0 whitespace-nowrap"
                         >
                           {DISCOUNT_LABEL[it.discount_mode ?? 'unit']}
                         </button>
@@ -1076,7 +1076,7 @@ function StockPicker({
               key={s.id} type="button"
               onMouseDown={() => { onPick(s); setTerm(''); setOpen(false); }}
               className="block w-full text-left px-3 py-2 text-xs
-                hover:bg-indigo-50 dark:hover:bg-slate-700"
+                hover:bg-slate-100 dark:hover:bg-slate-700"
             >
               <div className="flex items-baseline gap-2">
                 <span className="font-medium">{s.model_code}</span>
@@ -1090,7 +1090,7 @@ function StockPicker({
           {matches.length === 0 && (
             <div className="px-3 py-2 text-xs text-slate-400">
               ไม่พบสินค้านี้ —{' '}
-              <Link to="/stock" className="text-indigo-600 hover:underline">
+              <Link to="/stock" className="text-slate-900 hover:underline">
                 ไปเพิ่มใน Inventory พร้อมตั้งราคาขาย
               </Link>
             </div>

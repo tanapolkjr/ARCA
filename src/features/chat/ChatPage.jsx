@@ -8,7 +8,7 @@ import { listConversations, listMessages, sendMessage, startConversation, subscr
 import { listUsers } from "../../api/users.js";
 import { errMsg } from "../../lib/format.js";
 
-const AVATAR_COLORS = ["bg-indigo-500", "bg-teal-500", "bg-orange-500", "bg-purple-500", "bg-rose-500", "bg-blue-500"];
+const AVATAR_COLORS = ["bg-slate-800", "bg-slate-500", "bg-orange-500", "bg-slate-500", "bg-rose-500", "bg-slate-500"];
 function colorFor(name) {
   if (!name) return AVATAR_COLORS[0];
   return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
@@ -59,13 +59,13 @@ function NewConversationModal({ onClose, onCreated }) {
       <div className="flex gap-2 mb-4">
         <button
           onClick={() => { setIsGroup(false); setSelected((s) => s.slice(0, 1)); }}
-          className={`flex-1 py-2 rounded-xl text-sm font-medium border ${!isGroup ? "bg-indigo-600 text-white border-indigo-600" : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"}`}
+          className={`flex-1 py-2 rounded-xl text-sm font-medium border ${!isGroup ? "bg-slate-900 text-white border-slate-900" : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"}`}
         >
           แชท 1-1
         </button>
         <button
           onClick={() => setIsGroup(true)}
-          className={`flex-1 py-2 rounded-xl text-sm font-medium border ${isGroup ? "bg-indigo-600 text-white border-indigo-600" : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"}`}
+          className={`flex-1 py-2 rounded-xl text-sm font-medium border ${isGroup ? "bg-slate-900 text-white border-slate-900" : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"}`}
         >
           สร้างกลุ่ม
         </button>
@@ -81,7 +81,7 @@ function NewConversationModal({ onClose, onCreated }) {
       <div className="max-h-56 overflow-auto space-y-1 mb-4">
         {users?.filter((u) => u.id !== session?.user?.id).map((u) => (
           <label key={u.id} className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer">
-            <input type={isGroup ? "checkbox" : "radio"} checked={selected.includes(u.id)} onChange={() => toggleUser(u.id)} className="accent-indigo-600" />
+            <input type={isGroup ? "checkbox" : "radio"} checked={selected.includes(u.id)} onChange={() => toggleUser(u.id)} className="accent-slate-600" />
             <span className={`w-6 h-6 rounded-full ${colorFor(u.name)} text-white text-xs flex items-center justify-center font-semibold`}>{u.name?.slice(0, 1)}</span>
             <span className="text-sm text-slate-700 dark:text-slate-200">{u.name} <span className="text-slate-400">({u.role})</span></span>
           </label>
@@ -90,7 +90,7 @@ function NewConversationModal({ onClose, onCreated }) {
 
       <div className="flex justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-700">
         <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">ยกเลิก</button>
-        <button onClick={handleCreate} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm disabled:opacity-60">
+        <button onClick={handleCreate} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
           {saving ? "กำลังสร้าง..." : "เริ่มแชท"}
         </button>
       </div>
@@ -144,7 +144,7 @@ export default function ChatPage() {
         <Card className="col-span-4 flex flex-col overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-100 dark:border-slate-700">
             <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">การสนทนา</span>
-            <button onClick={() => setShowNewModal(true)} className="text-indigo-600 hover:text-indigo-700"><Plus className="w-4 h-4" /></button>
+            <button onClick={() => setShowNewModal(true)} className="text-slate-900 hover:text-slate-900"><Plus className="w-4 h-4" /></button>
           </div>
           <div className="flex-1 overflow-auto">
             {(!conversations || conversations.length === 0) && (
@@ -154,7 +154,7 @@ export default function ChatPage() {
               <button
                 key={c.id}
                 onClick={() => setActiveId(c.id)}
-                className={`w-full flex items-center gap-2.5 px-4 py-3 text-left border-b border-slate-50 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 ${activeId === c.id ? "bg-indigo-50 dark:bg-indigo-500/10" : ""}`}
+                className={`w-full flex items-center gap-2.5 px-4 py-3 text-left border-b border-slate-50 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 ${activeId === c.id ? "bg-slate-100 dark:bg-slate-800/10" : ""}`}
               >
                 <span className={`w-8 h-8 rounded-full ${c.is_group ? "bg-slate-400" : colorFor(conversationLabel(c, myId))} text-white flex items-center justify-center shrink-0`}>
                   {c.is_group ? <UsersIcon className="w-4 h-4" /> : <span className="text-xs font-semibold">{conversationLabel(c, myId).slice(0, 1)}</span>}
@@ -178,7 +178,7 @@ export default function ChatPage() {
                   const mine = m.sender?.id === myId || m.sender_id === myId;
                   return (
                     <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                      <div className={`max-w-[70%] rounded-2xl px-3.5 py-2 text-sm ${mine ? "bg-indigo-600 text-white" : "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200"}`}>
+                      <div className={`max-w-[70%] rounded-2xl px-3.5 py-2 text-sm ${mine ? "bg-slate-900 text-white" : "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200"}`}>
                         {!mine && activeConvo.is_group && <p className="text-xs font-semibold mb-0.5 opacity-70">{m.sender?.name}</p>}
                         <p className="whitespace-pre-wrap">{m.body}</p>
                       </div>
@@ -192,9 +192,9 @@ export default function ChatPage() {
                   onChange={(e) => setText(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSend()}
                   placeholder="พิมพ์ข้อความ..."
-                  className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-900"
                 />
-                <button onClick={handleSend} className="w-10 h-10 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center shrink-0">
+                <button onClick={handleSend} className="w-10 h-10 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white text-white flex items-center justify-center shrink-0">
                   <Send className="w-4 h-4" />
                 </button>
               </div>

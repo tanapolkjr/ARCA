@@ -38,7 +38,7 @@ export function AddCustomerModal({ onClose, onSave, initialName = "" }) {
         <button
           onClick={() => setType("individual")}
           className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
-            type === "individual" ? "bg-indigo-600 text-white border-indigo-600" : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
+            type === "individual" ? "bg-slate-900 text-white border-slate-900" : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
           }`}
         >
           บุคคลธรรมดา
@@ -46,7 +46,7 @@ export function AddCustomerModal({ onClose, onSave, initialName = "" }) {
         <button
           onClick={() => setType("company")}
           className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
-            type === "company" ? "bg-indigo-600 text-white border-indigo-600" : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
+            type === "company" ? "bg-slate-900 text-white border-slate-900" : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
           }`}
         >
           นิติบุคคล
@@ -89,7 +89,7 @@ export function AddCustomerModal({ onClose, onSave, initialName = "" }) {
         </button>
         <button
           onClick={handleSave}
-          className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm"
+          className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm"
         >
           บันทึกและใช้งาน
         </button>
@@ -127,7 +127,7 @@ export function AddSiteModal({ onClose, onSave, initialName = "" }) {
         </button>
         <button
           onClick={handleSave}
-          className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm"
+          className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm"
         >
           บันทึกและใช้งาน
         </button>

@@ -19,15 +19,15 @@ html, body, #root {
    brass #C8A24B; ARCA HOME red is #E8412B if that identity is adopted.)
    =========================================================================== */
 :root {
-  --bg-app: #f8fafc;        /* slate-50  — matches AppShell */
+  --bg-app: #ffffff;        /* ขาวสนิท — ธีมมินิมอลไม่มีสีจางแฝง */
   --bg-surface: #ffffff;
-  --bg-subtle: #f1f5f9;     /* slate-100 */
+  --bg-subtle: #f6f6f6;     /* เทาเป็นกลาง ไม่อมฟ้า */
   --border: #e2e8f0;        /* slate-200 */
   --text-1: #1e293b;        /* slate-800 */
   --text-2: #64748b;        /* slate-500 */
   --text-3: #94a3b8;        /* slate-400 */
-  --accent: #4f46e5;        /* indigo-600 — matches the ARCA platform */
-  --accent-hover: #4338ca;  /* indigo-700 */
+  --accent: #0f172a;        /* slate-900 — ธีมขาวดำ: สีเน้นคือหมึกดำ */
+  --accent-hover: #334155;  /* slate-700 */
   --c-green: #1f8a4c;
   --c-blue: #2563eb;
   --c-amber: #b45309;
@@ -36,15 +36,15 @@ html, body, #root {
   --tint: 0.1; /* badge fill opacity */
 }
 .dark {
-  --bg-app: #020617;        /* slate-950 — matches AppShell */
-  --bg-surface: #0f172a;    /* slate-900 */
-  --bg-subtle: #1e293b;     /* slate-800 */
+  --bg-app: #0a0a0a;        /* ดำเป็นกลาง ไม่อมน้ำเงิน */
+  --bg-surface: #141414;
+  --bg-subtle: #1f1f1f;
   --border: #1e293b;        /* slate-800 */
   --text-1: #f1f5f9;        /* slate-100 */
   --text-2: #94a3b8;        /* slate-400 */
   --text-3: #64748b;        /* slate-500 */
-  --accent: #818cf8;        /* indigo-400 */
-  --accent-hover: #a5b4fc;  /* indigo-300 */
+  --accent: #f1f5f9;        /* slate-100 — โหมดมืดกลับด้าน สีเน้นคือขาว */
+  --accent-hover: #cbd5e1;  /* slate-300 */
   --c-green: #34c275;
   --c-blue: #5b8def;
   --c-amber: #d99a3d;
@@ -162,3 +162,26 @@ html, body, #root {
   tr    { page-break-inside: avoid; break-inside: avoid; }
   thead { display: table-header-group; }
 }
+
+
+/* ===========================================================================
+   ธีมขาวดำ — ปรับผิวรวมของแอป
+   ---------------------------------------------------------------------------
+   หลักคิด: สีที่เหลือในระบบต้องมี "หน้าที่" เท่านั้น
+     • แดง  = ผิดพลาด / เงินออก / ทำลายข้อมูล
+     • เหลือง = รอดำเนินการ / เตือน
+     • เขียว = สำเร็จ / เงินเข้า
+   ที่เหลือเป็นเทาทั้งหมด ความสำคัญสื่อด้วยน้ำหนักตัวอักษรและเส้นแบ่ง แทนการใช้สี
+   =========================================================================== */
+:root {
+  color-scheme: light;
+}
+.dark {
+  color-scheme: dark;
+}
+
+/* พื้นแอปขาวสนิท การ์ดจึงต้องมีเส้นขอบชัดขึ้นเพื่อไม่ให้จมไปกับพื้น */
+.dark body { background: #0a0a0a; }
+
+/* ตราประทับบนหัวเอกสารที่พิมพ์ — บางลงเล็กน้อยให้ดูเป็นลายเส้น ไม่ทึบ */
+.doc-seal { opacity: 0.92; }

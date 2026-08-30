@@ -16,13 +16,13 @@ export default function StatusStepper({ steps, currentIndex }) {
                     done
                       ? "bg-emerald-500 border-emerald-500 text-white"
                       : active
-                      ? "bg-indigo-600 border-indigo-600 text-white"
+                      ? "bg-slate-900 border-slate-900 text-white"
                       : "bg-white border-slate-200 text-slate-400"
                   }`}
                 >
                   {done ? <Check className="w-4 h-4" /> : i + 1}
                 </div>
-                <span className={`text-xs text-center w-24 ${active ? "text-indigo-600 font-semibold" : "text-slate-400"}`}>
+                <span className={`text-xs text-center w-24 ${active ? "text-slate-900 font-semibold" : "text-slate-400"}`}>
                   {step}
                 </span>
               </div>

@@ -130,7 +130,7 @@ function AttachmentSection({ pmRequestId }) {
             className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-100"
           />
         </div>
-        <button onClick={handleAddLink} disabled={addingLink} className="px-3.5 py-2 rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60">
+        <button onClick={handleAddLink} disabled={addingLink} className="px-3.5 py-2 rounded-lg text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-60">
           {addingLink ? "..." : "เพิ่มลิงก์"}
         </button>
       </div>
@@ -142,7 +142,7 @@ function AttachmentSection({ pmRequestId }) {
           const isLink = /^https?:\/\//i.test(f.storage_path);
           return (
             <div key={f.id} className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm">
-              <a href={hrefFor(f)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 hover:underline min-w-0">
+              <a href={hrefFor(f)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-slate-900 hover:text-slate-900 hover:underline min-w-0">
                 {isLink ? <LinkIcon className="w-4 h-4 shrink-0" /> : <FileText className="w-4 h-4 shrink-0" />}
                 <span className="truncate">{f.file_name}</span>
               </a>
@@ -239,7 +239,7 @@ export default function PMRequestDetail() {
       <div className="flex items-start justify-between mb-6 flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5">
-            <button onClick={() => goBack()} className="hover:text-indigo-600 flex items-center gap-1">
+            <button onClick={() => goBack()} className="hover:text-slate-900 flex items-center gap-1">
               <ArrowLeft className="w-3.5 h-3.5" /> PM Request
             </button>
             <span>/</span>
@@ -262,7 +262,7 @@ export default function PMRequestDetail() {
           <button onClick={() => goBack()} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">
             ย้อนกลับ
           </button>
-          <button onClick={handleSave} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm">
+          <button onClick={handleSave} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm">
             <Save className="w-4 h-4" /> Save Data
           </button>
         </div>

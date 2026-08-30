@@ -114,7 +114,7 @@ export default function CustomerDetailPage() {
     <div>
       <div className="flex items-start justify-between mb-6 flex-wrap gap-3">
         <div>
-          <button onClick={goBack} className="flex items-center gap-1 text-xs text-slate-400 hover:text-indigo-600 mb-1.5">
+          <button onClick={goBack} className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-900 mb-1.5">
             <ArrowLeft className="w-3.5 h-3.5" /> Contact
           </button>
           <div className="flex items-center gap-2 flex-wrap">
@@ -128,7 +128,7 @@ export default function CustomerDetailPage() {
             <Trash2 className="w-4 h-4" />
           </button>
           <button onClick={goBack} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">ย้อนกลับ</button>
-          <button onClick={handleSave} disabled={saving} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm disabled:opacity-60">
+          <button onClick={handleSave} disabled={saving} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
             <Save className="w-4 h-4" /> {saving ? "กำลังบันทึก..." : "Save Data"}
           </button>
         </div>
@@ -175,7 +175,7 @@ export default function CustomerDetailPage() {
               <TextInput placeholder="ชื่อ" value={newContact.name} onChange={(e) => setNewContact((c) => ({ ...c, name: e.target.value }))} />
               <TextInput placeholder="ตำแหน่ง" value={newContact.position} onChange={(e) => setNewContact((c) => ({ ...c, position: e.target.value }))} />
               <TextInput placeholder="เบอร์โทร" value={newContact.phone} onChange={(e) => setNewContact((c) => ({ ...c, phone: e.target.value }))} />
-              <button onClick={handleAddContact} disabled={addingContact} className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60">
+              <button onClick={handleAddContact} disabled={addingContact} className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-60">
                 <Plus className="w-4 h-4" /> เพิ่ม
               </button>
             </div>
@@ -189,7 +189,7 @@ export default function CustomerDetailPage() {
             <div className="space-y-2">
               {linkedProjects?.map((p) => (
                 <button key={p.id} onClick={() => navigate(`/project/${p.id}`)} className="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-left">
-                  <span className="text-sm font-medium text-indigo-600">{p.project_number}</span>
+                  <span className="text-sm font-medium text-slate-900">{p.project_number}</span>
                   <Pill tone={projectStatusTone(p.status)}>{p.status}</Pill>
                 </button>
               ))}

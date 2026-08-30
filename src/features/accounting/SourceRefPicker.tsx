@@ -49,11 +49,11 @@ export function SourceRefPicker({
 
   if (value) {
     return (
-      <div className="rounded-xl border border-indigo-200 dark:border-indigo-800
-        bg-indigo-50/60 dark:bg-indigo-900/20 px-3 py-2 flex items-center gap-3">
-        <Link2 className="w-4 h-4 text-indigo-600 shrink-0" />
+      <div className="rounded-xl border border-slate-300 dark:border-slate-600
+        bg-slate-100/60 dark:bg-slate-800/60 px-3 py-2 flex items-center gap-3">
+        <Link2 className="w-4 h-4 text-slate-900 shrink-0" />
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
+          <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
             {value.docNo ?? label}
           </div>
           {value.jobName && (
@@ -62,7 +62,7 @@ export function SourceRefPicker({
           {remaining != null && sourceTotal != null && (
             <div className="text-[11px] text-slate-500 tabular-nums">
               ยอดต้นทาง {money(sourceTotal)} · ออกได้อีก{' '}
-              <span className="font-semibold text-indigo-600">{money(remaining)}</span>
+              <span className="font-semibold text-slate-900">{money(remaining)}</span>
             </div>
           )}
         </div>
@@ -100,10 +100,10 @@ export function SourceRefPicker({
             <button
               key={r.id} type="button"
               onMouseDown={() => { onPick(r); setOpen(false); setTerm(''); }}
-              className="block w-full text-left px-3 py-2 hover:bg-indigo-50 dark:hover:bg-slate-700"
+              className="block w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700"
             >
               <div className="flex items-baseline gap-2">
-                <span className="text-sm font-medium text-indigo-600">{r.doc_no}</span>
+                <span className="text-sm font-medium text-slate-900">{r.doc_no}</span>
                 <span className="text-[11px] text-slate-400">{docDate(r.doc_date)}</span>
                 <span className="ml-auto text-sm tabular-nums">{money(r.grand_total)}</span>
               </div>

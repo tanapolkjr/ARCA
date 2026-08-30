@@ -138,11 +138,11 @@ function NewBorrowModal({ onClose, onCreated, items, locations }) {
           </div>
         ))}
       </div>
-      <button onClick={addLine} className="text-sm font-medium text-indigo-600 hover:text-indigo-700 mb-4">+ เพิ่มสินค้าอีกรายการ</button>
+      <button onClick={addLine} className="text-sm font-medium text-slate-900 hover:text-slate-900 mb-4">+ เพิ่มสินค้าอีกรายการ</button>
 
       <div className="flex justify-end gap-2 mt-2 pt-4 border-t border-slate-100 dark:border-slate-700">
         <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">ยกเลิก</button>
-        <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm disabled:opacity-60">
+        <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
           {saving ? "กำลังบันทึก..." : "สร้างใบยืม"}
         </button>
       </div>
@@ -185,10 +185,10 @@ export default function StockBorrowPage() {
     <div>
       <div className="flex items-start justify-between mb-6">
         <div>
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5"><span>Stock</span><span>/</span><span className="text-indigo-600 font-medium">ยืมคืนสินค้า</span></div>
+          <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5"><span>Stock</span><span>/</span><span className="text-slate-900 font-medium">ยืมคืนสินค้า</span></div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">ยืมคืนสินค้า</h1>
         </div>
-        <button onClick={() => setShowModal(true)} disabled={!canManage} title={!canManage ? "เฉพาะ Super Admin/Manager/Store" : ""} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+        <button onClick={() => setShowModal(true)} disabled={!canManage} title={!canManage ? "เฉพาะ Super Admin/Manager/Store" : ""} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           <Plus className="w-4 h-4" /> สร้างใบยืม
         </button>
       </div>
@@ -216,7 +216,7 @@ export default function StockBorrowPage() {
                   <td className="px-4 py-3 text-slate-400">
                     {expanded === b.id ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                   </td>
-                  <td className="px-4 py-3 font-medium text-indigo-600">{b.borrow_no}</td>
+                  <td className="px-4 py-3 font-medium text-slate-900">{b.borrow_no}</td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{b.location?.name || "-"}</td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{b.borrower_name}</td>
                   <td className="px-4 py-3 text-slate-500">{b.due_date || "-"}</td>
@@ -250,7 +250,7 @@ export default function StockBorrowPage() {
                               </td>
                               <td className="py-2 text-right">
                                 {!it.returned && canManage && (
-                                  <button onClick={() => handleReturnItem(it.id)} className="text-indigo-600 hover:underline font-medium">บันทึกคืนชิ้นนี้</button>
+                                  <button onClick={() => handleReturnItem(it.id)} className="text-slate-900 hover:underline font-medium">บันทึกคืนชิ้นนี้</button>
                                 )}
                               </td>
                             </tr>

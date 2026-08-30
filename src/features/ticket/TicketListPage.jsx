@@ -24,7 +24,7 @@ export default function TicketList() {
   const statusCards = [
     { key: "all", label: "ทั้งหมด" },
     { key: "ส่งเรื่อง", label: "ส่งเรื่อง", chip: "bg-slate-400" },
-    { key: "รับเรื่อง", label: "รับเรื่อง", chip: "bg-indigo-500" },
+    { key: "รับเรื่อง", label: "รับเรื่อง", chip: "bg-slate-800" },
     { key: "นัดหมายแล้ว", label: "นัดหมายแล้ว", chip: "bg-amber-500" },
     { key: "ปิดงานแล้ว", label: "ปิดงานแล้ว", chip: "bg-emerald-500" },
   ];
@@ -46,13 +46,13 @@ export default function TicketList() {
       <div className="flex items-start justify-between mb-6 flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5">
-            <span>E-Service</span><span>/</span><span>Service</span><span>/</span><span className="text-indigo-600 font-medium">Ticket</span>
+            <span>E-Service</span><span>/</span><span>Service</span><span>/</span><span className="text-slate-900 font-medium">Ticket</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">E-Ticket — รายการแจ้งซ่อม</h1>
         </div>
         <button
           onClick={() => navigate("/ticket/new")}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm"
         >
           <Plus className="w-4 h-4" /> สร้าง Ticket ใหม่
         </button>
@@ -91,7 +91,7 @@ export default function TicketList() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="ค้นหา ticket code..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
           />
         </div>
       </div>
@@ -122,9 +122,9 @@ export default function TicketList() {
               <tr><td colSpan={8} className="text-center text-slate-400 py-10">No data available in table</td></tr>
             )}
             {rows?.map((r) => (
-              <tr key={r.id} onClick={() => navigate(`/ticket/${r.id}`)} className="cursor-pointer hover:bg-indigo-50/50 dark:hover:bg-indigo-500/5 transition-colors">
+              <tr key={r.id} onClick={() => navigate(`/ticket/${r.id}`)} className="cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/5 transition-colors">
                 <td className="px-4 py-3 text-slate-500">{r.reported_at ? new Date(r.reported_at).toLocaleDateString("th-TH") : "-"}</td>
-                <td className="px-4 py-3 font-medium text-indigo-600">{r.ticket_code}</td>
+                <td className="px-4 py-3 font-medium text-slate-900">{r.ticket_code}</td>
                 <td className="px-4 py-3 text-slate-700 dark:text-slate-200">{r.project?.project_number || "-"}</td>
                 <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.project?.customer?.display_name || "-"}</td>
                 <td className="px-4 py-3 text-slate-500">{r.reporter_name || "-"}</td>

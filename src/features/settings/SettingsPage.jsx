@@ -52,7 +52,7 @@ function UserProfileModal({ user, onClose, onSaved }) {
               toast.error("บันทึกไม่สำเร็จ: " + errMsg(err));
             } finally { setSaving(false); }
           }}
-          className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm disabled:opacity-60"
+          className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-60"
         >
           {saving ? "กำลังบันทึก..." : "บันทึก"}
         </button>
@@ -130,7 +130,7 @@ function LocationModal({ location, onClose, onSaved }) {
       )}
       <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-slate-100 dark:border-slate-700">
         <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">ยกเลิก</button>
-        <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm disabled:opacity-60">
+        <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
           {saving ? "กำลังบันทึก..." : editing ? "บันทึก" : "สร้างคลัง"}
         </button>
       </div>
@@ -158,7 +158,7 @@ function UserRoleSection() {
   return (
     <Card className="p-5">
       <div className="flex items-center gap-2 mb-1">
-        <Users className="w-4 h-4 text-indigo-500" />
+        <Users className="w-4 h-4 text-slate-600" />
         <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">User & Role Management</h3>
       </div>
       <p className="text-xs text-slate-400 mb-4">
@@ -186,7 +186,7 @@ function UserRoleSection() {
             <div className="flex items-center gap-2 shrink-0">
             {canEdit && (
               <button onClick={() => setEditUser(u)} title="แก้ชื่อและเบอร์โทร"
-                      className="p-1.5 text-slate-400 hover:text-indigo-600">
+                      className="p-1.5 text-slate-400 hover:text-slate-900">
                 <Pencil className="w-3.5 h-3.5" />
               </button>
             )}
@@ -223,10 +223,10 @@ function LocationSection() {
     <Card className="p-5">
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
-          <Boxes className="w-4 h-4 text-indigo-500" />
+          <Boxes className="w-4 h-4 text-slate-600" />
           <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">คลังสินค้า (Stock Locations)</h3>
         </div>
-        <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700">
+        <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-900 hover:text-slate-900">
           <Plus className="w-4 h-4" /> เพิ่มคลัง
         </button>
       </div>
@@ -249,7 +249,7 @@ function LocationSection() {
             <div className="flex items-center gap-2 shrink-0">
               <Pill tone="slate">{l.location_type}</Pill>
               <button onClick={() => setEditLocation(l)} title="แก้ไขคลัง"
-                      className="p-1.5 text-slate-400 hover:text-indigo-600">
+                      className="p-1.5 text-slate-400 hover:text-slate-900">
                 <Pencil className="w-3.5 h-3.5" />
               </button>
               <button

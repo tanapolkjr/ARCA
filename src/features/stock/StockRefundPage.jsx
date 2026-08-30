@@ -49,7 +49,7 @@ function NewRefundModal({ onClose, onCreated }) {
       <Field label="เหตุผลการคืน"><TextArea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
       <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-slate-100 dark:border-slate-700">
         <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">ยกเลิก</button>
-        <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm disabled:opacity-60">
+        <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
           {saving ? "กำลังบันทึก..." : "สร้างคำขอ"}
         </button>
       </div>
@@ -97,10 +97,10 @@ export default function StockRefundPage() {
     <div>
       <div className="flex items-start justify-between mb-6">
         <div>
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5"><span>Stock</span><span>/</span><span className="text-indigo-600 font-medium">Refund</span></div>
+          <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5"><span>Stock</span><span>/</span><span className="text-slate-900 font-medium">Refund</span></div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Refund — ลูกค้าคืนสินค้า/ขอเงินคืน</h1>
         </div>
-        <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm">
+        <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm">
           <Plus className="w-4 h-4" /> สร้างคำขอ
         </button>
       </div>
@@ -121,7 +121,7 @@ export default function StockRefundPage() {
             {!loading && refunds?.length === 0 && <tr><td colSpan={5} className="text-center text-slate-400 py-10">ยังไม่มีคำขอคืนเงิน</td></tr>}
             {refunds?.map((r) => (
               <tr key={r.id}>
-                <td className="px-4 py-3 font-medium text-indigo-600">{r.refund_no}</td>
+                <td className="px-4 py-3 font-medium text-slate-900">{r.refund_no}</td>
                 <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.customer?.display_name || "-"}</td>
                 <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-200">{r.amount ? `฿${Number(r.amount).toLocaleString()}` : "-"}</td>
                 <td className="px-4 py-3 text-right"><Pill tone={STATUS_TONE[r.status] || "slate"}>{r.status}</Pill></td>
@@ -135,7 +135,7 @@ export default function StockRefundPage() {
                           onClick={() => advance(r.id, r.status)}
                           disabled={blocked}
                           title={blocked ? "อนุมัติได้เฉพาะ Manager / Super Admin" : ""}
-                          className="text-xs font-medium text-indigo-600 hover:underline disabled:text-slate-300 disabled:no-underline disabled:cursor-not-allowed"
+                          className="text-xs font-medium text-slate-900 hover:underline disabled:text-slate-300 disabled:no-underline disabled:cursor-not-allowed"
                         >
                           {blocked ? "รออนุมัติ (Manager)" : "ขั้นถัดไป"}
                         </button>

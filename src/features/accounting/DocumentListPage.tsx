@@ -28,20 +28,19 @@ interface DocRow {
   tag?: { id: string; name: string; color: string } | null;
 }
 
-const TAG_TONE: Record<string, string> = {
-  indigo: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
-  violet: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
-  sky: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
-  teal: 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300',
-  amber: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-  emerald: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
-  slate: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-};
+/**
+ * ธีมขาวดำ: ป้ายประเภทงานใช้ชิปเส้นขอบเรียบเหมือนกันหมด
+ * ยังรับค่าสีจากฐานข้อมูลได้ (indigo/violet/…) แต่แสดงผลเป็นกลางทุกค่า
+ * การแยกประเภทอาศัยตัวหนังสือ ไม่ใช่สี — อ่านง่ายกว่าและพิมพ์ขาวดำได้
+ */
+const TAG_TONE: Record<string, string> = {};
+const TAG_NEUTRAL =
+  'border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300';
 
 export function TagChip({ tag }: { tag: { name: string; color: string } }) {
   return (
     <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-medium
-      ${TAG_TONE[tag.color] ?? TAG_TONE.slate}`}>
+      ${TAG_TONE[tag.color] ?? TAG_NEUTRAL}`}>
       {tag.name}
     </span>
   );
@@ -169,7 +168,7 @@ export function DocumentListPage() {
           onClick={() => setGrouped((v) => !v)}
           className={`px-3 py-2 rounded-xl text-sm border inline-flex items-center gap-1.5
             ${grouped
-              ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300'
+              ? 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100'
               : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'}`}
         >
           <TagIcon className="w-4 h-4" /> จัดกลุ่มตามประเภทงาน
@@ -183,7 +182,7 @@ export function DocumentListPage() {
               key={t.id}
               onClick={() => setTagId(t.id === 'none' ? '' : t.id)}
               className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100
-                dark:border-slate-800 px-3 py-2 text-left hover:border-indigo-300"
+                dark:border-slate-800 px-3 py-2 text-left hover:border-slate-400"
             >
               <TagChip tag={{ name: t.name, color: t.color }} />
               <div className="text-sm font-semibold tabular-nums mt-1 text-slate-800 dark:text-slate-100">
@@ -221,8 +220,8 @@ export function DocumentListPage() {
 function billingLabel(total: number, r?: BillingRollup) {
   if (!r || r.billed <= 0) return null;
   if (r.paid >= total - 0.01) return { text: 'ชำระแล้ว', tone: 'text-emerald-600' };
-  if (r.billed >= total - 0.01) return { text: 'วางบิลครบ', tone: 'text-sky-600' };
-  return { text: 'วางบิลบางส่วน', tone: 'text-pink-600' };
+  if (r.billed >= total - 0.01) return { text: 'วางบิลครบ', tone: 'text-slate-600' };
+  return { text: 'วางบิลบางส่วน', tone: 'text-slate-600' };
 }
 
 function DocTable({
@@ -265,7 +264,7 @@ function DocTable({
                   </td>
                   <td className="px-4 py-3">
                     <Link to={`/accounting/${docType}/${d.id}`}
-                          className="font-medium text-indigo-600 hover:underline inline-flex items-center gap-1.5">
+                          className="font-medium text-slate-900 hover:underline inline-flex items-center gap-1.5">
                       <FileText className="w-3.5 h-3.5" />
                       {d.doc_no ?? 'ร่าง'}
                     </Link>

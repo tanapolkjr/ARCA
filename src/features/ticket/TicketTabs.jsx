@@ -174,7 +174,7 @@ export function RequestIssueTab({ ticketId, projectId, state, setState }) {
             {deviceDetailRows?.map((d) => <option key={d.serial_no} value={d.serial_no}>{d.serial_no} ({d.model_code})</option>)}
           </Select>
           <TextInput placeholder="อาการที่พบ" value={newRow.symptom} onChange={(e) => setNewRow((r) => ({ ...r, symptom: e.target.value }))} />
-          <button onClick={handleAddIssue} disabled={saving} className="px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60">
+          <button onClick={handleAddIssue} disabled={saving} className="px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-60">
             {saving ? "..." : "+ เพิ่มอุปกรณ์"}
           </button>
         </div>
@@ -263,7 +263,7 @@ export function SubcontractorTab({ ticketId }) {
         <Field label="ค่าใช้จ่าย (ถ้ามี)"><TextInput type="number" value={form.cost} onChange={(e) => setForm((f) => ({ ...f, cost: e.target.value }))} /></Field>
       </div>
       <Field label="หมายเหตุ"><TextArea rows={2} value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} /></Field>
-      <button onClick={handleAdd} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm disabled:opacity-60 mb-5">
+      <button onClick={handleAdd} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-60 mb-5">
         {saving ? "กำลังบันทึก..." : "+ เพิ่มช่างนอก"}
       </button>
 
@@ -369,7 +369,7 @@ export function StockMovementTab({ ticketId }) {
               </div>
               <TextInput placeholder="Serial (ถ้ามี)" value={f.serialNo || ""} onChange={(e) => setFormField(s.type, "serialNo", e.target.value)} />
               <TextInput type="number" placeholder="จำนวน" value={f.qty || ""} onChange={(e) => setFormField(s.type, "qty", e.target.value)} />
-              <button onClick={() => handleAdd(s.type)} disabled={!canMoveStock} className="px-3 py-2.5 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed">บันทึก</button>
+              <button onClick={() => handleAdd(s.type)} disabled={!canMoveStock} className="px-3 py-2.5 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed">บันทึก</button>
             </div>
             {s.type !== "receive_old" && (
               <Select value={f.locationId || ""} onChange={(e) => setFormField(s.type, "locationId", e.target.value)}>

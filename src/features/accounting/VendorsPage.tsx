@@ -127,7 +127,7 @@ export function VendorsPanel() {
                   <td className="px-2">
                     <div className="inline-flex gap-0.5">
                       <button title="แก้ไข" onClick={() => setEditing(v)}
-                              className="text-slate-400 hover:text-indigo-600 p-1.5">
+                              className="text-slate-400 hover:text-slate-900 p-1.5">
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
                       <button

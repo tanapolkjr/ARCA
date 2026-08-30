@@ -210,12 +210,12 @@ export function CashBookPage() {
                   </td>
                   <td className="px-4 py-3">
                     <button onClick={() => setViewing(e)}
-                            className="text-left text-slate-700 dark:text-slate-200 hover:text-indigo-600">
+                            className="text-left text-slate-700 dark:text-slate-200 hover:text-slate-900">
                       {e.description}
                     </button>
                     <div className="flex flex-wrap gap-2 mt-0.5">
                       {e.ar_document_id && (
-                        <span className="text-[11px] text-indigo-500 inline-flex items-center gap-1">
+                        <span className="text-[11px] text-slate-600 inline-flex items-center gap-1">
                           <Link2 className="w-3 h-3" /> จากการรับชำระ
                         </span>
                       )}
@@ -247,7 +247,7 @@ export function CashBookPage() {
                   <td className="px-2 whitespace-nowrap">
                     <div className="inline-flex items-center gap-0.5">
                       <button title="แก้ไข" onClick={() => setEditing(e)}
-                              className="text-slate-400 hover:text-indigo-600 p-1.5">
+                              className="text-slate-400 hover:text-slate-900 p-1.5">
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
                       <button
@@ -261,7 +261,7 @@ export function CashBookPage() {
                             toast(err instanceof Error ? err.message : 'ทำซ้ำไม่สำเร็จ', 'error');
                           }
                         }}
-                        className="text-slate-400 hover:text-indigo-600 p-1.5"
+                        className="text-slate-400 hover:text-slate-900 p-1.5"
                       >
                         <Copy className="w-3.5 h-3.5" />
                       </button>
@@ -716,7 +716,7 @@ function WalletRow({ wallet, onEdit }: { wallet: Wallet; onEdit: () => void }) {
         <span className="text-xs text-slate-400 tabular-nums">
           ยอดยกมา {money(wallet.opening_balance)}
         </span>
-        <button onClick={onEdit} className="text-slate-400 hover:text-indigo-600 p-1">
+        <button onClick={onEdit} className="text-slate-400 hover:text-slate-900 p-1">
           <Pencil className="w-3.5 h-3.5" />
         </button>
       </div>

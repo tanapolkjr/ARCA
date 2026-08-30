@@ -41,11 +41,11 @@ export default function PMRequestList() {
       <div className="flex items-start justify-between mb-6 flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5">
-            <span>E-Service</span><span>/</span><span className="text-indigo-600 font-medium">PM Request</span>
+            <span>E-Service</span><span>/</span><span className="text-slate-900 font-medium">PM Request</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">PM Request — คำขอสนับสนุนจากทีม PM</h1>
         </div>
-        <button onClick={() => navigate("/pm-request/new")} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm">
+        <button onClick={() => navigate("/pm-request/new")} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm">
           <Plus className="w-4 h-4" /> สร้างคำขอใหม่
         </button>
       </div>
@@ -77,8 +77,8 @@ export default function PMRequestList() {
             {loading && <tr><td colSpan={8} className="text-center text-slate-400 py-10">กำลังโหลด...</td></tr>}
             {!loading && rows?.length === 0 && <tr><td colSpan={8} className="text-center text-slate-400 py-10">ยังไม่มีคำขอ</td></tr>}
             {rows?.map((r) => (
-              <tr key={r.id} onClick={() => navigate(`/pm-request/${r.id}`)} className="cursor-pointer hover:bg-indigo-50/50 dark:hover:bg-indigo-500/5 transition-colors">
-                <td className="px-4 py-3 font-medium text-indigo-600">{r.request_code}</td>
+              <tr key={r.id} onClick={() => navigate(`/pm-request/${r.id}`)} className="cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/5 transition-colors">
+                <td className="px-4 py-3 font-medium text-slate-900">{r.request_code}</td>
                 <td className="px-4 py-3 text-slate-700 dark:text-slate-200">{r.request_type}</td>
                 <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.requester?.name || "-"}</td>
                 <td className="px-4 py-3 text-slate-500">{r.customer_name_free || r.project?.project_number || "-"}</td>

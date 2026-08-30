@@ -46,9 +46,9 @@ export function CompanySettingsPage() {
           <div key={c.id} className="bg-white dark:bg-slate-900 rounded-2xl border
             border-slate-100 dark:border-slate-800 p-5">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30
+              <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800
                 flex items-center justify-center shrink-0">
-                <Building2 className="w-4 h-4 text-indigo-600 dark:text-indigo-300" />
+                <Building2 className="w-4 h-4 text-slate-900 dark:text-slate-100" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -77,7 +77,7 @@ export function CompanySettingsPage() {
                 <GhostButton className="!px-3 !py-1.5 text-xs" onClick={() => setSeedFor(c)}>เลขเอกสาร</GhostButton>
                 {!c.is_default && (
                   <button
-                    className="text-xs text-slate-400 hover:text-indigo-600 px-3"
+                    className="text-xs text-slate-400 hover:text-slate-900 px-3"
                     onClick={async () => {
                       await setDefaultCompany(c.id);
                       toast('ตั้งเป็นบริษัทตั้งต้นแล้ว');

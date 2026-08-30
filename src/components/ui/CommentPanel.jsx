@@ -8,7 +8,7 @@ import { listUsers } from "../../api/users.js";
 import { useToast } from "../../hooks/useToast.jsx";
 import { errMsg } from "../../lib/format.js";
 
-const AVATAR_COLORS = ["bg-indigo-500", "bg-teal-500", "bg-orange-500", "bg-purple-500", "bg-rose-500", "bg-blue-500"];
+const AVATAR_COLORS = ["bg-slate-800", "bg-slate-500", "bg-orange-500", "bg-slate-500", "bg-rose-500", "bg-slate-500"];
 function colorFor(name) {
   if (!name) return AVATAR_COLORS[0];
   const idx = name.charCodeAt(0) % AVATAR_COLORS.length;
@@ -192,7 +192,7 @@ export default function CommentPanel({ entityType, entityId, statusOptions = [] 
             onBlur={() => setTimeout(() => setShowMentions(false), 150)}
             rows={2}
             placeholder="พิมพ์คอมเมนต์... ใช้ @ เพื่อแท็กเพื่อนร่วมทีม"
-            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900 resize-none"
           />
           {showMentions && (
             <div className="absolute z-10 bottom-full mb-1 w-56 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg py-1.5 max-h-48 overflow-auto">
@@ -203,7 +203,7 @@ export default function CommentPanel({ entityType, entityId, statusOptions = [] 
                 <button
                   key={u.id}
                   onMouseDown={() => insertMention(u)}
-                  className="w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-500/10 text-slate-700 dark:text-slate-200"
+                  className="w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm hover:bg-slate-100 dark:hover:bg-slate-800/10 text-slate-700 dark:text-slate-200"
                 >
                   <span className={`w-5 h-5 rounded-full ${colorFor(u.name)} text-white text-xs flex items-center justify-center font-semibold`}>
                     {u.name.slice(0, 1)}
@@ -216,13 +216,13 @@ export default function CommentPanel({ entityType, entityId, statusOptions = [] 
         </div>
 
         <div className="flex items-center justify-between mt-2.5">
-          <button className="text-slate-400 hover:text-indigo-600" title="แนบไฟล์ (เร็วๆ นี้)">
+          <button className="text-slate-400 hover:text-slate-900" title="แนบไฟล์ (เร็วๆ นี้)">
             <Paperclip className="w-4 h-4" />
           </button>
           <button
             onClick={send}
             disabled={sending}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm disabled:opacity-60"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-60"
           >
             <Send className="w-3.5 h-3.5" /> {sending ? "กำลังส่ง..." : "ส่ง"}
           </button>

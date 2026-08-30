@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
-  Home, LayoutGrid, Wrench, Users, Boxes, BarChart3, Settings,
+  LayoutGrid, Wrench, Users, Boxes, BarChart3, Settings,
   LogOut, ChevronDown, ChevronRight, MessageSquare, Factory, Receipt, Wallet,
 } from "lucide-react";
 import { useAuth, useHasRole, SOURCING_ROLES, ACCOUNTING_ROLES } from "../../hooks/useAuth.jsx";
+import { ArcaSeal } from "../brand/ArcaSeal";
 
 function Item({ to, icon: Icon, label, badge, sub, end }) {
   return (
@@ -13,17 +14,17 @@ function Item({ to, icon: Icon, label, badge, sub, end }) {
       end={end}
       className={({ isActive }) =>
         `w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors relative ${
-          isActive ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+          isActive ? "bg-slate-100 dark:bg-slate-800/10 text-slate-900 dark:text-slate-300" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
         } ${sub ? "pl-11" : ""}`
       }
     >
       {({ isActive }) => (
         <>
-          {isActive && !sub && <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-full bg-indigo-600" />}
+          {isActive && !sub && <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-full bg-slate-900" />}
           {Icon && <Icon className="w-4 h-4 shrink-0" />}
           <span className="flex-1 text-left">{label}</span>
           {badge && (
-            <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-semibold">
+            <span className="w-5 h-5 rounded-full bg-slate-900 text-white text-xs flex items-center justify-center font-semibold">
               {badge}
             </span>
           )}
@@ -59,10 +60,11 @@ export default function Sidebar() {
   return (
     <aside className="hidden lg:flex flex-col w-64 shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 h-screen sticky top-0 px-4 py-5">
       <div className="flex items-center gap-2.5 px-2 mb-7">
-        <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center">
-          <Home className="w-4 h-4 text-white" />
+        <ArcaSeal className="w-9 h-9 text-slate-900 dark:text-slate-100 shrink-0" />
+        <div className="leading-none">
+          <div className="brand-wordmark text-slate-900 dark:text-slate-100 text-lg">ARCA HAUS</div>
+          <div className="text-[10px] tracking-widest text-slate-400 mt-0.5">E-SERVICE</div>
         </div>
-        <span className="brand-wordmark text-slate-900 dark:text-slate-100 text-xl">ARCA</span>
       </div>
 
       <div className="flex-1 overflow-auto space-y-6">
