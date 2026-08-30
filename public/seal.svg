@@ -1,0 +1,18 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" fill="none">
+  <defs>
+    <path id="t" d="M 28,100 A 72,72 0 0 1 172,100"/>
+    <path id="b" d="M 30,100 A 70,70 0 0 0 170,100"/>
+  </defs>
+  <circle cx="100" cy="100" r="94" stroke="#0f172a" stroke-width="4"/>
+  <circle cx="100" cy="100" r="82" stroke="#0f172a" stroke-width="2.5"/>
+  <text fill="#0f172a" font-size="15" font-family="sans-serif">
+    <textPath href="#t" startOffset="50%" text-anchor="middle">บริษัท อาร์-คา เฮาส์ จำกัด</textPath>
+  </text>
+  <text fill="#0f172a" font-size="12" letter-spacing="1" font-family="sans-serif">
+    <textPath href="#b" startOffset="50%" text-anchor="middle">AR-CA HAUS COMPANY LIMITED</textPath>
+  </text>
+  <circle cx="18" cy="100" r="4" fill="#0f172a"/>
+  <circle cx="182" cy="100" r="4" fill="#0f172a"/>
+  <text x="100" y="100" fill="#0f172a" font-size="46" letter-spacing="2"
+        text-anchor="middle" dominant-baseline="central" font-family="sans-serif">ARCA</text>
+</svg>
