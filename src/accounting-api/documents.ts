@@ -243,6 +243,8 @@ export async function saveArDocument(input: SaveArInput, userId: string): Promis
       unit_price: i.unit_price,
       discount_amount: i.discount_amount,
       discount_percent: i.discount_percent ?? null,
+      discount_mode: i.discount_mode ?? 'line',
+      discount_input: i.discount_input ?? 0,
       wht_rate: i.wht_rate ?? 0,
       line_total: i.line_total,
     }));
@@ -538,6 +540,7 @@ export async function saveApDocument(input: SaveApInput, userId: string): Promis
       description: i.description, item_type: i.item_type, vat_type: i.vat_type,
       qty: i.qty, unit: i.unit || null, unit_price: i.unit_price,
       discount_amount: i.discount_amount, discount_percent: i.discount_percent ?? null,
+      discount_mode: i.discount_mode ?? 'line', discount_input: i.discount_input ?? 0,
       wht_rate: i.wht_rate ?? 0, line_total: i.line_total,
     }));
     const { error } = await supabase.from('ap_document_items').insert(rows);

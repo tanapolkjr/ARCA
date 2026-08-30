@@ -11,7 +11,9 @@ import { computeTotals, docDate as docDateTh, lineDiscount, lineTotal, money } f
 import {
   AP_DOC_LABEL, AR_DOC_LABEL,
 } from '@/accounting-lib/types';
-import type { ApDocType, ArDocType, DocumentItem, VatType } from '@/accounting-lib/types';
+import type {
+  ApDocType, ArDocType, DiscountMode, DocumentItem, VatType,
+} from '@/accounting-lib/types';
 import { getDefaultCompany, listBankAccounts, listCompanies, listTemplates, listVendors } from '@/accounting-api/setup';
 import {
   approveQuotation, cancelApDocument, cancelDocument, childBillingPercent, childExtraDiscount,
@@ -30,12 +32,23 @@ import { CancelDialog, PaymentHistory, ReceivePaymentModal } from './PaymentPane
 import { SourceRefPicker } from './SourceRefPicker';
 
 const AR_TYPES: ArDocType[] = ['QT', 'BL', 'INV', 'RC', 'CN', 'DN'];
+
+/** ป้ายบนปุ่มสลับโหมดส่วนลด — สั้นแต่ต้องอ่านออกว่าคิดยังไง */
+const DISCOUNT_LABEL: Record<DiscountMode, string> = {
+  unit: '฿/ชิ้น',
+  line: '฿ รวม',
+  percent: '%',
+};
+const DISCOUNT_NEXT: Record<DiscountMode, DiscountMode> = {
+  unit: 'line', line: 'percent', percent: 'unit',
+};
 const isAr = (t: string): t is ArDocType => (AR_TYPES as string[]).includes(t);
 
 const blankItem = (): DocumentItem => ({
   line_no: 1, stock_item_id: null, description: '', item_type: 'goods',
   vat_type: 'vat', qty: 1, unit: 'ชิ้น', unit_price: 0,
-  discount_amount: 0, discount_percent: null, wht_rate: 0, line_total: 0,
+  discount_amount: 0, discount_percent: null,
+  discount_mode: 'unit', discount_input: 0, wht_rate: 0, line_total: 0,
 });
 
 interface PartyOption { id: string; label: string; raw: Record<string, unknown> }
@@ -351,6 +364,7 @@ function DocumentEditorInner() {
       setWhtRate(Number(src.wht_rate));
       setNote(src.note_text ?? '');
       setTerms(src.terms_text ?? '');
+      // ยกทั้งบรรทัดรวมโหมดส่วนลด ไม่งั้นยอดใบลูกจะไม่ตรงใบต้นทาง
       setItems(src.items?.length ? src.items.map((i) => ({ ...i, id: undefined })) : [blankItem()]);
 
       // ตั้ง % ให้ยอดตรงกับส่วนที่ใบต้นทางยังเหลือพอดี ผู้ใช้ปรับลงได้แต่เกินไม่ได้
@@ -875,31 +889,30 @@ function DocumentEditorInner() {
                       <NumberInput value={it.unit_price} disabled={locked} step="0.01"
                                    onChange={(e) => patchItem(i, { unit_price: Number(e.target.value) })} />
                     </Field>
-                    <Field label="ส่วนลด" className="w-36">
+                    <Field label="ส่วนลด" className="w-44">
                       <div className="flex gap-1">
                         <NumberInput
                           className="!px-2"
-                          value={it.discount_percent != null ? it.discount_percent : it.discount_amount}
+                          value={it.discount_input ?? 0}
                           disabled={locked} step="0.01"
-                          onChange={(e) => patchItem(i, it.discount_percent != null
-                            ? { discount_percent: Number(e.target.value) }
-                            : { discount_amount: Number(e.target.value) })}
+                          onChange={(e) => patchItem(i, { discount_input: Number(e.target.value) })}
                         />
                         <button
                           type="button" disabled={locked}
-                          title="สลับระหว่างบาทและเปอร์เซ็นต์"
-                          onClick={() => patchItem(i, it.discount_percent != null
-                            ? { discount_percent: null, discount_amount: 0 }
-                            : { discount_percent: 0, discount_amount: 0 })}
+                          title="สลับวิธีคิดส่วนลด: ต่อชิ้น → ทั้งบรรทัด → เปอร์เซ็นต์"
+                          onClick={() => patchItem(i, {
+                            discount_mode: DISCOUNT_NEXT[it.discount_mode ?? 'unit'],
+                          })}
                           className="px-2 rounded-lg border border-slate-200 dark:border-slate-700
-                            text-xs text-slate-500 hover:text-indigo-600 shrink-0"
+                            text-[11px] text-slate-500 hover:text-indigo-600 shrink-0 whitespace-nowrap"
                         >
-                          {it.discount_percent != null ? '%' : '฿'}
+                          {DISCOUNT_LABEL[it.discount_mode ?? 'unit']}
                         </button>
                       </div>
-                      {it.discount_percent != null && it.discount_percent !== 0 && (
+                      {/* โชว์ยอดที่หักจริงเสมอ — ลดต่อชิ้นกับลดทั้งบรรทัดต่างกันมหาศาลเมื่อจำนวนเยอะ */}
+                      {(it.discount_input ?? 0) !== 0 && (
                         <div className="text-[11px] text-slate-400 text-right mt-0.5 tabular-nums">
-                          −{money(lineDiscount(it))}
+                          หักจริง −{money(lineDiscount(it))}
                         </div>
                       )}
                     </Field>

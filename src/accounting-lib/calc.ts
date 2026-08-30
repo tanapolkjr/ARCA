@@ -12,17 +12,34 @@ export const lineGross = (item: Pick<DocumentItem, 'qty' | 'unit_price'>): numbe
 
 /**
  * ส่วนลดที่หักจริงของบรรทัด
- * ถ้ากรอกเป็น % ให้คิดจากยอดก่อนหักส่วนลดของบรรทัดนั้น
- * ลดได้ไม่เกินมูลค่าบรรทัด (ค่าติดตั้งฟรี = ลด 100% เหลือ 0)
+ *
+ * ช่องส่วนลดอยู่ถัดจากราคา/หน่วย คนจึงกรอกเป็น "ลดต่อชิ้น" เป็นธรรมชาติ
+ * แต่ FlowAccount คิดเป็น "ลดทั้งบรรทัด" — ต่างกันคนละโลกเมื่อจำนวนเยอะ
+ * (1,647 ชิ้น ลด 630: ต่อชิ้น = ลด 1,037,610 · ทั้งบรรทัด = ลด 630)
+ * จึงให้ระบุโหมดมาชัดๆ แทนการเดา
+ *
+ * ลดได้ไม่เกินมูลค่าบรรทัด (ค่าติดตั้งฟรี = ลดจนเหลือ 0)
  */
 export function lineDiscount(
-  item: Pick<DocumentItem, 'qty' | 'unit_price' | 'discount_amount' | 'discount_percent'>
+  item: Pick<DocumentItem,
+    'qty' | 'unit_price' | 'discount_amount' | 'discount_percent' | 'discount_mode' | 'discount_input'>
 ): number {
   const gross = lineGross(item);
-  const pct = item.discount_percent;
-  const raw = pct != null && pct !== 0
-    ? (gross * Number(pct)) / 100
-    : Number(item.discount_amount) || 0;
+  const qty = Number(item.qty) || 0;
+
+  let raw: number;
+  if (item.discount_mode) {
+    const input = Number(item.discount_input) || 0;
+    raw = item.discount_mode === 'percent' ? (gross * input) / 100
+        : item.discount_mode === 'unit'    ? input * qty
+        : input;
+  } else {
+    // เอกสารเก่าที่ยังไม่มีโหมด — คิดแบบเดิมทุกประการ ยอดจึงไม่ขยับ
+    const pct = item.discount_percent;
+    raw = pct != null && pct !== 0
+      ? (gross * Number(pct)) / 100
+      : Number(item.discount_amount) || 0;
+  }
   return round2(Math.min(Math.max(0, raw), gross));
 }
 

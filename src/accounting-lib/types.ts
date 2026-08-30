@@ -5,6 +5,9 @@ export type DocType = ArDocType | ApDocType;
 export type ItemType = 'goods' | 'service';
 export type VatType = 'vat' | 'exempt' | 'zero';
 
+/** unit = ลดต่อชิ้น · line = ลดทั้งบรรทัด · percent = % ของยอดบรรทัด */
+export type DiscountMode = 'unit' | 'line' | 'percent';
+
 export interface Company {
   id: string;
   code: string | null;
@@ -83,8 +86,12 @@ export interface DocumentItem {
   unit_price: number;
   /** จำนวนเงินที่ลดจริง — ใช้คำนวณเสมอ */
   discount_amount: number;
-  /** เก็บไว้ว่ากรอกมาเป็น % เท่าไร (null = กรอกเป็นบาท) */
+  /** เก็บไว้ว่ากรอกมาเป็น % เท่าไร (null = กรอกเป็นบาท) — คงไว้เพื่ออ่านเอกสารเก่า */
   discount_percent?: number | null;
+  /** วิธีคิดส่วนลดของบรรทัดนี้ */
+  discount_mode?: DiscountMode;
+  /** ตัวเลขที่ผู้ใช้กรอก ตีความตาม discount_mode */
+  discount_input?: number;
   /** อัตราหัก ณ ที่จ่ายของบรรทัดนี้ (%) — สินค้าปกติ 0 · ค่าบริการ 3 */
   wht_rate?: number;
   line_total: number;
