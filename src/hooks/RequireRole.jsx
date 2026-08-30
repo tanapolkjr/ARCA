@@ -19,7 +19,7 @@ export default function RequireRole({ roles, children }) {
   if (!profileLoaded) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="w-8 h-8 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
       </div>
     );
   }
@@ -39,7 +39,7 @@ export default function RequireRole({ roles, children }) {
         </p>
         <Link
           to="/"
-          className="inline-block mt-6 px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+          className="inline-block mt-6 px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-medium hover:bg-slate-800"
         >
           กลับหน้า Dashboard
         </Link>

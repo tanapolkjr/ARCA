@@ -8,10 +8,10 @@
 // drop-in change rather than a redesign.
 // ---------------------------------------------------------------------------
 
-export const CURRENT_USER = { name: "ชลิดา ฮวดพรหม", role: "Sale", color: "bg-indigo-500" };
+export const CURRENT_USER = { name: "ชลิดา ฮวดพรหม", role: "Sale", color: "bg-slate-800" };
 
 export const MOCK_USERS = [
-  { name: "ชลิดา ฮวดพรหม", role: "Sale", color: "bg-indigo-500" },
+  { name: "ชลิดา ฮวดพรหม", role: "Sale", color: "bg-slate-800" },
   { name: "ศรัณย์ ไตรวรเดชา", role: "Admin", color: "bg-teal-500" },
   { name: "มานพ คลังสินค้า", role: "Store", color: "bg-orange-500" },
   { name: "สมชาย พีเอ็ม", role: "PM", color: "bg-purple-500" },
