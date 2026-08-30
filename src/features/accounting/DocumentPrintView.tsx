@@ -275,11 +275,9 @@ function DocPage({
   return (
     <div className="doc-page bg-white text-slate-900"
          style={{ width: '210mm', height: '297mm', padding: `${PAGE_PAD_MM}mm`, overflow: 'hidden' }}>
-      {/* ธีมขาวดำ: มุมกระดาษใช้เส้นบางแทนสามเหลี่ยมทึบ — สะอาดกว่าและประหยัดหมึก */}
       <div style={{
-        position: 'absolute', top: `${PAGE_PAD_MM}mm`, right: `${PAGE_PAD_MM}mm`,
-        width: '18mm', height: '18mm',
-        borderTop: `1.5px solid ${color}`, borderRight: `1.5px solid ${color}`,
+        position: 'absolute', top: 0, right: 0, width: 0, height: 0,
+        borderTop: `26mm solid ${color}`, borderLeft: '26mm solid transparent',
       }} />
 
       <DocHeader doc={doc} copyLabel={copyLabel} pageNo={pageNo} totalPages={totalPages} />
