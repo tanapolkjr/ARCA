@@ -68,6 +68,8 @@ export interface Vendor {
 /** ข้อมูลคู่ค้าที่แช่แข็งไว้ในเอกสาร ณ วันที่ออก */
 export interface PartySnapshot {
   name: string;
+  /** ชื่ออังกฤษ — ขึ้นใต้ชื่อไทยบนหัวเอกสาร (มีเฉพาะฝั่งบริษัทผู้ออก) */
+  name_en?: string | null;
   branch_label: string | null;
   tax_id: string | null;
   address: string | null;

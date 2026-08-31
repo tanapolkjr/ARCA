@@ -65,6 +65,7 @@ export async function getArDocument(id: string): Promise<ArDocumentFull> {
 export function companySnapshot(c: Company): PartySnapshot {
   return {
     name: c.name_th,
+    name_en: c.name_en,
     branch_label: c.branch_code === '00000' ? 'สำนักงานใหญ่' : `สาขา ${c.branch_code ?? ''}`.trim(),
     tax_id: c.tax_id,
     address: c.address_th,

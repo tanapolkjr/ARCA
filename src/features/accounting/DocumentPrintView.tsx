@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ArcaSeal } from '@/components/brand/ArcaSeal';
 import { bahtText, docDate, lineDiscount, money } from '@/accounting-lib/calc';
 import {
@@ -114,8 +114,7 @@ type Block =
   | { kind: 'totals'; key: string }
   | { kind: 'text'; key: string; heading?: string; line?: string; keepWithNext?: boolean }
   | { kind: 'payment'; key: string }
-  | { kind: 'sign'; key: string }
-  | { kind: 'bank'; key: string };
+  | { kind: 'sign'; key: string };
 
 /** แตกข้อความหลายบรรทัดเป็นชิ้นย่อย เพื่อให้ไหลข้ามหน้าได้โดยไม่ตัดกลางบรรทัด */
 function textBlocks(prefix: string, heading: string, body: string | null | undefined): Block[] {
@@ -147,7 +146,6 @@ export function DocumentPrintView({
     out.push(...textBlocks('terms', 'เงื่อนไข', doc.terms_text));
     if (doc.doc_type === 'INV' || doc.doc_type === 'RC') out.push({ kind: 'payment', key: 'payment' });
     out.push({ kind: 'sign', key: 'sign' });
-    if (bankAccounts.length > 0) out.push({ kind: 'bank', key: 'bank' });
     return out;
   }, [doc, bankAccounts.length]);
 
@@ -227,7 +225,7 @@ export function DocumentPrintView({
             )}
           </tbody>
         </table>
-        <div data-mk="totals"><TotalsBlock doc={doc} color={color} /></div>
+        <div data-mk="totals"><TotalsBlock doc={doc} color={color} bankAccounts={bankAccounts} /></div>
         {textBlocks('note', 'หมายเหตุ', doc.note_text).map((b) => (
           <div key={b.key} data-mk={b.key}><TextLine block={b} color={color} /></div>
         ))}
@@ -238,9 +236,6 @@ export function DocumentPrintView({
           <div data-mk="payment"><PaymentBlock /></div>
         )}
         <div data-mk="sign"><SignBlock docType={doc.doc_type} /></div>
-        {bankAccounts.length > 0 && (
-          <div data-mk="bank"><BankBlock accounts={bankAccounts} color={color} /></div>
-        )}
       </div>
 
       {rendered.map((pageBlocks, i) => (
@@ -300,11 +295,12 @@ function DocPage({
       )}
 
       {rest.map((b) => {
-        if (b.kind === 'totals') return <TotalsBlock key={b.key} doc={doc} color={color} />;
+        if (b.kind === 'totals') return (
+          <TotalsBlock key={b.key} doc={doc} color={color} bankAccounts={bankAccounts} />
+        );
         if (b.kind === 'text') return <TextLine key={b.key} block={b} color={color} />;
         if (b.kind === 'payment') return <PaymentBlock key={b.key} />;
         if (b.kind === 'sign') return <SignBlock key={b.key} docType={doc.doc_type} />;
-        if (b.kind === 'bank') return <BankBlock key={b.key} accounts={bankAccounts} color={color} />;
         return null;
       })}
     </div>
@@ -325,11 +321,16 @@ function DocHeader({
           <ArcaSeal className="w-12 h-12 shrink-0 doc-seal" />
           <div className="text-[13px] font-bold leading-tight">
             {doc.company_snapshot?.name ?? '—'}
-            <div className="text-[10px] font-normal text-slate-500">{labelEn(doc.doc_type)}</div>
+            {doc.company_snapshot?.name_en && (
+              <div className="text-[10px] font-normal text-slate-500">
+                {doc.company_snapshot.name_en}
+              </div>
+            )}
           </div>
         </div>
         <div className="text-right pr-[22mm]">
           <div className="text-[17px] font-bold" style={{ color }}>{labelTh(doc.doc_type)}</div>
+          <div className="text-[10px] font-medium" style={{ color }}>({labelEn(doc.doc_type)})</div>
           {copyLabel && <div className="text-[10px] text-slate-500">{copyLabel}</div>}
           {isTaxInvoice && copyLabel === 'ต้นฉบับ' && (
             <div className="text-[9px] text-slate-500">(เอกสารออกเป็นชุด)</div>
@@ -346,12 +347,9 @@ function DocHeader({
           <PartyBlock label={doc.party_label} party={doc.party_snapshot} />
           {(doc.contact_name || doc.contact_phone) && (
             <div className="text-[11px] leading-[1.6]">
-              {doc.contact_name && (
-                <div><span className="text-slate-500">ผู้ติดต่อ </span>{doc.contact_name}</div>
-              )}
-              {doc.contact_phone && (
-                <div><span className="text-slate-500">เบอร์โทร </span>{doc.contact_phone}</div>
-              )}
+              <span className="text-slate-500">ผู้ติดต่อ </span>
+              {doc.contact_name}
+              {doc.contact_phone && <span className="ml-3">โทร. {doc.contact_phone}</span>}
             </div>
           )}
         </div>
@@ -363,8 +361,14 @@ function DocHeader({
           {doc.doc_type === 'QT' && doc.valid_until && (
             <Row k="ยืนราคาถึง" v={docDate(doc.valid_until)} />
           )}
-          {doc.sales_name && <Row k="ผู้ขาย" v={doc.sales_name} />}
-          {doc.sales_phone && <Row k="เบอร์โทร" v={doc.sales_phone} />}
+          {doc.sales_name && (
+            <Row k="ผู้ขาย" v={
+              <>
+                {doc.sales_name}
+                {doc.sales_phone && <span className="ml-3">{doc.sales_phone}</span>}
+              </>
+            } />
+          )}
           {doc.reference_no && <Row k="อ้างอิง" v={doc.reference_no} />}
           {doc.customer_po_no && <Row k="เลขที่ PO" v={doc.customer_po_no} />}
           {doc.paid_on && (doc.doc_type === 'INV' || doc.doc_type === 'RC') && (
@@ -416,12 +420,7 @@ function ItemRow({
       <td className="py-1.5 pl-1">{it.unit ?? ''}</td>
       <td className="py-1.5 text-right tabular-nums">{money(it.unit_price)}</td>
       <td className="py-1.5 text-right tabular-nums">
-        {disc > 0 && (
-          <>
-            {qty > 0 ? money(disc / qty) : ''}
-            <div className="text-[9px] text-slate-500">รวม {money(disc)}</div>
-          </>
-        )}
+        {disc > 0 && qty > 0 ? money(disc / qty) : ''}
       </td>
       <td className="py-1.5 text-right tabular-nums">
         {qty > 0 ? money(it.line_total / qty) : ''}
@@ -434,11 +433,33 @@ function ItemRow({
   );
 }
 
-function TotalsBlock({ doc, color }: { doc: PrintableDoc; color: string }) {
+function TotalsBlock({
+  doc, color, bankAccounts = [],
+}: { doc: PrintableDoc; color: string; bankAccounts?: BankAccount[] }) {
   return (
     <>
-      <div className="flex justify-end mb-2">
-        <div className="w-[80mm] text-[11px]">
+      {/* ธนาคารอยู่ฝั่งซ้ายระดับเดียวกับสรุปยอด — ใช้ช่องว่างที่เดิมปล่อยทิ้ง
+          และลูกค้าเห็นเลขบัญชีพร้อมยอดที่ต้องโอนในสายตาเดียว */}
+      <div className="flex justify-between items-start gap-6 mb-2">
+        <div className="flex-1 pt-1">
+          {bankAccounts.length > 0 && (
+            <>
+              <div className="text-[10px] font-semibold mb-1" style={{ color }}>
+                ข้อมูลการรับชำระ
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {bankAccounts.map((b) => (
+                  <div key={b.id} className="border border-slate-200 rounded px-3 py-1.5 text-[10px]">
+                    <div>ธ. {b.bank_name}{b.branch ? ` (${b.branch})` : ''}</div>
+                    <div className="font-medium tabular-nums">{b.account_no}</div>
+                    <div className="text-slate-500">{b.account_name}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+        <div className="w-[80mm] text-[11px] shrink-0">
           <Total k="รวมเป็นเงิน" v={doc.subtotal} />
           {doc.discount_total > 0 && <Total k="ส่วนลด" v={doc.discount_total} />}
           {(doc.extra_discount ?? 0) > 0 && <Total k="ส่วนลดพิเศษ" v={doc.extra_discount ?? 0} />}
@@ -452,9 +473,6 @@ function TotalsBlock({ doc, color }: { doc: PrintableDoc; color: string }) {
           <Total k="มูลค่าที่ไม่มี/ยกเว้นภาษี" v={doc.vat_exempt_base} />
           <Total k="มูลค่าที่คำนวณภาษี" v={doc.vat_base} />
           <Total k={`ภาษีมูลค่าเพิ่ม ${doc.vat_rate}%`} v={doc.vat_amount} />
-          <div className="text-[9px] text-slate-400 text-right -mt-0.5">
-            {doc.price_include_vat ? '(ราคาต่อหน่วยรวมภาษีแล้ว)' : '(ราคาต่อหน่วยยังไม่รวมภาษี)'}
-          </div>
           <div style={{ borderTop: `1px solid ${color}` }} className="mt-1 pt-1">
             <Total k="จำนวนเงินรวมทั้งสิ้น" v={doc.grand_total} bold />
           </div>
@@ -517,24 +535,7 @@ function SignBlock({ docType }: { docType: string }) {
   );
 }
 
-function BankBlock({ accounts, color }: { accounts: BankAccount[]; color: string }) {
-  return (
-    <div className="mt-6 pt-3 border-t border-slate-200 text-[10px]">
-      <div className="font-semibold mb-1" style={{ color }}>ข้อมูลการรับชำระ</div>
-      <div className="flex flex-wrap gap-4">
-        {accounts.map((b) => (
-          <div key={b.id} className="border border-slate-200 rounded px-3 py-1.5">
-            <div className="font-medium tabular-nums">{b.account_no}</div>
-            <div>ธ. {b.bank_name}{b.branch ? ` (${b.branch})` : ''}</div>
-            <div className="text-slate-500">{b.account_name}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function Row({ k, v, bold }: { k: string; v: string; bold?: boolean }) {
+function Row({ k, v, bold }: { k: string; v: React.ReactNode; bold?: boolean }) {
   return (
     <div className="flex gap-2">
       <span className="w-[22mm] shrink-0 text-slate-500">{k}</span>
