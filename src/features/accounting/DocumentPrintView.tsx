@@ -1,9 +1,7 @@
 import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ArcaSeal } from '@/components/brand/ArcaSeal';
+import { ArcaWordmark } from '@/components/brand/ArcaWordmark';
 import { bahtText, docDate, lineDiscount, money } from '@/accounting-lib/calc';
-import {
-  AP_DOC_LABEL, AP_DOC_LABEL_EN, AR_DOC_LABEL, AR_DOC_LABEL_EN, DOC_COLOR,
-} from '@/accounting-lib/types';
+import { AP_DOC_LABEL, AR_DOC_LABEL, DOC_COLOR } from '@/accounting-lib/types';
 import type { BankAccount, DocumentItem, PartySnapshot } from '@/accounting-lib/types';
 
 export interface PrintableDoc {
@@ -13,6 +11,7 @@ export interface PrintableDoc {
   due_date?: string | null;
   valid_until?: string | null;
   company_snapshot: PartySnapshot | null;
+  company_email?: string | null;
   party_snapshot: PartySnapshot | null;
   party_label: string;                 // "ลูกค้า" | "ผู้ขาย"
   job_name?: string | null;
@@ -61,51 +60,24 @@ const SIGN_LABELS: Record<string, [string, string]> = {
 function labelTh(t: string) {
   return (AR_DOC_LABEL as Record<string, string>)[t] ?? (AP_DOC_LABEL as Record<string, string>)[t] ?? t;
 }
-function labelEn(t: string) {
-  return (AR_DOC_LABEL_EN as Record<string, string>)[t] ?? (AP_DOC_LABEL_EN as Record<string, string>)[t] ?? '';
-}
 
 
-function PartyBlock({ label, party }: { label: string; party: PartySnapshot | null }) {
-  if (!party) return <div className="text-[11px] text-slate-400">— ยังไม่ได้เลือก{label} —</div>;
-  return (
-    <div className="text-[11px] leading-[1.6]">
-      <div className="font-semibold mb-0.5">{label}</div>
-      <div className="font-medium">
-        {party.name}
-        {party.branch_label && <span className="font-normal"> ({party.branch_label})</span>}
-      </div>
-      {party.address && <div className="whitespace-pre-line">{party.address}</div>}
-      {party.tax_id && <div>เลขประจำตัวผู้เสียภาษี {party.tax_id}</div>}
-      {party.phone && <div>โทร. {party.phone}</div>}
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
-// การตัดหน้า
+// การตัดหน้า — วัดความสูงจริงจากเบราว์เซอร์ก่อนแบ่ง
 //
-// เดิมนับ "จำนวนบรรทัด" ต่อหน้าแบบตายตัว ซึ่งเดาไม่ได้จริง เพราะรายละเอียดสินค้า
-// เป็นข้อความหลายบรรทัดและภาษาไทยตัดคำไม่เท่ากัน เอกสารจึงล้นออกนอก A4
+// นับ "จำนวนบรรทัด" แบบตายตัวไม่ได้ เพราะรายละเอียดสินค้าเป็นข้อความหลายบรรทัด
+// และภาษาไทยตัดคำไม่เท่ากัน จึงเรนเดอร์ลงชั้นที่ซ่อนไว้ วัดจริง แล้วค่อยจัดหน้า
 //
-// วิธีใหม่: เรนเดอร์ทุกชิ้นลงในชั้นที่ซ่อนไว้ก่อน วัดความสูงจริงจากเบราว์เซอร์
-// แล้วค่อยจัดลงหน้า จึงพอดี A4 เสมอไม่ว่ารายการจะยาวแค่ไหน
-//
-// กฎการจัดหน้า:
-//   • หัวเอกสารซ้ำทุกหน้า (จำเป็น เพราะแต่ละแผ่นต้องอ่านได้ด้วยตัวเอง)
-//   • ทุกอย่างที่เหลือขึ้นครั้งเดียว — สรุปยอด หมายเหตุ เงื่อนไข ลายเซ็น
-//     ไม่มีทางซ้ำสองหน้า เพราะแต่ละชิ้นถูกจัดลงหน้าใดหน้าหนึ่งเท่านั้น
-//   • ลายเซ็นและข้อมูลธนาคารอยู่ท้ายสุดเสมอ
+// กฎ: หัวเอกสารซ้ำทุกหน้า · ที่เหลือขึ้นครั้งเดียว ไม่ซ้ำไม่ตก · ลายเซ็นหน้าสุดท้าย
 // ---------------------------------------------------------------------------
 
-/** px ต่อ 1 มิลลิเมตรตามมาตรฐาน CSS */
 const PX_PER_MM = 96 / 25.4;
 const PAGE_H_MM = 297;
-const PAGE_PAD_MM = 12;
-/** เผื่อไว้กันคลาดจากการวัดเศษ pixel — ยอมเสียพื้นที่นิดเดียวดีกว่าล้นหน้า */
+const PAGE_PAD_MM = 14;
+/** เผื่อกันคลาดจากการวัดเศษ pixel — ยอมเสียพื้นที่นิดเดียวดีกว่าล้นหน้า */
 const SAFETY_MM = 6;
 const CONTENT_H = (PAGE_H_MM - PAGE_PAD_MM * 2 - SAFETY_MM) * PX_PER_MM;
-/** ความกว้างเนื้อหาจริงในหน้า ใช้ให้ชั้นวัดกว้างเท่ากันเป๊ะ */
 const CONTENT_W_MM = 210 - PAGE_PAD_MM * 2;
 
 type Block =
@@ -116,7 +88,7 @@ type Block =
   | { kind: 'payment'; key: string }
   | { kind: 'sign'; key: string };
 
-/** แตกข้อความหลายบรรทัดเป็นชิ้นย่อย เพื่อให้ไหลข้ามหน้าได้โดยไม่ตัดกลางบรรทัด */
+/** แตกข้อความหลายบรรทัดเป็นชิ้นย่อย ให้ไหลข้ามหน้าได้โดยไม่ตัดกลางบรรทัด */
 function textBlocks(prefix: string, heading: string, body: string | null | undefined): Block[] {
   const lines = (body ?? '').split('\n').filter((l) => l.trim() !== '');
   if (lines.length === 0) return [];
@@ -147,9 +119,8 @@ export function DocumentPrintView({
     if (doc.doc_type === 'INV' || doc.doc_type === 'RC') out.push({ kind: 'payment', key: 'payment' });
     out.push({ kind: 'sign', key: 'sign' });
     return out;
-  }, [doc, bankAccounts.length]);
+  }, [doc]);
 
-  // วัดใหม่เมื่อเนื้อหาที่มีผลต่อความสูงเปลี่ยน
   const measureKey = useMemo(() => JSON.stringify([
     doc.doc_type, doc.doc_no, copyLabel,
     doc.company_snapshot, doc.party_snapshot, doc.job_name,
@@ -168,27 +139,23 @@ export function DocumentPrintView({
     });
     const headerH = h['header'] ?? 0;
     const theadH = h['thead'] ?? 0;
-    if (!headerH) return;                       // ยังวัดไม่ได้ ปล่อยไว้ก่อน
+    if (!headerH) return;
 
     const avail = CONTENT_H - headerH;
     const out: Block[][] = [];
     let cur: Block[] = [];
     let used = 0;
     let curHasRows = false;
-
     const heightOf = (b: Block) => h[b.key] ?? 0;
 
     for (let i = 0; i < blocks.length; i++) {
       const b = blocks[i];
-      // แถวรายการแถวแรกของหน้าต้องเผื่อหัวตารางด้วย
       const needThead = (b.kind === 'row' || b.kind === 'empty') && !curHasRows ? theadH : 0;
       let need = needThead + heightOf(b);
-      // หัวข้อห้ามค้างท้ายหน้าโดยไม่มีเนื้อหาตามมา
       if (b.kind === 'text' && b.keepWithNext && blocks[i + 1]) need += heightOf(blocks[i + 1]);
 
       if (used + need > avail && cur.length > 0) {
-        out.push(cur);
-        cur = []; used = 0; curHasRows = false;
+        out.push(cur); cur = []; used = 0; curHasRows = false;
       }
       const thead2 = (b.kind === 'row' || b.kind === 'empty') && !curHasRows ? theadH : 0;
       cur.push(b);
@@ -213,16 +180,16 @@ export function DocumentPrintView({
           width: `${CONTENT_W_MM}mm`, padding: 0, minHeight: 0,
         }}
       >
-        <div data-mk="header"><DocHeader doc={doc} copyLabel={copyLabel} pageNo={1} totalPages={2} /></div>
+        <div data-mk="header">
+          <DocHeader doc={doc} copyLabel={copyLabel} pageNo={1} totalPages={2} />
+        </div>
         <table className="w-full text-[11px] border-collapse">
           <thead><tr data-mk="thead"><ItemHead color={color} /></tr></thead>
           <tbody>
             {doc.items.map((it, i) => (
-              <ItemRow key={i} it={it} no={i + 1} vatRate={doc.vat_rate} mk={`row-${i}`} />
+              <ItemRow key={i} it={it} no={i + 1} mk={`row-${i}`} />
             ))}
-            {doc.items.length === 0 && (
-              <tr data-mk="empty"><td colSpan={9} className="py-6" /></tr>
-            )}
+            {doc.items.length === 0 && <tr data-mk="empty"><td colSpan={7} className="py-6" /></tr>}
           </tbody>
         </table>
         <div data-mk="totals"><TotalsBlock doc={doc} color={color} bankAccounts={bankAccounts} /></div>
@@ -270,23 +237,18 @@ function DocPage({
   return (
     <div className="doc-page bg-white text-slate-900"
          style={{ width: '210mm', height: '297mm', padding: `${PAGE_PAD_MM}mm`, overflow: 'hidden' }}>
-      <div style={{
-        position: 'absolute', top: 0, right: 0, width: 0, height: 0,
-        borderTop: `26mm solid ${color}`, borderLeft: '26mm solid transparent',
-      }} />
-
       <DocHeader doc={doc} copyLabel={copyLabel} pageNo={pageNo} totalPages={totalPages} />
 
       {rowBlocks.length > 0 && (
-        <table className="w-full text-[11px] border-collapse mb-3">
+        <table className="w-full text-[11px] border-collapse">
           <thead><tr><ItemHead color={color} /></tr></thead>
           <tbody>
             {rowBlocks.map((b) =>
               b.kind === 'row' ? (
-                <ItemRow key={b.key} it={doc.items[b.index]} no={b.index + 1} vatRate={doc.vat_rate} />
+                <ItemRow key={b.key} it={doc.items[b.index]} no={b.index + 1} />
               ) : (
                 <tr key={b.key}>
-                  <td colSpan={9} className="py-6 text-center text-slate-400">ยังไม่มีรายการ</td>
+                  <td colSpan={7} className="py-6 text-center text-slate-400">ยังไม่มีรายการ</td>
                 </tr>
               )
             )}
@@ -295,9 +257,9 @@ function DocPage({
       )}
 
       {rest.map((b) => {
-        if (b.kind === 'totals') return (
-          <TotalsBlock key={b.key} doc={doc} color={color} bankAccounts={bankAccounts} />
-        );
+        if (b.kind === 'totals') {
+          return <TotalsBlock key={b.key} doc={doc} color={color} bankAccounts={bankAccounts} />;
+        }
         if (b.kind === 'text') return <TextLine key={b.key} block={b} color={color} />;
         if (b.kind === 'payment') return <PaymentBlock key={b.key} />;
         if (b.kind === 'sign') return <SignBlock key={b.key} docType={doc.doc_type} />;
@@ -307,54 +269,63 @@ function DocPage({
   );
 }
 
+// ---------------------------------------------------------------- หัวเอกสาร
+
 function DocHeader({
   doc, copyLabel, pageNo, totalPages,
 }: { doc: PrintableDoc; copyLabel?: string; pageNo: number; totalPages: number }) {
   const color = DOC_COLOR[doc.doc_type] ?? '#5C6B7A';
+  const co = doc.company_snapshot;
+  const party = doc.party_snapshot;
   const isTaxInvoice = doc.doc_type === 'INV';
   const showDue = doc.doc_type === 'BL' || doc.doc_type === 'PO';
 
   return (
     <>
-      <div className="flex justify-between items-start mb-4 relative">
-        <div className="flex items-center gap-2.5">
-          <ArcaSeal className="w-12 h-12 shrink-0 doc-seal" />
-          <div className="text-[13px] font-bold leading-tight">
-            {doc.company_snapshot?.name ?? '—'}
-            {doc.company_snapshot?.name_en && (
-              <div className="text-[10px] font-normal text-slate-500">
-                {doc.company_snapshot.name_en}
-              </div>
-            )}
+      {/* แถวบน: โลโก้ + ข้อมูลบริษัท ซ้าย · ชื่อเอกสาร ขวา */}
+      <div className="flex justify-between items-start gap-6">
+        <div className="flex items-start gap-4 min-w-0">
+          <ArcaWordmark className="w-[34mm] mt-1 shrink-0" />
+          <div className="text-[10px] leading-[1.55] min-w-0">
+            <div className="text-[13px] font-bold leading-tight">{co?.name ?? '—'}</div>
+            {co?.name_en && <div className="text-[10px]">{co.name_en}</div>}
+            {co?.address && <div className="whitespace-pre-line">{co.address}</div>}
+            <div>
+              เลขประจำตัวผู้เสียภาษี {co?.tax_id || '-'}
+              {doc.company_email && <span className="ml-6">E-mail {doc.company_email}</span>}
+              {co?.phone && <span className="ml-6">โทร. {co.phone}</span>}
+            </div>
           </div>
         </div>
-        <div className="text-right pr-[22mm]">
-          <div className="text-[17px] font-bold" style={{ color }}>{labelTh(doc.doc_type)}</div>
-          <div className="text-[10px] font-medium" style={{ color }}>({labelEn(doc.doc_type)})</div>
-          {copyLabel && <div className="text-[10px] text-slate-500">{copyLabel}</div>}
+        <div className="text-right shrink-0">
+          <div className="text-[24px] font-bold leading-none" style={{ color }}>
+            {labelTh(doc.doc_type)}
+          </div>
+          {copyLabel && <div className="text-[9px] text-slate-500 mt-1.5">{copyLabel}</div>}
           {isTaxInvoice && copyLabel === 'ต้นฉบับ' && (
-            <div className="text-[9px] text-slate-500">(เอกสารออกเป็นชุด)</div>
+            <div className="text-[8px] text-slate-500">(เอกสารออกเป็นชุด)</div>
           )}
-          {totalPages > 1 && (
-            <div className="text-[9px] text-slate-400">หน้าที่ {pageNo}/{totalPages}</div>
-          )}
+          <div className="text-[9px] text-slate-500">หน้าที่ {pageNo}/{totalPages}</div>
         </div>
       </div>
 
-      <div className="flex gap-4 mb-3">
-        <div className="flex-1 flex flex-col gap-3">
-          <PartyBlock label="ผู้ออกเอกสาร" party={doc.company_snapshot} />
-          <PartyBlock label={doc.party_label} party={doc.party_snapshot} />
-          {(doc.contact_name || doc.contact_phone) && (
-            <div className="text-[11px] leading-[1.6]">
-              <span className="text-slate-500">ผู้ติดต่อ </span>
-              {doc.contact_name}
-              {doc.contact_phone && <span className="ml-3">โทร. {doc.contact_phone}</span>}
-            </div>
-          )}
+      {/* แถวสอง: ลูกค้า ซ้าย · ข้อมูลเอกสาร ขวา */}
+      <div className="flex justify-between gap-6 mt-6">
+        <div className="text-[10px] leading-[1.6] min-w-0">
+          <div className="text-[11px] font-bold">{doc.party_label}</div>
+          <div className="text-[11px] font-bold">
+            {party?.name ?? '—'}
+            {party?.branch_label && <span> ({party.branch_label})</span>}
+          </div>
+          {party?.tax_id && <div>เลขประจำตัวผู้เสียภาษี {party.tax_id}</div>}
+          {party?.address && <div className="whitespace-pre-line">{party.address}</div>}
+          <div>
+            ผู้ติดต่อ {doc.contact_name || '-'}
+            <span className="ml-4">โทร. {doc.contact_phone || '-'}</span>
+          </div>
         </div>
 
-        <div className="w-[75mm] text-[11px] leading-[1.7] border-l border-slate-200 pl-3">
+        <div className="w-[72mm] text-[10px] leading-[1.8] shrink-0">
           <Row k="เลขที่" v={doc.doc_no ?? '(ร่าง — ยังไม่ออกเลขที่)'} bold />
           <Row k="วันที่" v={docDate(doc.doc_date)} />
           {showDue && doc.due_date && <Row k="ครบกำหนด" v={docDate(doc.due_date)} />}
@@ -374,135 +345,127 @@ function DocHeader({
           {doc.paid_on && (doc.doc_type === 'INV' || doc.doc_type === 'RC') && (
             <Row k="วันที่รับชำระ" v={docDate(doc.paid_on)} />
           )}
-          {doc.job_name && <Row k="ชื่องาน" v={doc.job_name} />}
         </div>
       </div>
+
+      {/* ชื่องานเต็มความกว้าง — ชื่อโครงการมักยาว ให้พื้นที่เต็มบรรทัด */}
+      {doc.job_name && (
+        <div className="flex gap-6 text-[11px] mt-5 mb-3">
+          <span className="w-[22mm] shrink-0 text-slate-500">ชื่องาน</span>
+          <span className="flex-1">{doc.job_name}</span>
+        </div>
+      )}
     </>
   );
 }
+
+// ------------------------------------------------------------------ ตาราง
+
+const HEAD_CELL = 'py-2 font-semibold';
 
 function ItemHead({ color }: { color: string }) {
+  const border = { borderTop: `1.5px solid ${color}`, borderBottom: `1.5px solid ${color}`, color };
   return (
     <>
-      <th className="py-1.5 w-[8mm] text-center font-semibold"
-          style={{ borderTop: `1px solid ${color}`, borderBottom: `1px solid ${color}` }}>#</th>
-      <th className="py-1.5 text-left font-semibold"
-          style={{ borderTop: `1px solid ${color}`, borderBottom: `1px solid ${color}` }}>รายละเอียด</th>
-      <th className="py-1.5 w-[16mm] text-right font-semibold"
-          style={{ borderTop: `1px solid ${color}`, borderBottom: `1px solid ${color}` }}>จำนวน</th>
-      <th className="py-1.5 w-[12mm] text-left font-semibold pl-1"
-          style={{ borderTop: `1px solid ${color}`, borderBottom: `1px solid ${color}` }}>หน่วย</th>
-      <th className="py-1.5 w-[20mm] text-right font-semibold"
-          style={{ borderTop: `1px solid ${color}`, borderBottom: `1px solid ${color}` }}>ราคา/หน่วย</th>
-      <th className="py-1.5 w-[22mm] text-right font-semibold"
-          style={{ borderTop: `1px solid ${color}`, borderBottom: `1px solid ${color}` }}>ส่วนลด/หน่วย</th>
-      <th className="py-1.5 w-[20mm] text-right font-semibold"
-          style={{ borderTop: `1px solid ${color}`, borderBottom: `1px solid ${color}` }}>ราคาสุทธิ/หน่วย</th>
-      <th className="py-1.5 w-[12mm] text-center font-semibold"
-          style={{ borderTop: `1px solid ${color}`, borderBottom: `1px solid ${color}` }}>ภาษี</th>
-      <th className="py-1.5 w-[26mm] text-right font-semibold"
-          style={{ borderTop: `1px solid ${color}`, borderBottom: `1px solid ${color}` }}>มูลค่า</th>
+      <th className={`${HEAD_CELL} w-[12mm] text-left`} style={border}>ลำดับ</th>
+      <th className={`${HEAD_CELL} text-center`} style={border}>รายละเอียด</th>
+      <th className={`${HEAD_CELL} w-[16mm] text-center`} style={border}>จำนวน</th>
+      <th className={`${HEAD_CELL} w-[14mm] text-center`} style={border}>หน่วย</th>
+      <th className={`${HEAD_CELL} w-[24mm] text-center`} style={border}>ราคา/หน่วย</th>
+      <th className={`${HEAD_CELL} w-[22mm] text-center`} style={border}>ส่วนลด</th>
+      <th className={`${HEAD_CELL} w-[26mm] text-right pr-1`} style={border}>มูลค่า</th>
     </>
   );
 }
 
-function ItemRow({
-  it, no, vatRate, mk,
-}: { it: DocumentItem; no: number; vatRate: number; mk?: string }) {
+function ItemRow({ it, no, mk }: { it: DocumentItem; no: number; mk?: string }) {
   const qty = Number(it.qty) || 0;
   const disc = lineDiscount(it);
   return (
-    <tr data-mk={mk} className="align-top border-b border-slate-100">
-      <td className="py-1.5 text-center">{no}</td>
+    <tr data-mk={mk} className="align-top">
+      <td className="py-2 pl-1">{no}</td>
       {/* รายละเอียดหลายบรรทัด: ชื่อรุ่นบรรทัดแรก สเปกย่อยบรรทัดถัดไป */}
-      <td className="py-1.5 whitespace-pre-line pr-2">{it.description}</td>
-      <td className="py-1.5 text-right tabular-nums">{money(it.qty).replace('.00', '')}</td>
-      <td className="py-1.5 pl-1">{it.unit ?? ''}</td>
-      <td className="py-1.5 text-right tabular-nums">{money(it.unit_price)}</td>
-      <td className="py-1.5 text-right tabular-nums">
+      <td className="py-2 whitespace-pre-line pr-3">{it.description}</td>
+      <td className="py-2 text-right tabular-nums">{money(it.qty).replace('.00', '')}</td>
+      <td className="py-2 text-center">{it.unit ?? ''}</td>
+      <td className="py-2 text-right tabular-nums">{money(it.unit_price)}</td>
+      {/* ส่วนลดต่อหน่วย เพื่อให้บวกลบในบรรทัดเดียวได้:
+          (ราคา/หน่วย − ส่วนลด) × จำนวน = มูลค่า */}
+      <td className="py-2 text-right tabular-nums">
         {disc > 0 && qty > 0 ? money(disc / qty) : ''}
       </td>
-      <td className="py-1.5 text-right tabular-nums">
-        {qty > 0 ? money(it.line_total / qty) : ''}
-      </td>
-      <td className="py-1.5 text-center">
-        {it.vat_type === 'vat' ? `${vatRate}%` : it.vat_type === 'zero' ? '0%' : 'ยกเว้น'}
-      </td>
-      <td className="py-1.5 text-right tabular-nums">{money(it.line_total)}</td>
+      <td className="py-2 text-right tabular-nums pr-1">{money(it.line_total)}</td>
     </tr>
   );
 }
 
+// -------------------------------------------------------------- สรุปยอด
+
 function TotalsBlock({
   doc, color, bankAccounts = [],
 }: { doc: PrintableDoc; color: string; bankAccounts?: BankAccount[] }) {
+  const hasDiscount = doc.discount_total > 0 || (doc.extra_discount ?? 0) > 0;
   return (
-    <>
-      {/* ธนาคารอยู่ฝั่งซ้ายระดับเดียวกับสรุปยอด — ใช้ช่องว่างที่เดิมปล่อยทิ้ง
-          และลูกค้าเห็นเลขบัญชีพร้อมยอดที่ต้องโอนในสายตาเดียว */}
-      <div className="flex justify-between items-start gap-6 mb-2">
-        <div className="flex-1 pt-1">
-          {bankAccounts.length > 0 && (
-            <>
-              <div className="text-[10px] font-semibold mb-1" style={{ color }}>
-                ข้อมูลการรับชำระ
-              </div>
-              <div className="flex flex-wrap gap-3">
-                {bankAccounts.map((b) => (
-                  <div key={b.id} className="border border-slate-200 rounded px-3 py-1.5 text-[10px]">
-                    <div>ธ. {b.bank_name}{b.branch ? ` (${b.branch})` : ''}</div>
-                    <div className="font-medium tabular-nums">{b.account_no}</div>
-                    <div className="text-slate-500">{b.account_name}</div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-        <div className="w-[80mm] text-[11px] shrink-0">
-          <Total k="รวมเป็นเงิน" v={doc.subtotal} />
-          {doc.discount_total > 0 && <Total k="ส่วนลด" v={doc.discount_total} />}
-          {(doc.extra_discount ?? 0) > 0 && <Total k="ส่วนลดพิเศษ" v={doc.extra_discount ?? 0} />}
-          {(doc.discount_total > 0 || (doc.extra_discount ?? 0) > 0) && (
-            <Total k="จำนวนเงินหลังหักส่วนลด"
-                   v={doc.subtotal - doc.discount_total - (doc.extra_discount ?? 0)} />
-          )}
-          {doc.billing_percent != null && doc.billing_percent > 0 && doc.billing_percent < 100 && (
-            <Total k={`แบ่งชำระ ${doc.billing_percent}%`} v={doc.grand_total} bold />
-          )}
-          <Total k="มูลค่าที่ไม่มี/ยกเว้นภาษี" v={doc.vat_exempt_base} />
-          <Total k="มูลค่าที่คำนวณภาษี" v={doc.vat_base} />
-          <Total k={`ภาษีมูลค่าเพิ่ม ${doc.vat_rate}%`} v={doc.vat_amount} />
-          <div style={{ borderTop: `1px solid ${color}` }} className="mt-1 pt-1">
-            <Total k="จำนวนเงินรวมทั้งสิ้น" v={doc.grand_total} bold />
-          </div>
-          <Total k="หักภาษี ณ ที่จ่ายทั้งสิ้น" v={doc.wht_amount} />
-          {doc.wht_amount > 0 && doc.wht_base != null && (
-            <div className="text-[9px] text-slate-500 text-right -mt-0.5">
-              (จากมูลค่าก่อนภาษี {money(doc.wht_base)})
-            </div>
-          )}
-          <Total k="ยอดชำระ" v={doc.net_payable} bold />
+    <div className="flex justify-between items-start gap-8 mt-6">
+      {/* บัญชีรับเงินอยู่ระดับเดียวกับยอด ลูกค้าเห็นเลขบัญชีกับยอดที่ต้องโอนพร้อมกัน */}
+      <div className="flex-1 text-[10px] leading-[1.7] pt-1">
+        <div className="font-semibold" style={{ color }}>กรุณาชำระ</div>
+        <div className="pl-3">
+          <div>{doc.company_snapshot?.name ?? ''}</div>
+          {bankAccounts.length > 0
+            ? bankAccounts.map((b) => (
+                <div key={b.id}>
+                  ธนาคาร{b.bank_name} เลขที่ : {b.account_no}
+                  {b.branch ? ` (${b.branch})` : ''}
+                </div>
+              ))
+            : <div className="text-slate-400">ธนาคาร — เลขที่ :</div>}
         </div>
       </div>
-      <div className="text-[11px] italic mb-4">({bahtText(doc.net_payable)})</div>
-    </>
+
+      <div className="w-[86mm] text-[10px] shrink-0">
+        <Total k="รวมเป็นเงิน" v={doc.subtotal} />
+        {doc.discount_total > 0 && <Total k="ส่วนลด" v={doc.discount_total} />}
+        {(doc.extra_discount ?? 0) > 0 && <Total k="ส่วนลดพิเศษ" v={doc.extra_discount ?? 0} />}
+        {hasDiscount && (
+          <Total k="จำนวนเงินหลังหักส่วนลด"
+                 v={doc.subtotal - doc.discount_total - (doc.extra_discount ?? 0)} />
+        )}
+        {doc.billing_percent != null && doc.billing_percent > 0 && doc.billing_percent < 100 && (
+          <Total k={`แบ่งชำระ ${doc.billing_percent}%`} v={doc.grand_total} bold />
+        )}
+        <Total k="มูลค่าที่ไม่มี/ยกเว้นภาษี" v={doc.vat_exempt_base} />
+        <Total k="มูลค่าที่คำนวณภาษี" v={doc.vat_base} />
+        <Total k={`ภาษีมูลค่าเพิ่ม ${doc.vat_rate}%`} v={doc.vat_amount} />
+        <div style={{ borderTop: `1.5px solid ${color}` }} className="mt-1.5 pt-1.5">
+          <Total k="จำนวนเงินรวมทั้งสิ้น" v={doc.grand_total} bold />
+        </div>
+        <Total k="หักภาษี ณ ที่จ่ายทั้งสิ้น" v={doc.wht_amount} />
+        <Total k="ยอดชำระ" v={doc.net_payable} bold />
+        <div className="text-[10px] italic text-right mt-1">({bahtText(doc.net_payable)})</div>
+      </div>
+    </div>
   );
 }
+
+// ------------------------------------------------------ หมายเหตุ / เงื่อนไข
 
 function TextLine({ block, color }: { block: Block; color: string }) {
   if (block.kind !== 'text') return null;
   if (block.heading) {
     return (
-      <div className="text-[10px] font-semibold mt-1" style={{ color }}>{block.heading}</div>
+      <div className="text-[10px] font-semibold mt-3 pt-3 first:mt-0"
+           style={{ color, borderTop: block.key === 'note-h' ? '1px solid #cbd5e1' : undefined }}>
+        {block.heading}
+      </div>
     );
   }
-  return <div className="text-[10px] leading-[1.65]">{block.line}</div>;
+  return <div className="text-[10px] leading-[1.7] pl-1">{block.line}</div>;
 }
 
 function PaymentBlock() {
   return (
-    <div className="text-[10px] border-t border-slate-200 pt-2 mt-3 mb-4">
+    <div className="text-[10px] border-t border-slate-200 pt-2 mt-3">
       <div className="mb-1">การชำระเงินจะสมบูรณ์เมื่อบริษัทได้รับเงินเรียบร้อยแล้ว</div>
       <div className="flex gap-5">
         {['เงินสด', 'เช็ค', 'โอนเงิน', 'บัตรเครดิต'].map((m) => <span key={m}>☐ {m}</span>)}
@@ -520,17 +483,14 @@ function PaymentBlock() {
 function SignBlock({ docType }: { docType: string }) {
   const [leftSign, rightSign] = SIGN_LABELS[docType] ?? ['ผู้รับเอกสาร', 'ผู้มีอำนาจลงนาม'];
   return (
-    <div className="flex justify-between gap-10 text-[10px] mt-8">
-      <div className="flex-1 text-center">
-        <div className="border-b border-slate-400 h-10" />
-        <div className="mt-1">{leftSign}</div>
-        <div className="text-slate-400">วันที่</div>
-      </div>
-      <div className="flex-1 text-center">
-        <div className="border-b border-slate-400 h-10" />
-        <div className="mt-1">{rightSign}</div>
-        <div className="text-slate-400">วันที่</div>
-      </div>
+    <div className="flex justify-between gap-16 text-[10px] mt-12 px-6">
+      {[leftSign, rightSign].map((label) => (
+        <div key={label} className="flex-1 text-center">
+          <div className="border-b border-slate-400 h-8" />
+          <div className="mt-1.5">{label}</div>
+          <div className="text-slate-400 text-[9px]">วันที่</div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -546,8 +506,8 @@ function Row({ k, v, bold }: { k: string; v: React.ReactNode; bold?: boolean }) 
 
 function Total({ k, v, bold }: { k: string; v: number; bold?: boolean }) {
   return (
-    <div className={`flex justify-between py-0.5 ${bold ? 'font-semibold' : ''}`}>
-      <span className="text-slate-600">{k}</span>
+    <div className={`flex justify-between py-[1.5px] ${bold ? 'font-semibold' : ''}`}>
+      <span>{k}</span>
       <span className="tabular-nums">{money(v)} บาท</span>
     </div>
   );

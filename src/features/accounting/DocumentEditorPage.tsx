@@ -420,6 +420,7 @@ function DocumentEditorInner() {
     due_date: dueDate || null,
     valid_until: validUntil || null,
     company_snapshot: selectedCompany ? companySnapshot(selectedCompany) : null,
+    company_email: selectedCompany?.email ?? null,
     party_snapshot: selectedParty
       ? (ar
           ? customerSnapshotFrom(selectedParty.raw as Parameters<typeof customerSnapshotFrom>[0])
