@@ -76,7 +76,7 @@ const PX_PER_MM = 96 / 25.4;
 const PAGE_H_MM = 297;
 const PAGE_PAD_MM = 14;
 /** เผื่อกันคลาดจากการวัดเศษ pixel — ยอมเสียพื้นที่นิดเดียวดีกว่าล้นหน้า */
-const SAFETY_MM = 6;
+const SAFETY_MM = 10;
 const CONTENT_H = (PAGE_H_MM - PAGE_PAD_MM * 2 - SAFETY_MM) * PX_PER_MM;
 const CONTENT_W_MM = 210 - PAGE_PAD_MM * 2;
 
@@ -108,6 +108,8 @@ export function DocumentPrintView({
   const color = DOC_COLOR[doc.doc_type] ?? '#5C6B7A';
   const measureRef = useRef<HTMLDivElement>(null);
   const [pages, setPages] = useState<Block[][] | null>(null);
+  // โลโก้เป็นรูป โหลดเสร็จทีหลัง — ต้องวัดใหม่เหมือนตอนฟอนต์พร้อม
+  const [assetsReady, setAssetsReady] = useState(0);
 
   const blocks = useMemo<Block[]>(() => {
     const out: Block[] = [];
@@ -133,38 +135,47 @@ export function DocumentPrintView({
     const root = measureRef.current;
     if (!root) return;
 
-    const h: Record<string, number> = {};
-    root.querySelectorAll<HTMLElement>('[data-mk]').forEach((el) => {
-      h[el.dataset.mk!] = el.getBoundingClientRect().height;
-    });
-    const headerH = h['header'] ?? 0;
-    const theadH = h['thead'] ?? 0;
-    if (!headerH) return;
+    const measure = () => {
+      const h: Record<string, number> = {};
+      root.querySelectorAll<HTMLElement>('[data-mk]').forEach((el) => {
+        h[el.dataset.mk!] = el.getBoundingClientRect().height;
+      });
+      const headerH = h['header'] ?? 0;
+      const theadH = h['thead'] ?? 0;
+      if (!headerH) return;
 
-    const avail = CONTENT_H - headerH;
-    const out: Block[][] = [];
-    let cur: Block[] = [];
-    let used = 0;
-    let curHasRows = false;
-    const heightOf = (b: Block) => h[b.key] ?? 0;
+      const avail = CONTENT_H - headerH;
+      const out: Block[][] = [];
+      let cur: Block[] = [];
+      let used = 0;
+      let curHasRows = false;
+      const heightOf = (b: Block) => h[b.key] ?? 0;
 
-    for (let i = 0; i < blocks.length; i++) {
-      const b = blocks[i];
-      const needThead = (b.kind === 'row' || b.kind === 'empty') && !curHasRows ? theadH : 0;
-      let need = needThead + heightOf(b);
-      if (b.kind === 'text' && b.keepWithNext && blocks[i + 1]) need += heightOf(blocks[i + 1]);
+      for (let i = 0; i < blocks.length; i++) {
+        const b = blocks[i];
+        const needThead = (b.kind === 'row' || b.kind === 'empty') && !curHasRows ? theadH : 0;
+        let need = needThead + heightOf(b);
+        if (b.kind === 'text' && b.keepWithNext && blocks[i + 1]) need += heightOf(blocks[i + 1]);
 
-      if (used + need > avail && cur.length > 0) {
-        out.push(cur); cur = []; used = 0; curHasRows = false;
+        if (used + need > avail && cur.length > 0) {
+          out.push(cur); cur = []; used = 0; curHasRows = false;
+        }
+        const thead2 = (b.kind === 'row' || b.kind === 'empty') && !curHasRows ? theadH : 0;
+        cur.push(b);
+        used += thead2 + heightOf(b);
+        if (b.kind === 'row' || b.kind === 'empty') curHasRows = true;
       }
-      const thead2 = (b.kind === 'row' || b.kind === 'empty') && !curHasRows ? theadH : 0;
-      cur.push(b);
-      used += thead2 + heightOf(b);
-      if (b.kind === 'row' || b.kind === 'empty') curHasRows = true;
-    }
-    if (cur.length) out.push(cur);
-    setPages(out);
-  }, [measureKey, blocks]);
+      if (cur.length) out.push(cur);
+      setPages(out);
+    };
+
+    measure();
+    // ฟอนต์ไทยมักโหลดเสร็จหลังการวาดครั้งแรก ถ้าวัดด้วยฟอนต์สำรองความสูงจะเพี้ยน
+    // แล้วเนื้อหาจะล้นหน้า — วัดซ้ำเมื่อฟอนต์พร้อมจริง
+    let cancelled = false;
+    void document.fonts?.ready.then(() => { if (!cancelled) measure(); });
+    return () => { cancelled = true; };
+  }, [measureKey, blocks, assetsReady]);
 
   const rendered = pages ?? [blocks];
 
@@ -180,7 +191,7 @@ export function DocumentPrintView({
           width: `${CONTENT_W_MM}mm`, padding: 0, minHeight: 0,
         }}
       >
-        <div data-mk="header">
+        <div data-mk="header" onLoad={() => setAssetsReady((n) => n + 1)}>
           <DocHeader doc={doc} copyLabel={copyLabel} pageNo={1} totalPages={2} />
         </div>
         <table className="w-full text-[11px] border-collapse">
@@ -350,7 +361,7 @@ function DocHeader({
 
       {/* ชื่องานเต็มความกว้าง — ชื่อโครงการมักยาว ให้พื้นที่เต็มบรรทัด */}
       {doc.job_name && (
-        <div className="flex gap-6 text-[11px] mt-5 mb-3">
+        <div className="flex gap-6 text-[11px] pt-5 pb-3">
           <span className="w-[22mm] shrink-0 text-slate-500">ชื่องาน</span>
           <span className="flex-1">{doc.job_name}</span>
         </div>
@@ -406,7 +417,7 @@ function TotalsBlock({
 }: { doc: PrintableDoc; color: string; bankAccounts?: BankAccount[] }) {
   const hasDiscount = doc.discount_total > 0 || (doc.extra_discount ?? 0) > 0;
   return (
-    <div className="flex justify-between items-start gap-8 mt-6">
+    <div className="flex justify-between items-start gap-8 pt-6">
       {/* บัญชีรับเงินอยู่ระดับเดียวกับยอด ลูกค้าเห็นเลขบัญชีกับยอดที่ต้องโอนพร้อมกัน */}
       <div className="flex-1 text-[10px] leading-[1.7] pt-1">
         <div className="font-semibold" style={{ color }}>กรุณาชำระ</div>
@@ -454,7 +465,7 @@ function TextLine({ block, color }: { block: Block; color: string }) {
   if (block.kind !== 'text') return null;
   if (block.heading) {
     return (
-      <div className="text-[10px] font-semibold mt-3 pt-3 first:mt-0"
+      <div className="text-[10px] font-semibold pt-4"
            style={{ color, borderTop: block.key === 'note-h' ? '1px solid #cbd5e1' : undefined }}>
         {block.heading}
       </div>
@@ -465,7 +476,7 @@ function TextLine({ block, color }: { block: Block; color: string }) {
 
 function PaymentBlock() {
   return (
-    <div className="text-[10px] border-t border-slate-200 pt-2 mt-3">
+    <div className="text-[10px] border-t border-slate-200 pt-2 mt-0">
       <div className="mb-1">การชำระเงินจะสมบูรณ์เมื่อบริษัทได้รับเงินเรียบร้อยแล้ว</div>
       <div className="flex gap-5">
         {['เงินสด', 'เช็ค', 'โอนเงิน', 'บัตรเครดิต'].map((m) => <span key={m}>☐ {m}</span>)}
@@ -483,7 +494,7 @@ function PaymentBlock() {
 function SignBlock({ docType }: { docType: string }) {
   const [leftSign, rightSign] = SIGN_LABELS[docType] ?? ['ผู้รับเอกสาร', 'ผู้มีอำนาจลงนาม'];
   return (
-    <div className="flex justify-between gap-16 text-[10px] mt-12 px-6">
+    <div className="flex justify-between gap-16 text-[10px] pt-12 px-6">
       {[leftSign, rightSign].map((label) => (
         <div key={label} className="flex-1 text-center">
           <div className="border-b border-slate-400 h-8" />

@@ -9,7 +9,7 @@ import type {
 const AR_SELECT = `
   *,
   customer:customers(id, display_name, company_name, tax_id, branch_code, branch_name,
-                     billing_address, address, phone),
+                     billing_address, office_address, address, phone),
   sales_user:users!ar_documents_sales_user_id_fkey(id, name),
   tag:document_tags(id, name, color),
   project:projects(id, project_number, product_category)
@@ -18,7 +18,8 @@ const AR_SELECT = `
 export interface ArDocumentFull extends ArDocument {
   customer?: { id: string; display_name: string; company_name: string | null; tax_id: string | null;
               branch_code: string | null; branch_name: string | null;
-              billing_address: string | null; address: string | null; phone: string | null } | null;
+              billing_address: string | null; office_address: string | null;
+              address: string | null; phone: string | null } | null;
   sales_user?: { id: string; name: string } | null;
   project?: { id: string; project_number: string; product_category: string | null } | null;
   tag?: DocTag | null;
@@ -76,13 +77,17 @@ export function companySnapshot(c: Company): PartySnapshot {
 export function customerSnapshotFrom(c: {
   display_name: string; company_name?: string | null; tax_id?: string | null;
   branch_code?: string | null; branch_name?: string | null;
-  billing_address?: string | null; address?: string | null; phone?: string | null;
+  billing_address?: string | null; office_address?: string | null;
+  address?: string | null; phone?: string | null;
 }): PartySnapshot {
   return {
     name: c.company_name?.trim() || c.display_name,
     branch_label: c.branch_name?.trim() || (c.branch_code === '00000' ? 'สำนักงานใหญ่' : null),
     tax_id: c.tax_id ?? null,
-    address: c.billing_address?.trim() || c.address || null,
+    // ฟอร์มลูกค้ามีสองช่อง: "ที่อยู่วางบิล" กับ "ที่ตั้งสำนักงาน"
+    // เอกสารภาษีต้องใช้ที่อยู่วางบิลก่อน แต่ถ้าไม่ได้กรอกก็ยังต้องมีที่อยู่ขึ้น
+    // ไม่งั้นใบกำกับจะไม่มีที่อยู่ผู้ซื้อ ซึ่งขาดไม่ได้ตามกฎหมาย
+    address: c.billing_address?.trim() || c.office_address?.trim() || c.address || null,
     phone: c.phone ?? null,
   };
 }

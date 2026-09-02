@@ -135,7 +135,7 @@ function DocumentEditorInner() {
   const partiesQ = useQuery<PartyOption[]>(async () => {
     if (ar) {
       const { data } = await supabase.from('customers')
-        .select('id, display_name, company_name, tax_id, branch_code, branch_name, billing_address, address, phone')
+        .select('id, display_name, company_name, tax_id, branch_code, branch_name, billing_address, office_address, address, phone')
         .order('display_name').limit(500);
       return (data ?? []).map((c) => ({
         id: c.id as string,
