@@ -3,7 +3,7 @@ import {
   childBillingPercent, childExtraDiscount, computeTotals, lineDiscount, lineTotal, round2,
 } from '@/accounting-lib/calc';
 import type {
-  ApDocType, ArDocType, ArDocument, Company, DocumentItem, PartySnapshot, Vendor,
+  ApDocType, ArDocType, ArDocument, Company, DocumentItem, DocumentItemGroup, PartySnapshot, Vendor,
 } from '@/accounting-lib/types';
 
 const AR_SELECT = `
@@ -24,6 +24,8 @@ export interface ArDocumentFull extends ArDocument {
   project?: { id: string; project_number: string; product_category: string | null } | null;
   tag?: DocTag | null;
   items?: DocumentItem[];
+  /** กลุ่มรายการ (Type A/B/C) — optional ต่อเอกสาร, ว่างได้ถ้าไม่ได้ใช้ */
+  groups?: DocumentItemGroup[];
 }
 
 export interface DocTag { id: string; name: string; color: string }
@@ -58,7 +60,14 @@ export async function getArDocument(id: string): Promise<ArDocumentFull> {
   const { data: items, error: itemErr } = await supabase
     .from('ar_document_items').select('*').eq('document_id', id).order('line_no');
   if (itemErr) throw itemErr;
-  return { ...(data as unknown as ArDocumentFull), items: (items ?? []) as DocumentItem[] };
+  const { data: groups, error: groupErr } = await supabase
+    .from('ar_document_item_groups').select('*').eq('document_id', id).order('sort_order');
+  if (groupErr) throw groupErr;
+  return {
+    ...(data as unknown as ArDocumentFull),
+    items: (items ?? []) as DocumentItem[],
+    groups: (groups ?? []) as DocumentItemGroup[],
+  };
 }
 
 // ------------------------------------------------------------- snapshot
@@ -122,6 +131,8 @@ export interface SaveArInput {
   terms_text?: string | null;
   source_document_id?: string | null;
   items: DocumentItem[];
+  /** กลุ่มรายการ — optional, ตัดทิ้งอัตโนมัติถ้าไม่มี item เหลืออยู่ในกลุ่มนั้นแล้ว */
+  groups?: DocumentItemGroup[];
 }
 
 /**
@@ -219,6 +230,10 @@ export async function saveArDocument(input: SaveArInput, userId: string): Promis
     const { error: delErr } = await supabase
       .from('ar_document_items').delete().eq('document_id', docId);
     if (delErr) throw delErr;
+    // ลบกลุ่มเดิมทิ้งด้วย — บันทึกใหม่ทุกครั้งเหมือน items (เขียนทับทั้งชุด ไม่ upsert)
+    const { error: delGroupErr } = await supabase
+      .from('ar_document_item_groups').delete().eq('document_id', docId);
+    if (delGroupErr) throw delGroupErr;
   } else {
     // ใบเสนอราคาได้เลขตั้งแต่ร่าง จะได้อ้างอิงและตามงานได้ทันทีโดยไม่ต้องรออนุมัติ
     let docNo: string | null = null;
@@ -234,6 +249,22 @@ export async function saveArDocument(input: SaveArInput, userId: string): Promis
       .select('id').single();
     if (error) throw error;
     docId = data.id as string;
+  }
+
+  // กลุ่มที่ไม่มี item เหลืออยู่แล้วถูกตัดทิ้งเงียบๆ — ห้ามมีกลุ่มว่างอยู่ในระบบ
+  // (หน้าจอ ungroup อัตโนมัติเมื่อลบ item สุดท้ายของกลุ่มอยู่แล้ว แต่เช็คซ้ำที่นี่กันพลาด)
+  const referencedGroupIds = new Set(items.map((i) => i.group_id).filter(Boolean) as string[]);
+  const groups = (input.groups ?? [])
+    .filter((g) => referencedGroupIds.has(g.id))
+    .map((g, idx) => ({ id: g.id, document_id: docId, sort_order: idx, group_name: g.group_name }));
+  // เฉพาะกลุ่มที่ถูกแทรกจริงเท่านั้นที่ item จะชี้ไปได้ — กัน FK พังถ้า item อ้าง
+  // group_id ที่ไม่มีกลุ่มมาด้วย (ข้อมูลจากหน้าจอไม่ครบ)
+  const insertedGroupIds = new Set(groups.map((g) => g.id));
+
+  // กลุ่มต้องมีอยู่ก่อน item จะชี้ group_id มาหาได้ (FK) — แทรกก่อนเสมอ
+  if (groups.length) {
+    const { error: groupInsErr } = await supabase.from('ar_document_item_groups').insert(groups);
+    if (groupInsErr) throw groupInsErr;
   }
 
   if (items.length) {
@@ -253,6 +284,7 @@ export async function saveArDocument(input: SaveArInput, userId: string): Promis
       discount_input: i.discount_input ?? 0,
       wht_rate: i.wht_rate ?? 0,
       line_total: i.line_total,
+      group_id: insertedGroupIds.has(i.group_id ?? '') ? i.group_id : null,
     }));
     const { error } = await supabase.from('ar_document_items').insert(rows);
     if (error) throw error;
@@ -361,6 +393,21 @@ export async function convertArDocument(
   // ไม่งั้นใบที่สองจะตั้งต้นเป็นเต็มจำนวนแล้วชนกฎห้ามวางเกินทันที
   const info = await loadSource(sourceId);
   const pct = childBillingPercent(src, info.remaining);
+
+  // กลุ่มเป็น per-document (id เป็น primary key เฉพาะแถวเดียว) — คัดลอกไปใบใหม่
+  // ต้องออก id ใหม่ให้ทุกกลุ่ม แล้วชี้ item ที่เคยอยู่กลุ่มเดิมไปกลุ่มใหม่ตาม
+  // ไม่งั้นโครงสร้างกลุ่มหายตอนแปลง QT → BL → INV
+  const groupIdMap = new Map<string, string>();
+  const groups = (src.groups ?? []).map((g) => {
+    const newId = crypto.randomUUID();
+    groupIdMap.set(g.id, newId);
+    return { ...g, id: newId };
+  });
+  const items = (src.items ?? []).map((i) => ({
+    ...i,
+    group_id: i.group_id ? groupIdMap.get(i.group_id) ?? null : null,
+  }));
+
   return saveArDocument({
     company_id: src.company_id,
     doc_type: targetType,
@@ -385,7 +432,8 @@ export async function convertArDocument(
     note_text: src.note_text,
     terms_text: src.terms_text,
     source_document_id: src.id,
-    items: src.items ?? [],
+    items,
+    groups,
   }, userId);
 }
 

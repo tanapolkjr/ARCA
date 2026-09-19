@@ -7,12 +7,12 @@ import {
 import { useToast } from '@/hooks/useToast.jsx';
 import { useUserId } from '@/hooks/useAuth.jsx';
 import { useQuery } from '@/hooks/useSourcingQuery';
-import { computeTotals, docDate as docDateTh, lineDiscount, lineTotal, money } from '@/accounting-lib/calc';
+import { computeTotals, docDate as docDateTh, lineDiscount, lineTotal, money, buildItemLayout } from '@/accounting-lib/calc';
 import {
   AP_DOC_LABEL, AR_DOC_LABEL,
 } from '@/accounting-lib/types';
 import type {
-  ApDocType, ArDocType, DiscountMode, DocumentItem, VatType,
+  ApDocType, ArDocType, DiscountMode, DocumentItem, DocumentItemGroup, VatType,
 } from '@/accounting-lib/types';
 import { getDefaultCompany, listBankAccounts, listCompanies, listTemplates, listVendors } from '@/accounting-api/setup';
 import {
@@ -48,7 +48,7 @@ const blankItem = (): DocumentItem => ({
   line_no: 1, stock_item_id: null, description: '', item_type: 'goods',
   vat_type: 'vat', qty: 1, unit: 'ชิ้น', unit_price: 0,
   discount_amount: 0, discount_percent: null,
-  discount_mode: 'unit', discount_input: 0, wht_rate: 0, line_total: 0,
+  discount_mode: 'unit', discount_input: 0, wht_rate: 0, line_total: 0, group_id: null,
 });
 
 interface PartyOption { id: string; label: string; raw: Record<string, unknown> }
@@ -99,6 +99,8 @@ function DocumentEditorInner() {
   const [note, setNote] = useState('');
   const [terms, setTerms] = useState('');
   const [items, setItems] = useState<DocumentItem[]>([blankItem()]);
+  // จัดกลุ่มรายการ (Type A/B/C) — optional, ว่างเปล่าถ้าเอกสารนี้ไม่ได้ใช้ฟีเจอร์นี้
+  const [groups, setGroups] = useState<DocumentItemGroup[]>([]);
   const [docNo, setDocNo] = useState<string | null>(null);
   const [status, setStatus] = useState('draft');
   const [savedId, setSavedId] = useState<string | undefined>(id);
@@ -171,6 +173,8 @@ function DocumentEditorInner() {
         setPaidAmount(Number(d.paid_amount) || 0);
         if (ar) { try { setPaidOn(await latestPaymentDate(id)); } catch { /* ไม่สำคัญพอจะขวางการเปิดเอกสาร */ } }
         setItems(d.items?.length ? d.items : [blankItem()]);
+        // AP (ฝั่งซื้อ) ยังไม่มีฟีเจอร์นี้ในรอบนี้ — groups มีเฉพาะฝั่งขาย
+        setGroups(ar ? (d as Awaited<ReturnType<typeof getArDocument>>).groups ?? [] : []);
         setTagId(d.tag_id ?? '');
         setCustomerPoNo(d.customer_po_no ?? '');
         setExtraDiscType((d.extra_discount_type as 'amount' | 'percent') ?? 'amount');
@@ -239,6 +243,48 @@ function DocumentEditorInner() {
       return { ...next, discount_amount: lineDiscount(next), line_total: lineTotal(next) };
     }));
 
+  /**
+   * ลบบรรทัด — ถ้าเป็นชิ้นสุดท้ายของกลุ่มใดกลุ่มหนึ่ง ต้องลบกลุ่มนั้นไปด้วย
+   * เพราะห้ามมีกลุ่มว่างอยู่ในเอกสาร (บังคับตั้งแต่หน้าจอ ไม่ต้องรอ error ตอนบันทึก)
+   */
+  const removeItem = (idx: number) => {
+    const removed = items[idx];
+    const next = items.filter((_, x) => x !== idx);
+    setItems(next);
+    if (removed.group_id && !next.some((it) => it.group_id === removed.group_id)) {
+      setGroups((g) => g.filter((x) => x.id !== removed.group_id));
+    }
+  };
+
+  /** สร้างกลุ่มใหม่พร้อมบรรทัดแรกทันที — กลุ่มว่างสร้างไม่ได้ */
+  const addGroup = () => {
+    const gid = crypto.randomUUID();
+    setGroups((g) => [...g, { id: gid, sort_order: g.length, group_name: `กลุ่มที่ ${g.length + 1}` }]);
+    setItems((p) => [...p, { ...blankItem(), group_id: gid }]);
+  };
+
+  /** เพิ่มบรรทัดต่อท้ายรายการสุดท้ายของกลุ่มนั้น (คงลำดับให้ item กลุ่มเดียวกันติดกันเสมอ) */
+  const addItemToGroup = (groupId: string) => {
+    setItems((prev) => {
+      const lastIdx = prev.map((it) => it.group_id).lastIndexOf(groupId);
+      const insertAt = lastIdx === -1 ? prev.length : lastIdx + 1;
+      const next = [...prev];
+      next.splice(insertAt, 0, { ...blankItem(), group_id: groupId });
+      return next;
+    });
+  };
+
+  const renameGroup = (groupId: string, name: string) =>
+    setGroups((g) => g.map((x) => (x.id === groupId ? { ...x, group_name: name } : x)));
+
+  /** ยกเลิกกลุ่ม — ย้ายรายการทั้งหมดออกมานอกกลุ่มเฉยๆ ไม่ลบข้อมูลสินค้าใดๆ */
+  const removeGroup = (groupId: string) => {
+    setItems((prev) => prev.map((it) => (it.group_id === groupId ? { ...it, group_id: null } : it)));
+    setGroups((g) => g.filter((x) => x.id !== groupId));
+  };
+
+  const itemLayout = useMemo(() => buildItemLayout(items, groups), [items, groups]);
+
   async function handleSave(): Promise<string | null> {
     if (!companyId) { toast('เลือกบริษัทผู้ออกเอกสารก่อน', 'error'); return null; }
     if (!partyId) { toast(ar ? 'เลือกลูกค้าก่อน' : 'เลือกผู้ขายก่อน', 'error'); return null; }
@@ -287,6 +333,7 @@ function DocumentEditorInner() {
             valid_until: validUntil || null, sales_user_id: salesUserId || null,
             fulfilment_type: fulfilment, source_document_id: sourceRef?.id ?? null,
             billing_percent: billingPercent ? Number(billingPercent) : null,
+            groups,
           }, userId)
         : await saveApDocument({
             ...common, doc_type: docType as ApDocType, vendor_id: partyId,
@@ -368,7 +415,21 @@ function DocumentEditorInner() {
       setNote(src.note_text ?? '');
       setTerms(src.terms_text ?? '');
       // ยกทั้งบรรทัดรวมโหมดส่วนลด ไม่งั้นยอดใบลูกจะไม่ตรงใบต้นทาง
-      setItems(src.items?.length ? src.items.map((i) => ({ ...i, id: undefined })) : [blankItem()]);
+      // กลุ่มเป็น per-document — ออก id ใหม่ให้ทุกกลุ่ม แล้วชี้ item ตามไป
+      // เหมือนกับตอนกด "แปลงเป็นเอกสารถัดไป" (convertArDocument ฝั่ง API)
+      const groupIdMap = new Map<string, string>();
+      const newGroups = (src.groups ?? []).map((g) => {
+        const newId = crypto.randomUUID();
+        groupIdMap.set(g.id, newId);
+        return { ...g, id: newId };
+      });
+      setGroups(newGroups);
+      setItems(src.items?.length
+        ? src.items.map((i) => ({
+            ...i, id: undefined,
+            group_id: i.group_id ? groupIdMap.get(i.group_id) ?? null : null,
+          }))
+        : [blankItem()]);
 
       // ตั้ง % ให้ยอดตรงกับส่วนที่ใบต้นทางยังเหลือพอดี ผู้ใช้ปรับลงได้แต่เกินไม่ได้
       const pct = childBillingPercent(src, info.remaining);
@@ -458,6 +519,9 @@ function DocumentEditorInner() {
     note_text: note,
     terms_text: terms,
     items: items.filter((i) => i.description.trim()),
+    // ตัดกลุ่มที่ไม่เหลือ item อยู่แล้วออกจากตัวอย่าง/พิมพ์ ให้ตรงกับที่ saveArDocument
+    // จะเก็บจริงตอนบันทึก (บรรทัดว่างถูกกรองทิ้งเหมือนกันทั้งสองที่)
+    groups: groups.filter((g) => items.some((i) => i.description.trim() && i.group_id === g.id)),
   };
 
   return (
@@ -820,137 +884,89 @@ function DocumentEditorInner() {
 
             {/* การ์ดต่อบรรทัด แทนตารางที่ต้องเลื่อนแนวนอน
                 overflow-x-auto ทำให้แกนตั้งกลายเป็น scroll ไปด้วยตามสเปก CSS
-                ตัวเลือกที่เด้งจากช่องค้นหาจึงถูกตัดและต้องเลื่อนลงไปกด */}
-            <div className="flex flex-col gap-2">
-              {items.map((it, i) => (
-                <div key={i}
-                     className="rounded-xl border border-slate-200 dark:border-slate-700 p-3">
-                  <div className="flex items-start gap-2">
-                    <span className="text-xs text-slate-400 pt-2 w-5 shrink-0">{i + 1}</span>
-                    <div className="flex-1 min-w-0">
-                      {/* ค้นหาสินค้าอยู่บนสุด — เป็นทางเข้าหลักของการเพิ่มรายการ */}
+                ตัวเลือกที่เด้งจากช่องค้นหาจึงถูกตัดและต้องเลื่อนลงไปกด
+                item ที่อยู่ Group จะถูกครอบด้วยกรอบ + หัวกลุ่ม + สรุปยอดย่อยท้ายกลุ่ม
+                เลขลำดับเริ่มใหม่ทุกกลุ่ม (คำนวณจาก buildItemLayout ตอน render เท่านั้น
+                ไม่กระทบ line_no ที่ใช้จริงตอนบันทึก) */}
+            <div className="flex flex-col gap-3">
+              {itemLayout.map((block) =>
+                block.kind === 'item' ? (
+                  <ItemCard
+                    key={block.entry.itemIndex}
+                    it={block.entry.item}
+                    no={block.entry.displayNo}
+                    locked={locked}
+                    stockOptions={stockQ.data ?? []}
+                    onPatch={(patch) => patchItem(block.entry.itemIndex, patch)}
+                    onRemove={items.length > 1 ? () => removeItem(block.entry.itemIndex) : null}
+                  />
+                ) : (
+                  <div key={block.group.id}
+                       className="rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600
+                         p-3 bg-slate-50/60 dark:bg-slate-800/30">
+                    <div className="flex items-center gap-2 mb-2">
+                      {!locked ? (
+                        <TextInput
+                          value={block.group.group_name}
+                          onChange={(e) => renameGroup(block.group.id, e.target.value)}
+                          className="!w-auto flex-1 font-semibold !bg-transparent !border-transparent
+                            hover:!border-slate-200 dark:hover:!border-slate-700"
+                        />
+                      ) : (
+                        <span className="font-semibold text-slate-700 dark:text-slate-200">
+                          {block.group.group_name}
+                        </span>
+                      )}
                       {!locked && (
-                        <StockPicker
-                          items={stockQ.data ?? []}
-                          onPick={(sel) => patchItem(i, {
-                            stock_item_id: sel.id,
-                            description: `${sel.model_code}${sel.description ? `\n${sel.description}` : ''}`,
-                            unit: sel.unit ?? 'ชิ้น',
-                            unit_price: sel.sale_price ?? 0,
-                          })}
-                        />
-                      )}
-                      <TextArea
-                        rows={2} value={it.description} disabled={locked}
-                        className="mt-2"
-                        placeholder={'รายละเอียด — บรรทัดแรกชื่อรุ่น บรรทัดถัดไปสเปกย่อย'}
-                        onChange={(e) => patchItem(i, { description: e.target.value })}
-                      />
-                    </div>
-                    <div className="text-right shrink-0 w-32 pt-1">
-                      <div className="text-[11px] text-slate-400">มูลค่า</div>
-                      <div className="tabular-nums font-semibold text-slate-800 dark:text-slate-100">
-                        {money(it.line_total)}
-                      </div>
-                    </div>
-                    {!locked && items.length > 1 && (
-                      <button onClick={() => setItems((p) => p.filter((_, x) => x !== i))}
-                              title="ลบบรรทัดนี้"
-                              className="text-slate-300 hover:text-rose-500 p-1 shrink-0">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 mt-2 pl-7">
-                    <Field label="ประเภท" className="w-28">
-                      <Select value={it.item_type} disabled={locked}
-                              onChange={(e) => {
-                                const t = e.target.value as 'goods' | 'service';
-                                // ขายสินค้าไม่ต้องหัก ณ ที่จ่าย — เคลียร์ให้อัตโนมัติ
-                                patchItem(i, t === 'goods' ? { item_type: t, wht_rate: 0 } : { item_type: t });
-                              }}>
-                        <option value="goods">สินค้า</option>
-                        <option value="service">บริการ</option>
-                      </Select>
-                    </Field>
-                    <Field label="ภาษี" className="w-28">
-                      <Select value={it.vat_type} disabled={locked}
-                              onChange={(e) => patchItem(i, { vat_type: e.target.value as VatType })}>
-                        <option value="vat">VAT</option>
-                        <option value="exempt">ยกเว้น</option>
-                        <option value="zero">0%</option>
-                      </Select>
-                    </Field>
-                    <Field label="จำนวน" className="w-24">
-                      <NumberInput value={it.qty} disabled={locked} step="0.001"
-                                   onChange={(e) => patchItem(i, { qty: Number(e.target.value) })} />
-                    </Field>
-                    <Field label="หน่วย" className="w-24">
-                      <TextInput value={it.unit ?? ''} disabled={locked}
-                                 onChange={(e) => patchItem(i, { unit: e.target.value })} />
-                    </Field>
-                    <Field label="ราคา/หน่วย" className="w-32">
-                      <NumberInput value={it.unit_price} disabled={locked} step="0.01"
-                                   onChange={(e) => patchItem(i, { unit_price: Number(e.target.value) })} />
-                    </Field>
-                    <Field label="ส่วนลด" className="w-44">
-                      <div className="flex gap-1">
-                        <NumberInput
-                          className="!px-2"
-                          value={it.discount_input ?? 0}
-                          disabled={locked} step="0.01"
-                          onChange={(e) => patchItem(i, { discount_input: Number(e.target.value) })}
-                        />
-                        <button
-                          type="button" disabled={locked}
-                          title="สลับวิธีคิดส่วนลด: ต่อชิ้น → ทั้งบรรทัด → เปอร์เซ็นต์"
-                          onClick={() => patchItem(i, {
-                            discount_mode: DISCOUNT_NEXT[it.discount_mode ?? 'unit'],
-                          })}
-                          className="px-2 rounded-lg border border-slate-200 dark:border-slate-700
-                            text-[11px] text-slate-500 hover:text-slate-900 shrink-0 whitespace-nowrap"
-                        >
-                          {DISCOUNT_LABEL[it.discount_mode ?? 'unit']}
+                        <button onClick={() => removeGroup(block.group.id)}
+                                title="ยกเลิกกลุ่ม (ย้ายรายการออกมา ไม่ลบข้อมูล)"
+                                className="text-slate-300 hover:text-rose-500 p-1 shrink-0">
+                          <Trash2 className="w-4 h-4" />
                         </button>
-                      </div>
-                      {/* โชว์ยอดที่หักจริงเสมอ — ลดต่อชิ้นกับลดทั้งบรรทัดต่างกันมหาศาลเมื่อจำนวนเยอะ */}
-                      {(it.discount_input ?? 0) !== 0 && (
-                        <div className="text-[11px] text-slate-400 text-right mt-0.5 tabular-nums">
-                          หักจริง −{money(lineDiscount(it))}
-                        </div>
                       )}
-                    </Field>
-                    {/* ราคาสุทธิต่อหน่วย — ตัวเลขที่ใช้เทียบกับราคาที่ตกลงกับลูกค้าจริง */}
-                    <Field label="ราคาสุทธิ/หน่วย" className="w-32">
-                      <div className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60
-                        text-sm text-right tabular-nums font-medium
-                        text-slate-700 dark:text-slate-200">
-                        {Number(it.qty) > 0 ? money(it.line_total / Number(it.qty)) : '—'}
-                      </div>
-                    </Field>
-                    <Field label="หัก ณ ที่จ่าย" className="w-28">
-                      <Select value={String(it.wht_rate ?? 0)} disabled={locked}
-                              onChange={(e) => patchItem(i, { wht_rate: Number(e.target.value) })}>
-                        <option value="0">ไม่หัก</option>
-                        <option value="1">1%</option>
-                        <option value="2">2%</option>
-                        <option value="3">3%</option>
-                        <option value="5">5%</option>
-                      </Select>
-                    </Field>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      {block.entries.map((entry) => (
+                        <ItemCard
+                          key={entry.itemIndex}
+                          it={entry.item}
+                          no={entry.displayNo}
+                          locked={locked}
+                          stockOptions={stockQ.data ?? []}
+                          onPatch={(patch) => patchItem(entry.itemIndex, patch)}
+                          onRemove={items.length > 1 ? () => removeItem(entry.itemIndex) : null}
+                        />
+                      ))}
+                    </div>
+                    {!locked && (
+                      <GhostButton onClick={() => addItemToGroup(block.group.id)} className="mt-2">
+                        <Plus className="w-4 h-4" /> เพิ่มสินค้าใน{block.group.group_name}
+                      </GhostButton>
+                    )}
+                    <div className="flex justify-end mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                      <span className="text-sm text-slate-500 dark:text-slate-400">
+                        รวม{block.group.group_name}{'\u00A0'}
+                        <span className="font-semibold text-slate-800 dark:text-slate-100 tabular-nums">
+                          {money(block.subtotal)}
+                        </span>
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              )}
             </div>
 
             {!locked && (
-              <div className="flex gap-2 mt-3">
+              <div className="flex flex-wrap gap-2 mt-3">
                 <GhostButton onClick={() => setItems((p) => [...p, blankItem()])}>
                   <Plus className="w-4 h-4" /> เพิ่มบรรทัด
                 </GhostButton>
                 <GhostButton onClick={() => setItems((p) => [...p, { ...p[p.length - 1] }])}>
                   <Copy className="w-4 h-4" /> ทำซ้ำบรรทัดล่าสุด
+                </GhostButton>
+                {/* Optional — ใบที่ไม่ต้องแบ่งประเภทสินค้าไม่ต้องกดปุ่มนี้เลย */}
+                <GhostButton onClick={addGroup}>
+                  <Plus className="w-4 h-4" /> เพิ่ม Group
                 </GhostButton>
               </div>
             )}
@@ -1037,6 +1053,141 @@ function DocumentEditorInner() {
 interface StockOption {
   id: string; model_code: string; description: string | null;
   unit: string | null; sale_price: number | null;
+}
+
+/**
+ * การ์ดของ 1 รายการ (บรรทัดสินค้า/บริการ) — แยกออกมาจาก DocumentEditorInner
+ * เพื่อใช้ซ้ำได้ทั้งตอนอยู่นอก Group และตอนอยู่ใน Group โดยตัวการ์ดเองไม่รู้จัก
+ * Group เลย รู้แค่เลขลำดับที่จะแสดง (no) กับฟังก์ชันแก้ไข/ลบที่ถูกส่งมาให้
+ */
+function ItemCard({
+  it, no, locked, stockOptions, onPatch, onRemove,
+}: {
+  it: DocumentItem;
+  no: number;
+  locked: boolean;
+  stockOptions: StockOption[];
+  onPatch: (patch: Partial<DocumentItem>) => void;
+  onRemove: (() => void) | null;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-3">
+      <div className="flex items-start gap-2">
+        <span className="text-xs text-slate-400 pt-2 w-5 shrink-0">{no}</span>
+        <div className="flex-1 min-w-0">
+          {/* ค้นหาสินค้าอยู่บนสุด — เป็นทางเข้าหลักของการเพิ่มรายการ */}
+          {!locked && (
+            <StockPicker
+              items={stockOptions}
+              onPick={(sel) => onPatch({
+                stock_item_id: sel.id,
+                description: `${sel.model_code}${sel.description ? `\n${sel.description}` : ''}`,
+                unit: sel.unit ?? 'ชิ้น',
+                unit_price: sel.sale_price ?? 0,
+              })}
+            />
+          )}
+          <TextArea
+            rows={2} value={it.description} disabled={locked}
+            className="mt-2"
+            placeholder={'รายละเอียด — บรรทัดแรกชื่อรุ่น บรรทัดถัดไปสเปกย่อย'}
+            onChange={(e) => onPatch({ description: e.target.value })}
+          />
+        </div>
+        <div className="text-right shrink-0 w-32 pt-1">
+          <div className="text-[11px] text-slate-400">มูลค่า</div>
+          <div className="tabular-nums font-semibold text-slate-800 dark:text-slate-100">
+            {money(it.line_total)}
+          </div>
+        </div>
+        {!locked && onRemove && (
+          <button onClick={onRemove} title="ลบบรรทัดนี้"
+                  className="text-slate-300 hover:text-rose-500 p-1 shrink-0">
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      <div className="flex flex-wrap gap-2 mt-2 pl-7">
+        <Field label="ประเภท" className="w-28">
+          <Select value={it.item_type} disabled={locked}
+                  onChange={(e) => {
+                    const t = e.target.value as 'goods' | 'service';
+                    // ขายสินค้าไม่ต้องหัก ณ ที่จ่าย — เคลียร์ให้อัตโนมัติ
+                    onPatch(t === 'goods' ? { item_type: t, wht_rate: 0 } : { item_type: t });
+                  }}>
+            <option value="goods">สินค้า</option>
+            <option value="service">บริการ</option>
+          </Select>
+        </Field>
+        <Field label="ภาษี" className="w-28">
+          <Select value={it.vat_type} disabled={locked}
+                  onChange={(e) => onPatch({ vat_type: e.target.value as VatType })}>
+            <option value="vat">VAT</option>
+            <option value="exempt">ยกเว้น</option>
+            <option value="zero">0%</option>
+          </Select>
+        </Field>
+        <Field label="จำนวน" className="w-24">
+          <NumberInput value={it.qty} disabled={locked} step="0.001"
+                       onChange={(e) => onPatch({ qty: Number(e.target.value) })} />
+        </Field>
+        <Field label="หน่วย" className="w-24">
+          <TextInput value={it.unit ?? ''} disabled={locked}
+                     onChange={(e) => onPatch({ unit: e.target.value })} />
+        </Field>
+        <Field label="ราคา/หน่วย" className="w-32">
+          <NumberInput value={it.unit_price} disabled={locked} step="0.01"
+                       onChange={(e) => onPatch({ unit_price: Number(e.target.value) })} />
+        </Field>
+        <Field label="ส่วนลด" className="w-44">
+          <div className="flex gap-1">
+            <NumberInput
+              className="!px-2"
+              value={it.discount_input ?? 0}
+              disabled={locked} step="0.01"
+              onChange={(e) => onPatch({ discount_input: Number(e.target.value) })}
+            />
+            <button
+              type="button" disabled={locked}
+              title="สลับวิธีคิดส่วนลด: ต่อชิ้น → ทั้งบรรทัด → เปอร์เซ็นต์"
+              onClick={() => onPatch({
+                discount_mode: DISCOUNT_NEXT[it.discount_mode ?? 'unit'],
+              })}
+              className="px-2 rounded-lg border border-slate-200 dark:border-slate-700
+                text-[11px] text-slate-500 hover:text-slate-900 shrink-0 whitespace-nowrap"
+            >
+              {DISCOUNT_LABEL[it.discount_mode ?? 'unit']}
+            </button>
+          </div>
+          {/* โชว์ยอดที่หักจริงเสมอ — ลดต่อชิ้นกับลดทั้งบรรทัดต่างกันมหาศาลเมื่อจำนวนเยอะ */}
+          {(it.discount_input ?? 0) !== 0 && (
+            <div className="text-[11px] text-slate-400 text-right mt-0.5 tabular-nums">
+              หักจริง −{money(lineDiscount(it))}
+            </div>
+          )}
+        </Field>
+        {/* ราคาสุทธิต่อหน่วย — ตัวเลขที่ใช้เทียบกับราคาที่ตกลงกับลูกค้าจริง */}
+        <Field label="ราคาสุทธิ/หน่วย" className="w-32">
+          <div className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60
+            text-sm text-right tabular-nums font-medium
+            text-slate-700 dark:text-slate-200">
+            {Number(it.qty) > 0 ? money(it.line_total / Number(it.qty)) : '—'}
+          </div>
+        </Field>
+        <Field label="หัก ณ ที่จ่าย" className="w-28">
+          <Select value={String(it.wht_rate ?? 0)} disabled={locked}
+                  onChange={(e) => onPatch({ wht_rate: Number(e.target.value) })}>
+            <option value="0">ไม่หัก</option>
+            <option value="1">1%</option>
+            <option value="2">2%</option>
+            <option value="3">3%</option>
+            <option value="5">5%</option>
+          </Select>
+        </Field>
+      </div>
+    </div>
+  );
 }
 
 /**

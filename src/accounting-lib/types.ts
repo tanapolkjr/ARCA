@@ -97,6 +97,19 @@ export interface DocumentItem {
   /** อัตราหัก ณ ที่จ่ายของบรรทัดนี้ (%) — สินค้าปกติ 0 · ค่าบริการ 3 */
   wht_rate?: number;
   line_total: number;
+  /** จัดกลุ่มรายการ (Type A / Type B ฯลฯ) — null = ไม่อยู่กลุ่มไหน แสดงเรียงเดี่ยวเหมือนเดิม */
+  group_id?: string | null;
+}
+
+/**
+ * กลุ่มรายการในเอกสารขาย — เป็นชั้นจัดกลุ่ม/แสดงผลที่ครอบ DocumentItem เท่านั้น
+ * ไม่มีผลต่อสูตรคำนวณยอดเอกสารใดๆ (accounting-lib/calc.ts ไม่รู้จักตารางนี้เลย)
+ * Optional ต่อเอกสาร — ใบที่ไม่สร้างกลุ่มเลยจะไม่มี object นี้ปนอยู่
+ */
+export interface DocumentItemGroup {
+  id: string;
+  sort_order: number;
+  group_name: string;
 }
 
 export interface DocumentTag {

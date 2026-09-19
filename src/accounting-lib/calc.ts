@@ -1,4 +1,4 @@
-import type { DocumentItem, VatType } from './types';
+import type { DocumentItem, DocumentItemGroup, VatType } from './types';
 
 /**
  * ตัวเลขเงินทั้งหมดในโมดูลนี้ปัดที่ 2 ตำแหน่ง "ตอนสรุปยอด" เท่านั้น
@@ -48,6 +48,57 @@ export function lineTotal(
   item: Pick<DocumentItem, 'qty' | 'unit_price' | 'discount_amount' | 'discount_percent'>
 ): number {
   return round2(Math.max(0, lineGross(item) - lineDiscount(item)));
+}
+
+// ---------------------------------------------------------------------------
+// จัดกลุ่มรายการเพื่อแสดงผล (Type A / Type B ฯลฯ)
+//
+// นี่คือ "ชั้นจัดกลุ่ม" ที่ครอบ items เฉยๆ — ไม่แตะ subtotal/vatBase/grandTotal
+// ของ computeTotals แม้แต่นิดเดียว เอกสารที่ไม่เคยสร้างกลุ่มเลยจะได้ผลลัพธ์
+// เหมือนก่อนมีฟีเจอร์นี้ทุกประการ (เลขลำดับ = ตำแหน่งในอาเรย์ เหมือนเดิม)
+//
+// ข้อกำหนด: item ที่อยู่กลุ่มเดียวกันต้องเรียงติดกันในอาเรย์ (หน้าจอที่เพิ่ม/ลบ
+// รายการในกลุ่มต้องคงลำดับนี้ไว้เอง) ฟังก์ชันนี้ไม่จัดเรียงใหม่ให้
+// ---------------------------------------------------------------------------
+
+export interface ItemEntry {
+  item: DocumentItem;
+  /** ตำแหน่งจริงในอาเรย์ items — ใช้อ้างอิงกลับตอนแก้ไข/ลบ */
+  itemIndex: number;
+  /** เลขลำดับที่พิมพ์/แสดงผล — เริ่มใหม่ทุกกลุ่ม ส่วนรายการนอกกลุ่มนับต่อกันแบบเดิม */
+  displayNo: number;
+}
+
+export type ItemLayoutBlock =
+  | { kind: 'item'; entry: ItemEntry }
+  | { kind: 'group'; group: DocumentItemGroup; entries: ItemEntry[]; subtotal: number };
+
+export function buildItemLayout(
+  items: DocumentItem[], groups: DocumentItemGroup[]
+): ItemLayoutBlock[] {
+  const groupMap = new Map(groups.map((g) => [g.id, g]));
+  const blocks: ItemLayoutBlock[] = [];
+  let openGroupId: string | null = null;
+  let counter = 0;
+
+  items.forEach((item, itemIndex) => {
+    const gid = item.group_id && groupMap.has(item.group_id) ? item.group_id : null;
+    if (gid !== openGroupId) {
+      counter = 0;
+      openGroupId = gid;
+      if (gid) blocks.push({ kind: 'group', group: groupMap.get(gid)!, entries: [], subtotal: 0 });
+    }
+    counter += 1;
+    const entry: ItemEntry = { item, itemIndex, displayNo: gid ? counter : itemIndex + 1 };
+    if (gid) {
+      const g = blocks[blocks.length - 1] as { kind: 'group'; entries: ItemEntry[]; subtotal: number };
+      g.entries.push(entry);
+      g.subtotal = round2(g.subtotal + (Number(item.line_total) || 0));
+    } else {
+      blocks.push({ kind: 'item', entry });
+    }
+  });
+  return blocks;
 }
 
 export interface DocumentTotals {

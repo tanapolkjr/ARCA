@@ -1,8 +1,8 @@
 import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ArcaWordmark } from '@/components/brand/ArcaWordmark';
-import { bahtText, docDate, lineDiscount, money } from '@/accounting-lib/calc';
+import { bahtText, buildItemLayout, docDate, lineDiscount, money } from '@/accounting-lib/calc';
 import { AP_DOC_LABEL, AR_DOC_LABEL, DOC_COLOR } from '@/accounting-lib/types';
-import type { BankAccount, DocumentItem, PartySnapshot } from '@/accounting-lib/types';
+import type { BankAccount, DocumentItem, DocumentItemGroup, PartySnapshot } from '@/accounting-lib/types';
 
 export interface PrintableDoc {
   doc_type: string;
@@ -41,6 +41,8 @@ export interface PrintableDoc {
   note_text?: string | null;
   terms_text?: string | null;
   items: DocumentItem[];
+  /** จัดกลุ่มรายการ (Type A/B/C) — optional, ว่างได้ถ้าเอกสารนี้ไม่ได้ใช้ */
+  groups?: DocumentItemGroup[];
 }
 
 /** ป้ายลายเซ็นต่างกันตามประเภทเอกสาร ตามธรรมเนียมที่ใช้จริง */
@@ -81,7 +83,9 @@ const CONTENT_H = (PAGE_H_MM - PAGE_PAD_MM * 2 - SAFETY_MM) * PX_PER_MM;
 const CONTENT_W_MM = 210 - PAGE_PAD_MM * 2;
 
 type Block =
-  | { kind: 'row'; key: string; index: number }
+  | { kind: 'row'; key: string; index: number; no: number }
+  | { kind: 'group-header'; key: string; name: string }
+  | { kind: 'group-subtotal'; key: string; name: string; subtotal: number }
   | { kind: 'empty'; key: string }
   | { kind: 'totals'; key: string }
   | { kind: 'text'; key: string; heading?: string; line?: string; keepWithNext?: boolean }
@@ -98,6 +102,10 @@ function textBlocks(prefix: string, heading: string, body: string | null | undef
   ];
 }
 
+/** แถวที่อยู่ในตารางรายการ (นับรวมหัวกลุ่ม/สรุปย่อยของกลุ่มด้วย) — ใช้ตัดสินว่า thead ต้องซ้ำไหม */
+const isRowLike = (b: Block) =>
+  b.kind === 'row' || b.kind === 'empty' || b.kind === 'group-header' || b.kind === 'group-subtotal';
+
 export function DocumentPrintView({
   doc, copyLabel, bankAccounts = [],
 }: {
@@ -111,24 +119,40 @@ export function DocumentPrintView({
   // โลโก้เป็นรูป โหลดเสร็จทีหลัง — ต้องวัดใหม่เหมือนตอนฟอนต์พร้อม
   const [assetsReady, setAssetsReady] = useState(0);
 
+  const itemLayout = useMemo(
+    () => buildItemLayout(doc.items, doc.groups ?? []),
+    [doc.items, doc.groups]
+  );
+
   const blocks = useMemo<Block[]>(() => {
     const out: Block[] = [];
     if (doc.items.length === 0) out.push({ kind: 'empty', key: 'empty' });
-    doc.items.forEach((_, i) => out.push({ kind: 'row', key: `row-${i}`, index: i }));
+    itemLayout.forEach((b) => {
+      if (b.kind === 'item') {
+        out.push({ kind: 'row', key: `row-${b.entry.itemIndex}`, index: b.entry.itemIndex, no: b.entry.displayNo });
+      } else {
+        out.push({ kind: 'group-header', key: `grp-h-${b.group.id}`, name: b.group.group_name });
+        b.entries.forEach((entry) => {
+          out.push({ kind: 'row', key: `row-${entry.itemIndex}`, index: entry.itemIndex, no: entry.displayNo });
+        });
+        out.push({ kind: 'group-subtotal', key: `grp-s-${b.group.id}`, name: b.group.group_name, subtotal: b.subtotal });
+      }
+    });
     out.push({ kind: 'totals', key: 'totals' });
     out.push(...textBlocks('note', 'หมายเหตุ', doc.note_text));
     out.push(...textBlocks('terms', 'เงื่อนไข', doc.terms_text));
     if (doc.doc_type === 'INV' || doc.doc_type === 'RC') out.push({ kind: 'payment', key: 'payment' });
     out.push({ kind: 'sign', key: 'sign' });
     return out;
-  }, [doc]);
+  }, [doc, itemLayout]);
 
   const measureKey = useMemo(() => JSON.stringify([
     doc.doc_type, doc.doc_no, copyLabel,
     doc.company_snapshot, doc.party_snapshot, doc.job_name,
     doc.contact_name, doc.contact_phone, doc.sales_name, doc.sales_phone,
     doc.note_text, doc.terms_text, bankAccounts.length,
-    doc.items.map((i) => [i.description, i.qty, i.unit_price, i.line_total]),
+    doc.items.map((i) => [i.description, i.qty, i.unit_price, i.line_total, i.group_id ?? null]),
+    (doc.groups ?? []).map((g) => [g.id, g.group_name]),
   ]), [doc, copyLabel, bankAccounts.length]);
 
   useLayoutEffect(() => {
@@ -153,17 +177,17 @@ export function DocumentPrintView({
 
       for (let i = 0; i < blocks.length; i++) {
         const b = blocks[i];
-        const needThead = (b.kind === 'row' || b.kind === 'empty') && !curHasRows ? theadH : 0;
+        const needThead = isRowLike(b) && !curHasRows ? theadH : 0;
         let need = needThead + heightOf(b);
         if (b.kind === 'text' && b.keepWithNext && blocks[i + 1]) need += heightOf(blocks[i + 1]);
 
         if (used + need > avail && cur.length > 0) {
           out.push(cur); cur = []; used = 0; curHasRows = false;
         }
-        const thead2 = (b.kind === 'row' || b.kind === 'empty') && !curHasRows ? theadH : 0;
+        const thead2 = isRowLike(b) && !curHasRows ? theadH : 0;
         cur.push(b);
         used += thead2 + heightOf(b);
-        if (b.kind === 'row' || b.kind === 'empty') curHasRows = true;
+        if (isRowLike(b)) curHasRows = true;
       }
       if (cur.length) out.push(cur);
       setPages(out);
@@ -197,10 +221,14 @@ export function DocumentPrintView({
         <table className="w-full text-[11px] border-collapse">
           <thead><tr data-mk="thead"><ItemHead color={color} /></tr></thead>
           <tbody>
-            {doc.items.map((it, i) => (
-              <ItemRow key={i} it={it} no={i + 1} mk={`row-${i}`} />
-            ))}
-            {doc.items.length === 0 && <tr data-mk="empty"><td colSpan={7} className="py-6" /></tr>}
+            {blocks.filter(isRowLike).map((b) => {
+              if (b.kind === 'row') return <ItemRow key={b.key} it={doc.items[b.index]} no={b.no} mk={b.key} />;
+              if (b.kind === 'group-header') return <GroupHeaderRow key={b.key} mk={b.key} name={b.name} />;
+              if (b.kind === 'group-subtotal') {
+                return <GroupSubtotalRow key={b.key} mk={b.key} name={b.name} subtotal={b.subtotal} />;
+              }
+              return <tr key={b.key} data-mk={b.key}><td colSpan={7} className="py-6" /></tr>;
+            })}
           </tbody>
         </table>
         <div data-mk="totals"><TotalsBlock doc={doc} color={color} bankAccounts={bankAccounts} /></div>
@@ -242,8 +270,8 @@ function DocPage({
   bankAccounts: BankAccount[];
 }) {
   const color = DOC_COLOR[doc.doc_type] ?? '#5C6B7A';
-  const rowBlocks = blocks.filter((b) => b.kind === 'row' || b.kind === 'empty');
-  const rest = blocks.filter((b) => b.kind !== 'row' && b.kind !== 'empty');
+  const rowBlocks = blocks.filter(isRowLike);
+  const rest = blocks.filter((b) => !isRowLike(b));
 
   return (
     <div className="doc-page bg-white text-slate-900"
@@ -254,15 +282,18 @@ function DocPage({
         <table className="w-full text-[11px] border-collapse">
           <thead><tr><ItemHead color={color} /></tr></thead>
           <tbody>
-            {rowBlocks.map((b) =>
-              b.kind === 'row' ? (
-                <ItemRow key={b.key} it={doc.items[b.index]} no={b.index + 1} />
-              ) : (
+            {rowBlocks.map((b) => {
+              if (b.kind === 'row') return <ItemRow key={b.key} it={doc.items[b.index]} no={b.no} />;
+              if (b.kind === 'group-header') return <GroupHeaderRow key={b.key} name={b.name} />;
+              if (b.kind === 'group-subtotal') {
+                return <GroupSubtotalRow key={b.key} name={b.name} subtotal={b.subtotal} />;
+              }
+              return (
                 <tr key={b.key}>
                   <td colSpan={7} className="py-6 text-center text-slate-400">ยังไม่มีรายการ</td>
                 </tr>
-              )
-            )}
+              );
+            })}
           </tbody>
         </table>
       )}
@@ -406,6 +437,30 @@ function ItemRow({ it, no, mk }: { it: DocumentItem; no: number; mk?: string }) 
         {disc > 0 && qty > 0 ? money(disc / qty) : ''}
       </td>
       <td className="py-2 text-right tabular-nums pr-1">{money(it.line_total)}</td>
+    </tr>
+  );
+}
+
+/** แถวหัวกลุ่ม (Type A/B/C) — ไม่มีจำนวน/ราคา แค่ชื่อกลุ่มคาดเส้นบาง */
+function GroupHeaderRow({ name, mk }: { name: string; mk?: string }) {
+  return (
+    <tr data-mk={mk}>
+      <td colSpan={7} className="pt-3 pb-1 font-semibold border-b border-slate-300">
+        {name}
+      </td>
+    </tr>
+  );
+}
+
+/** แถวสรุปยอดย่อยท้ายกลุ่ม — ชิดขวาใต้คอลัมน์มูลค่า เหมือนแถวรวมย่อยในตารางบัญชีทั่วไป */
+function GroupSubtotalRow({ name, subtotal, mk }: { name: string; subtotal: number; mk?: string }) {
+  return (
+    <tr data-mk={mk}>
+      <td colSpan={5} />
+      <td className="py-1 text-right text-slate-500 whitespace-nowrap">รวม{name}</td>
+      <td className="py-1 text-right tabular-nums font-semibold pr-1 border-t border-slate-200">
+        {money(subtotal)}
+      </td>
     </tr>
   );
 }
