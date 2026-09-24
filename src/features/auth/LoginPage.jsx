@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Lock, Mail, AlertCircle } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth.jsx";
 import { errMsg } from "../../lib/format.js";
-import { ArcaSeal } from "../../components/brand/ArcaSeal";
+import { ArcaWordmark } from "../../components/brand/ArcaWordmark";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -30,12 +30,11 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-white dark:bg-[#0a0a0a] flex items-center justify-center px-4 font-sans">
       <div className="w-full max-w-sm">
-        <div className="flex flex-col items-center gap-3 mb-8">
-          <ArcaSeal className="w-20 h-20 text-stone-900 dark:text-stone-100" />
-          <div className="text-center leading-none">
-            <div className="brand-wordmark text-stone-900 dark:text-stone-100 text-2xl">ARCA HAUS</div>
-            <div className="text-[10px] tracking-[0.25em] text-stone-400 mt-1.5">E-SERVICE</div>
-          </div>
+        {/* โลโก้เดียวกับเมนูและเอกสารที่พิมพ์ — ตราวงกลมเดิมไม่ตรงกับแคตตาล็อกบริษัท
+            ไฟล์เป็น PNG สีดำพื้นโปร่งใส กลับสีเองไม่ได้ โหมดมืดจึงใช้ invert */}
+        <div className="flex flex-col items-center mb-8">
+          <ArcaWordmark className="h-9 w-auto dark:invert" />
+          <div className="text-[10px] tracking-[0.25em] text-stone-400 mt-2">E-SERVICE</div>
         </div>
 
         <div className="bg-white dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700 shadow-sm p-7">
