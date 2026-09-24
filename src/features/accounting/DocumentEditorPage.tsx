@@ -591,17 +591,17 @@ function DocumentEditorInner() {
   return (
     <div className="flex flex-col gap-4 pb-24">
       <div className="flex items-center gap-3 no-print">
-        <button onClick={() => nav(-1)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
-          <ArrowLeft className="w-4 h-4 text-slate-500" />
+        <button onClick={() => nav(-1)} className="p-1.5 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800">
+          <ArrowLeft className="w-4 h-4 text-stone-500" />
         </button>
         <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">{label}</h1>
-          <p className="text-xs text-slate-500">
+          <h1 className="text-xl font-bold text-stone-800 dark:text-stone-100">{label}</h1>
+          <p className="text-xs text-stone-500">
             {docNo ? `เลขที่ ${docNo}` : 'ร่าง — ยังไม่ออกเลขที่'}
             {sourceRef && (
               <>
                 {' · อ้างอิง '}
-                <Link to={`/accounting/QT/${sourceRef.id}`} className="text-slate-900 hover:underline">
+                <Link to={`/accounting/QT/${sourceRef.id}`} className="text-stone-900 hover:underline">
                   {sourceRef.docNo ?? 'ใบเสนอราคา'}
                 </Link>
               </>
@@ -675,28 +675,28 @@ function DocumentEditorInner() {
         const billed = kids.reduce((a, c) => a + Number(c.grand_total || 0), 0);
         const left = Math.max(0, totals.grandTotal - billed);
         return (
-          <div className="no-print bg-white dark:bg-slate-900 rounded-2xl border border-slate-100
-            dark:border-slate-800 overflow-hidden">
+          <div className="no-print bg-white dark:bg-stone-900 rounded-2xl border border-stone-100
+            dark:border-stone-800 overflow-hidden">
             <div className="flex flex-wrap items-baseline gap-4 px-4 py-3
-              border-b border-slate-100 dark:border-slate-800">
-              <h3 className="text-sm font-semibold text-slate-600">
+              border-b border-stone-100 dark:border-stone-800">
+              <h3 className="text-sm font-semibold text-stone-600">
                 ประวัติการแบ่งจ่ายจากมูลค่าเอกสาร
               </h3>
               <div className="ml-auto flex gap-6 text-right">
                 <div>
-                  <div className="text-[11px] text-slate-400">เรียกเก็บแล้ว</div>
-                  <div className="text-sm font-bold tabular-nums text-slate-600">{money(billed)}</div>
+                  <div className="text-[11px] text-stone-400">เรียกเก็บแล้ว</div>
+                  <div className="text-sm font-bold tabular-nums text-stone-600">{money(billed)}</div>
                 </div>
                 <div>
-                  <div className="text-[11px] text-slate-400">ยังไม่ได้เรียกเก็บ</div>
-                  <div className="text-sm font-bold tabular-nums text-slate-700 dark:text-slate-200">
+                  <div className="text-[11px] text-stone-400">ยังไม่ได้เรียกเก็บ</div>
+                  <div className="text-sm font-bold tabular-nums text-stone-700 dark:text-stone-200">
                     {money(left)}
                   </div>
                 </div>
               </div>
             </div>
             <table className="w-full text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-900/20 text-slate-600 dark:text-slate-300">
+              <thead className="bg-stone-50 dark:bg-stone-900/20 text-stone-600 dark:text-stone-300">
                 <tr>
                   <th className="text-left font-medium px-4 py-2 w-12">ลำดับ</th>
                   <th className="text-left font-medium px-4 py-2 w-40">เลขที่อ้างอิง</th>
@@ -709,12 +709,12 @@ function DocumentEditorInner() {
               <tbody>
                 {kids.map((c, i) => (
                   <tr key={c.id}
-                      className="border-t border-slate-50 dark:border-slate-800
-                        hover:bg-slate-50/70 dark:hover:bg-slate-800/40 cursor-pointer"
+                      className="border-t border-stone-50 dark:border-stone-800
+                        hover:bg-stone-50/70 dark:hover:bg-stone-800/40 cursor-pointer"
                       onClick={() => nav(`/accounting/${c.doc_type}/${c.id}`)}>
-                    <td className="px-4 py-2 text-slate-400">{i + 1}</td>
-                    <td className="px-4 py-2 font-medium text-slate-900">{c.doc_no ?? 'ร่าง'}</td>
-                    <td className="px-4 py-2 text-slate-500 tabular-nums">{docDateTh(c.doc_date)}</td>
+                    <td className="px-4 py-2 text-stone-400">{i + 1}</td>
+                    <td className="px-4 py-2 font-medium text-stone-900">{c.doc_no ?? 'ร่าง'}</td>
+                    <td className="px-4 py-2 text-stone-500 tabular-nums">{docDateTh(c.doc_date)}</td>
                     <td className="px-4 py-2 text-right tabular-nums">{money(c.grand_total)}</td>
                     <td className="px-4 py-2 text-right tabular-nums text-emerald-600">
                       {money(c.paid_amount ?? 0)}
@@ -767,7 +767,7 @@ function DocumentEditorInner() {
           ))}
           {/* เลือกฉบับก่อนกดพิมพ์ — สิ่งที่เห็นบนจอคือสิ่งที่จะออกมาในไฟล์ทุกประการ */}
           <div className="no-print flex flex-col items-center gap-3 pb-6">
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800">
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-stone-100 dark:bg-stone-800">
               {PRINT_MODES.map((m) => (
                 <button
                   key={m.value}
@@ -775,15 +775,15 @@ function DocumentEditorInner() {
                   title={m.hint}
                   className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
                     printMode === m.value
-                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-medium shadow-sm'
-                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                      ? 'bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 font-medium shadow-sm'
+                      : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
                   }`}
                 >
                   {m.label}
                 </button>
               ))}
             </div>
-            <div className="text-xs text-slate-400">
+            <div className="text-xs text-stone-400">
               {PRINT_MODES.find((m) => m.value === printMode)?.hint}
             </div>
             <PrimaryButton onClick={() => window.print()}>
@@ -793,8 +793,8 @@ function DocumentEditorInner() {
         </div>
       ) : (
         <>
-          <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100
-            dark:border-slate-800 p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <section className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100
+            dark:border-stone-800 p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
             <Field label="บริษัทผู้ออกเอกสาร" required
                    hint="เปลี่ยนหัวบิลได้เหมือนเปลี่ยนลูกค้า">
               <Select value={companyId} disabled={locked}
@@ -908,8 +908,8 @@ function DocumentEditorInner() {
             </Field>
           </section>
 
-          <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100
-            dark:border-slate-800 p-5">
+          <section className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100
+            dark:border-stone-800 p-5">
             <div className="flex flex-wrap items-end gap-4 mb-4">
               <Field label="รูปแบบราคา" className="w-48">
                 <Select value={includeVat ? 'inc' : 'exc'} disabled={locked}
@@ -948,7 +948,7 @@ function DocumentEditorInner() {
               </Field>
 
               {/* แบ่งชำระอยู่คนละกลุ่มกับภาษี กันสับสน */}
-              <div className="ml-auto rounded-xl border border-slate-200 dark:border-slate-700
+              <div className="ml-auto rounded-xl border border-stone-200 dark:border-stone-700
                 px-3 py-2">
                 <div className="flex gap-3">
                   <Field label="แบ่งชำระ % ของยอดเอกสาร" className="w-44"
@@ -965,8 +965,8 @@ function DocumentEditorInner() {
                         type="button" disabled={locked}
                         title="สลับระหว่างบาทและเปอร์เซ็นต์"
                         onClick={() => setExtraDiscType((t) => (t === 'amount' ? 'percent' : 'amount'))}
-                        className="px-2 rounded-lg border border-slate-200 dark:border-slate-700
-                          text-xs text-slate-500 hover:text-slate-900 shrink-0"
+                        className="px-2 rounded-lg border border-stone-200 dark:border-stone-700
+                          text-xs text-stone-500 hover:text-stone-900 shrink-0"
                       >
                         {extraDiscType === 'percent' ? '%' : '฿'}
                       </button>
@@ -996,18 +996,18 @@ function DocumentEditorInner() {
                   />
                 ) : (
                   <div key={block.group.id}
-                       className="rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600
-                         p-3 bg-slate-50/60 dark:bg-slate-800/30">
+                       className="rounded-xl border-2 border-dashed border-stone-300 dark:border-stone-600
+                         p-3 bg-stone-50/60 dark:bg-stone-800/30">
                     <div className="flex items-center gap-2 mb-2">
                       {!locked ? (
                         <TextInput
                           value={block.group.group_name}
                           onChange={(e) => renameGroup(block.group.id, e.target.value)}
                           className="!w-auto flex-1 font-semibold !bg-transparent !border-transparent
-                            hover:!border-slate-200 dark:hover:!border-slate-700"
+                            hover:!border-stone-200 dark:hover:!border-stone-700"
                         />
                       ) : (
-                        <span className="font-semibold text-slate-700 dark:text-slate-200">
+                        <span className="font-semibold text-stone-700 dark:text-stone-200">
                           {block.group.group_name}
                         </span>
                       )}
@@ -1017,20 +1017,20 @@ function DocumentEditorInner() {
                           <button onClick={() => moveGroup(block.group.id, -1)}
                                   disabled={blockIdx === 0}
                                   title="เลื่อนกลุ่มนี้ขึ้น"
-                                  className="text-slate-400 hover:text-slate-900 p-1 shrink-0
-                                    disabled:opacity-25 disabled:hover:text-slate-400">
+                                  className="text-stone-400 hover:text-stone-900 p-1 shrink-0
+                                    disabled:opacity-25 disabled:hover:text-stone-400">
                             <ChevronUp className="w-4 h-4" />
                           </button>
                           <button onClick={() => moveGroup(block.group.id, 1)}
                                   disabled={blockIdx === itemLayout.length - 1}
                                   title="เลื่อนกลุ่มนี้ลง"
-                                  className="text-slate-400 hover:text-slate-900 p-1 shrink-0
-                                    disabled:opacity-25 disabled:hover:text-slate-400">
+                                  className="text-stone-400 hover:text-stone-900 p-1 shrink-0
+                                    disabled:opacity-25 disabled:hover:text-stone-400">
                             <ChevronDown className="w-4 h-4" />
                           </button>
                           <button onClick={() => removeGroup(block.group.id)}
                                   title="ยกเลิกกลุ่ม (ย้ายรายการออกมา ไม่ลบข้อมูล)"
-                                  className="text-slate-300 hover:text-rose-500 p-1 shrink-0">
+                                  className="text-stone-300 hover:text-rose-500 p-1 shrink-0">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </>
@@ -1054,10 +1054,10 @@ function DocumentEditorInner() {
                         <Plus className="w-4 h-4" /> เพิ่มสินค้าใน{block.group.group_name}
                       </GhostButton>
                     )}
-                    <div className="flex justify-end mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
-                      <span className="text-sm text-slate-500 dark:text-slate-400">
+                    <div className="flex justify-end mt-2 pt-2 border-t border-stone-200 dark:border-stone-700">
+                      <span className="text-sm text-stone-500 dark:text-stone-400">
                         รวม{block.group.group_name}{'\u00A0'}
-                        <span className="font-semibold text-slate-800 dark:text-slate-100 tabular-nums">
+                        <span className="font-semibold text-stone-800 dark:text-stone-100 tabular-nums">
                           {money(block.subtotal)}
                         </span>
                       </span>
@@ -1097,14 +1097,14 @@ function DocumentEditorInner() {
                 <Sum k="มูลค่าที่ไม่มี/ยกเว้นภาษี" v={totals.vatExemptBase} />
                 <Sum k="มูลค่าที่คำนวณภาษี" v={totals.vatBase} />
                 <Sum k={`ภาษีมูลค่าเพิ่ม ${vatRate}%`} v={totals.vatAmount} />
-                <div className="border-t border-slate-200 dark:border-slate-700 mt-1 pt-1">
+                <div className="border-t border-stone-200 dark:border-stone-700 mt-1 pt-1">
                   <Sum k="จำนวนเงินรวมทั้งสิ้น" v={totals.grandTotal} bold />
                 </div>
                 {totals.whtAmount > 0 && (
                   <>
                     <Sum k="หักภาษี ณ ที่จ่าย" v={-totals.whtAmount} />
                     {/* บอกที่มาให้ตรวจได้ — ไม่งั้นเห็นแต่ยอดสุทธิแล้วเช็คไม่ได้ว่าถูกไหม */}
-                    <div className="text-[11px] text-slate-400 text-right -mt-1 mb-1">
+                    <div className="text-[11px] text-stone-400 text-right -mt-1 mb-1">
                       คิดจากมูลค่าก่อน VAT {money(totals.whtBase)} ของบรรทัดที่ตั้งอัตราหักไว้
                       {items.filter((i) => Number(i.wht_rate) > 0).length > 0 && (
                         <> · {items.filter((i) => Number(i.wht_rate) > 0).length} จาก {items.length} บรรทัด</>
@@ -1117,8 +1117,8 @@ function DocumentEditorInner() {
             </div>
           </section>
 
-          <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100
-            dark:border-slate-800 p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <section className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100
+            dark:border-stone-800 p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="หมายเหตุ">
               <TextArea rows={6} value={note} disabled={locked}
                         onChange={(e) => setNote(e.target.value)} />
@@ -1186,9 +1186,9 @@ function ItemCard({
   onRemove: (() => void) | null;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-3">
+    <div className="rounded-xl border border-stone-200 dark:border-stone-700 p-3">
       <div className="flex items-start gap-2">
-        <span className="text-xs text-slate-400 pt-2 w-5 shrink-0">{no}</span>
+        <span className="text-xs text-stone-400 pt-2 w-5 shrink-0">{no}</span>
         <div className="flex-1 min-w-0">
           {/* ค้นหาสินค้าอยู่บนสุด — เป็นทางเข้าหลักของการเพิ่มรายการ */}
           {!locked && (
@@ -1210,14 +1210,14 @@ function ItemCard({
           />
         </div>
         <div className="text-right shrink-0 w-32 pt-1">
-          <div className="text-[11px] text-slate-400">มูลค่า</div>
-          <div className="tabular-nums font-semibold text-slate-800 dark:text-slate-100">
+          <div className="text-[11px] text-stone-400">มูลค่า</div>
+          <div className="tabular-nums font-semibold text-stone-800 dark:text-stone-100">
             {money(it.line_total)}
           </div>
         </div>
         {!locked && onRemove && (
           <button onClick={onRemove} title="ลบบรรทัดนี้"
-                  className="text-slate-300 hover:text-rose-500 p-1 shrink-0">
+                  className="text-stone-300 hover:text-rose-500 p-1 shrink-0">
             <Trash2 className="w-4 h-4" />
           </button>
         )}
@@ -1269,24 +1269,24 @@ function ItemCard({
               onClick={() => onPatch({
                 discount_mode: DISCOUNT_NEXT[it.discount_mode ?? 'unit'],
               })}
-              className="px-2 rounded-lg border border-slate-200 dark:border-slate-700
-                text-[11px] text-slate-500 hover:text-slate-900 shrink-0 whitespace-nowrap"
+              className="px-2 rounded-lg border border-stone-200 dark:border-stone-700
+                text-[11px] text-stone-500 hover:text-stone-900 shrink-0 whitespace-nowrap"
             >
               {DISCOUNT_LABEL[it.discount_mode ?? 'unit']}
             </button>
           </div>
           {/* โชว์ยอดที่หักจริงเสมอ — ลดต่อชิ้นกับลดทั้งบรรทัดต่างกันมหาศาลเมื่อจำนวนเยอะ */}
           {(it.discount_input ?? 0) !== 0 && (
-            <div className="text-[11px] text-slate-400 text-right mt-0.5 tabular-nums">
+            <div className="text-[11px] text-stone-400 text-right mt-0.5 tabular-nums">
               หักจริง −{money(lineDiscount(it))}
             </div>
           )}
         </Field>
         {/* ราคาสุทธิต่อหน่วย — ตัวเลขที่ใช้เทียบกับราคาที่ตกลงกับลูกค้าจริง */}
         <Field label="ราคาสุทธิ/หน่วย" className="w-32">
-          <div className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60
+          <div className="px-3 py-2 rounded-xl bg-stone-50 dark:bg-stone-800/60
             text-sm text-right tabular-nums font-medium
-            text-slate-700 dark:text-slate-200">
+            text-stone-700 dark:text-stone-200">
             {Number(it.qty) > 0 ? money(it.line_total / Number(it.qty)) : '—'}
           </div>
         </Field>
@@ -1325,7 +1325,7 @@ function StockPicker({
 
   return (
     <div className="relative">
-      <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+      <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
       <input
         value={term}
         placeholder="ค้นหาสินค้าจากคลัง แล้วระบบจะเติมชื่อ หน่วย และราคาให้"
@@ -1335,29 +1335,29 @@ function StockPicker({
         className={`${inputCls} pl-9`}
       />
       {open && term.trim() && (
-        <div className="absolute z-30 left-0 right-0 mt-1 bg-white dark:bg-slate-800
-          border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg
+        <div className="absolute z-30 left-0 right-0 mt-1 bg-white dark:bg-stone-800
+          border border-stone-200 dark:border-stone-700 rounded-xl shadow-lg
           max-h-64 overflow-y-auto">
           {matches.map((s) => (
             <button
               key={s.id} type="button"
               onMouseDown={() => { onPick(s); setTerm(''); setOpen(false); }}
               className="block w-full text-left px-3 py-2 text-xs
-                hover:bg-slate-100 dark:hover:bg-slate-700"
+                hover:bg-stone-100 dark:hover:bg-stone-700"
             >
               <div className="flex items-baseline gap-2">
                 <span className="font-medium">{s.model_code}</span>
-                <span className="text-slate-400 truncate">{s.description}</span>
-                <span className="ml-auto tabular-nums text-slate-500 shrink-0">
+                <span className="text-stone-400 truncate">{s.description}</span>
+                <span className="ml-auto tabular-nums text-stone-500 shrink-0">
                   {s.sale_price != null ? money(s.sale_price) : 'ยังไม่ตั้งราคา'}
                 </span>
               </div>
             </button>
           ))}
           {matches.length === 0 && (
-            <div className="px-3 py-2 text-xs text-slate-400">
+            <div className="px-3 py-2 text-xs text-stone-400">
               ไม่พบสินค้านี้ —{' '}
-              <Link to="/stock" className="text-slate-900 hover:underline">
+              <Link to="/stock" className="text-stone-900 hover:underline">
                 ไปเพิ่มใน Inventory พร้อมตั้งราคาขาย
               </Link>
             </div>
@@ -1370,7 +1370,7 @@ function StockPicker({
 
 function Sum({ k, v, bold }: { k: string; v: number; bold?: boolean }) {
   return (
-    <div className={`flex justify-between py-1 ${bold ? 'font-semibold text-slate-800 dark:text-slate-100' : 'text-slate-600 dark:text-slate-400'}`}>
+    <div className={`flex justify-between py-1 ${bold ? 'font-semibold text-stone-800 dark:text-stone-100' : 'text-stone-600 dark:text-stone-400'}`}>
       <span>{k}</span>
       <span className="tabular-nums">{money(v)}</span>
     </div>

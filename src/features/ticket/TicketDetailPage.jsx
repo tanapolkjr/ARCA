@@ -173,7 +173,7 @@ export default function TicketDetail() {
   }
 
   if (!isNew && loading) {
-    return <div className="text-center text-slate-400 py-20">กำลังโหลด...</div>;
+    return <div className="text-center text-stone-400 py-20">กำลังโหลด...</div>;
   }
   if (!isNew && loadError) {
     return <div className="bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-300 text-sm rounded-xl p-4">โหลด Ticket ไม่สำเร็จ: {errMsg(loadError)}</div>;
@@ -183,15 +183,15 @@ export default function TicketDetail() {
     <div>
       <div className="flex items-start justify-between mb-6 flex-wrap gap-3">
         <div>
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5">
-            <button onClick={() => goBack()} className="hover:text-slate-900 flex items-center gap-1">
+          <div className="flex items-center gap-1.5 text-xs text-stone-400 mb-1.5">
+            <button onClick={() => goBack()} className="hover:text-stone-900 flex items-center gap-1">
               <ArrowLeft className="w-3.5 h-3.5" /> Ticket
             </button>
             <span>/</span>
             <span>{isNew ? "New Ticket" : "Edit Ticket"}</span>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">{isNew ? "Ticket ใหม่" : ticket?.ticket_code}</h1>
+            <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100 tracking-tight">{isNew ? "Ticket ใหม่" : ticket?.ticket_code}</h1>
             <Pill tone={ticketStatusTone(state.status)}>{state.status}</Pill>
           </div>
         </div>
@@ -204,31 +204,31 @@ export default function TicketDetail() {
               <Trash2 className="w-4 h-4" />
             </button>
           )}
-          <button onClick={() => goBack()} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">
+          <button onClick={() => goBack()} className="px-4 py-2 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800">
             ย้อนกลับ
           </button>
-          <button onClick={handleSave} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm">
+          <button onClick={handleSave} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white shadow-sm">
             <Save className="w-4 h-4" /> Save Data
           </button>
         </div>
       </div>
 
       {isNew && (
-        <Card className="border-slate-300 dark:border-slate-500/30 p-4 mb-6">
-          <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">
+        <Card className="border-stone-300 dark:border-stone-500/30 p-4 mb-6">
+          <label className="block text-sm font-medium text-stone-600 dark:text-stone-300 mb-1.5">
             Project อ้างอิง <span className="text-rose-500">*</span>
           </label>
           <select
             value={projectRef}
             onChange={(e) => setProjectRef(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
+            className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-sm bg-stone-50 dark:bg-stone-900 text-stone-800 dark:text-stone-100 focus:bg-white dark:focus:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-900"
           >
             <option value="">— ต้องเลือก Project ก่อนจึงเปิด Ticket ได้ —</option>
             {projectOptions?.map((p) => (
               <option key={p.id} value={p.id}>{p.project_number} — {p.site?.name}</option>
             ))}
           </select>
-          <p className="text-xs text-slate-400 mt-1.5">Project ไม่จำเป็นต้องปิดงานแล้ว แค่มีอยู่ในระบบก็เปิด Ticket อ้างอิงได้ทันที</p>
+          <p className="text-xs text-stone-400 mt-1.5">Project ไม่จำเป็นต้องปิดงานแล้ว แค่มีอยู่ในระบบก็เปิด Ticket อ้างอิงได้ทันที</p>
         </Card>
       )}
 
@@ -236,7 +236,7 @@ export default function TicketDetail() {
 
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-12 lg:col-span-8">
-          <div className="flex gap-1 overflow-x-auto bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-1.5 mb-4">
+          <div className="flex gap-1 overflow-x-auto bg-white dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700 shadow-sm p-1.5 mb-4">
             {TABS.map((t) => {
               const Icon = t.icon;
               const active = activeTab === t.id;
@@ -245,7 +245,7 @@ export default function TicketDetail() {
                   key={t.id}
                   onClick={() => setActiveTab(t.id)}
                   className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
-                    active ? "bg-slate-900 text-white shadow-sm" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"
+                    active ? "bg-stone-900 text-white shadow-sm" : "text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-700"
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" /> {t.label}

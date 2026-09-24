@@ -8,7 +8,7 @@ import { listUsers } from "../../api/users.js";
 import { useToast } from "../../hooks/useToast.jsx";
 import { errMsg } from "../../lib/format.js";
 
-const AVATAR_COLORS = ["bg-slate-800", "bg-slate-500", "bg-orange-500", "bg-slate-500", "bg-rose-500", "bg-slate-500"];
+const AVATAR_COLORS = ["bg-stone-800", "bg-stone-500", "bg-orange-500", "bg-stone-500", "bg-rose-500", "bg-stone-500"];
 function colorFor(name) {
   if (!name) return AVATAR_COLORS[0];
   const idx = name.charCodeAt(0) % AVATAR_COLORS.length;
@@ -122,28 +122,28 @@ export default function CommentPanel({ entityType, entityId, statusOptions = [] 
 
   if (!entityId) {
     return (
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 text-center">
-        <p className="text-sm text-slate-400">บันทึกข้อมูลก่อน จึงจะเริ่มคอมเมนต์ได้</p>
+      <div className="bg-white dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700 shadow-sm p-5 text-center">
+        <p className="text-sm text-stone-400">บันทึกข้อมูลก่อน จึงจะเริ่มคอมเมนต์ได้</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col h-full">
-      <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700">
-        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">Comments & Updates</h3>
-        <p className="text-xs text-slate-400 mt-0.5">พิมพ์ @ เพื่อแท็กเพื่อนร่วมทีม</p>
+    <div className="bg-white dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700 shadow-sm flex flex-col h-full">
+      <div className="px-5 py-4 border-b border-stone-100 dark:border-stone-700">
+        <h3 className="text-sm font-semibold text-stone-800 dark:text-stone-100">Comments & Updates</h3>
+        <p className="text-xs text-stone-400 mt-0.5">พิมพ์ @ เพื่อแท็กเพื่อนร่วมทีม</p>
       </div>
 
       <div className="flex-1 overflow-auto px-5 py-4 space-y-4 max-h-96">
-        {loading && <p className="text-sm text-slate-400 text-center py-4">กำลังโหลด...</p>}
+        {loading && <p className="text-sm text-stone-400 text-center py-4">กำลังโหลด...</p>}
         {loadError && (
           <p className="text-sm text-rose-600 dark:text-rose-300 bg-rose-50 dark:bg-rose-500/10 rounded-lg px-3 py-2 text-center">
             โหลดคอมเมนต์ไม่สำเร็จ: {errMsg(loadError)}
           </p>
         )}
         {!loading && !loadError && allComments.length === 0 && (
-          <p className="text-sm text-slate-400 text-center py-4">ยังไม่มีคอมเมนต์ — เริ่มต้นได้เลย</p>
+          <p className="text-sm text-stone-400 text-center py-4">ยังไม่มีคอมเมนต์ — เริ่มต้นได้เลย</p>
         )}
         {allComments.map((c) => (
           <div key={c.id} className="flex gap-3">
@@ -152,21 +152,21 @@ export default function CommentPanel({ entityType, entityId, statusOptions = [] 
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-medium text-slate-800 dark:text-slate-100">{c.author?.name || "ผู้ใช้งาน"}</span>
-                <span className="text-xs text-slate-400">{timeAgo(c.created_at)}</span>
+                <span className="text-sm font-medium text-stone-800 dark:text-stone-100">{c.author?.name || "ผู้ใช้งาน"}</span>
+                <span className="text-xs text-stone-400">{timeAgo(c.created_at)}</span>
               </div>
               {c.status_tag && (
                 <div className="mt-1">
                   <Pill tone="indigo">{c.status_tag}</Pill>
                 </div>
               )}
-              <p className="text-sm text-slate-600 dark:text-slate-300 mt-1 leading-relaxed whitespace-pre-wrap">{c.body}</p>
+              <p className="text-sm text-stone-600 dark:text-stone-300 mt-1 leading-relaxed whitespace-pre-wrap">{c.body}</p>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="border-t border-slate-100 dark:border-slate-700 p-4">
+      <div className="border-t border-stone-100 dark:border-stone-700 p-4">
         {statusOptions.length > 0 && (
           <Select value={tag} onChange={(e) => setTag(e.target.value)}>
             <option value="">แปะสถานะประกอบ (ไม่บังคับ)</option>
@@ -192,18 +192,18 @@ export default function CommentPanel({ entityType, entityId, statusOptions = [] 
             onBlur={() => setTimeout(() => setShowMentions(false), 150)}
             rows={2}
             placeholder="พิมพ์คอมเมนต์... ใช้ @ เพื่อแท็กเพื่อนร่วมทีม"
-            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900 resize-none"
+            className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-sm bg-stone-50 dark:bg-stone-900 text-stone-800 dark:text-stone-100 focus:bg-white dark:focus:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-900 resize-none"
           />
           {showMentions && (
-            <div className="absolute z-10 bottom-full mb-1 w-56 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg py-1.5 max-h-48 overflow-auto">
+            <div className="absolute z-10 bottom-full mb-1 w-56 bg-white dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 shadow-lg py-1.5 max-h-48 overflow-auto">
               {mentionCandidates.length === 0 && (
-                <p className="px-3 py-1.5 text-sm text-slate-400">ไม่พบผู้ใช้งาน</p>
+                <p className="px-3 py-1.5 text-sm text-stone-400">ไม่พบผู้ใช้งาน</p>
               )}
               {mentionCandidates.map((u) => (
                 <button
                   key={u.id}
                   onMouseDown={() => insertMention(u)}
-                  className="w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm hover:bg-slate-100 dark:hover:bg-slate-800/10 text-slate-700 dark:text-slate-200"
+                  className="w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm hover:bg-stone-100 dark:hover:bg-stone-800/10 text-stone-700 dark:text-stone-200"
                 >
                   <span className={`w-5 h-5 rounded-full ${colorFor(u.name)} text-white text-xs flex items-center justify-center font-semibold`}>
                     {u.name.slice(0, 1)}
@@ -216,13 +216,13 @@ export default function CommentPanel({ entityType, entityId, statusOptions = [] 
         </div>
 
         <div className="flex items-center justify-between mt-2.5">
-          <button className="text-slate-400 hover:text-slate-900" title="แนบไฟล์ (เร็วๆ นี้)">
+          <button className="text-stone-400 hover:text-stone-900" title="แนบไฟล์ (เร็วๆ นี้)">
             <Paperclip className="w-4 h-4" />
           </button>
           <button
             onClick={send}
             disabled={sending}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-60"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white shadow-sm disabled:opacity-60"
           >
             <Send className="w-3.5 h-3.5" /> {sending ? "กำลังส่ง..." : "ส่ง"}
           </button>

@@ -19,7 +19,7 @@ import {
 export function CustomerRefTab({ project }) {
   return (
     <div>
-      <p className="text-xs text-slate-400 mb-4">ข้อมูลนี้ดึงมาจาก Project อ้างอิงโดยอัตโนมัติ (Read-only)</p>
+      <p className="text-xs text-stone-400 mb-4">ข้อมูลนี้ดึงมาจาก Project อ้างอิงโดยอัตโนมัติ (Read-only)</p>
       <div className="grid grid-cols-2 gap-x-5 gap-y-4">
         <Field label="Project Number"><TextInput value={project.code || ""} disabled /></Field>
         <Field label="Project Name"><TextInput value={project.name || ""} disabled /></Field>
@@ -34,24 +34,24 @@ export function DeviceInstallRefTab({ projectId }) {
   const { data: rows, loading } = useQuery(() => (projectId ? listDeviceInstall(projectId) : Promise.resolve([])), [projectId]);
   return (
     <div>
-      <p className="text-xs text-slate-400 mb-4">รายการสินค้าตามแผนของ Project (Read-only)</p>
-      <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <p className="text-xs text-stone-400 mb-4">รายการสินค้าตามแผนของ Project (Read-only)</p>
+      <div className="rounded-xl border border-stone-200 dark:border-stone-700 overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
+          <thead className="bg-stone-50 dark:bg-stone-900 text-stone-500 dark:text-stone-400">
             <tr>
               <th className="text-left font-medium px-4 py-2.5">รุ่น</th>
               <th className="text-left font-medium px-4 py-2.5">รายละเอียด</th>
               <th className="text-right font-medium px-4 py-2.5">จำนวน</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-            {loading && <tr><td colSpan={3} className="text-center text-slate-400 py-6">กำลังโหลด...</td></tr>}
-            {!loading && rows?.length === 0 && <tr><td colSpan={3} className="text-center text-slate-400 py-6">ไม่มีข้อมูล</td></tr>}
+          <tbody className="divide-y divide-stone-100 dark:divide-stone-700">
+            {loading && <tr><td colSpan={3} className="text-center text-stone-400 py-6">กำลังโหลด...</td></tr>}
+            {!loading && rows?.length === 0 && <tr><td colSpan={3} className="text-center text-stone-400 py-6">ไม่มีข้อมูล</td></tr>}
             {rows?.map((r) => (
               <tr key={r.id}>
-                <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">{r.model_code}</td>
-                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.description}</td>
-                <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-300">{r.planned_qty}</td>
+                <td className="px-4 py-3 font-medium text-stone-800 dark:text-stone-100">{r.model_code}</td>
+                <td className="px-4 py-3 text-stone-600 dark:text-stone-300">{r.description}</td>
+                <td className="px-4 py-3 text-right text-stone-600 dark:text-stone-300">{r.planned_qty}</td>
               </tr>
             ))}
           </tbody>
@@ -65,10 +65,10 @@ export function DeviceDetailRefTab({ projectId }) {
   const { data: rows, loading } = useQuery(() => (projectId ? listDeviceDetail(projectId) : Promise.resolve([])), [projectId]);
   return (
     <div>
-      <p className="text-xs text-slate-400 mb-4">Serial ที่ติดตั้งจริง — เลือกใช้ในแท็บ Request &amp; Issue เพื่อเช็ค Warranty อัตโนมัติ</p>
-      <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <p className="text-xs text-stone-400 mb-4">Serial ที่ติดตั้งจริง — เลือกใช้ในแท็บ Request &amp; Issue เพื่อเช็ค Warranty อัตโนมัติ</p>
+      <div className="rounded-xl border border-stone-200 dark:border-stone-700 overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
+          <thead className="bg-stone-50 dark:bg-stone-900 text-stone-500 dark:text-stone-400">
             <tr>
               <th className="text-left font-medium px-4 py-2.5">Serial No.</th>
               <th className="text-left font-medium px-4 py-2.5">รุ่น</th>
@@ -76,15 +76,15 @@ export function DeviceDetailRefTab({ projectId }) {
               <th className="text-right font-medium px-4 py-2.5">ประกัน</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-            {loading && <tr><td colSpan={4} className="text-center text-slate-400 py-6">กำลังโหลด...</td></tr>}
-            {!loading && rows?.length === 0 && <tr><td colSpan={4} className="text-center text-slate-400 py-6">ไม่มีข้อมูล</td></tr>}
+          <tbody className="divide-y divide-stone-100 dark:divide-stone-700">
+            {loading && <tr><td colSpan={4} className="text-center text-stone-400 py-6">กำลังโหลด...</td></tr>}
+            {!loading && rows?.length === 0 && <tr><td colSpan={4} className="text-center text-stone-400 py-6">ไม่มีข้อมูล</td></tr>}
             {rows?.map((r) => (
               <tr key={r.id}>
-                <td className="px-4 py-3 font-mono text-xs text-slate-700 dark:text-slate-300">{r.serial_no}</td>
-                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.model_code}</td>
-                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.start_date}</td>
-                <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-300">{r.warranty_months} เดือน</td>
+                <td className="px-4 py-3 font-mono text-xs text-stone-700 dark:text-stone-300">{r.serial_no}</td>
+                <td className="px-4 py-3 text-stone-600 dark:text-stone-300">{r.model_code}</td>
+                <td className="px-4 py-3 text-stone-600 dark:text-stone-300">{r.start_date}</td>
+                <td className="px-4 py-3 text-right text-stone-600 dark:text-stone-300">{r.warranty_months} เดือน</td>
               </tr>
             ))}
           </tbody>
@@ -143,7 +143,7 @@ export function RequestIssueTab({ ticketId, projectId, state, setState }) {
 
   return (
     <div>
-      <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">ข้อมูลการแจ้งเรื่อง</h4>
+      <h4 className="text-sm font-semibold text-stone-700 dark:text-stone-200 mb-3">ข้อมูลการแจ้งเรื่อง</h4>
       <div className="grid grid-cols-2 gap-x-5">
         <Field label="ผู้แจ้งเรื่อง">
           <TextInput placeholder="ชื่อลูกค้า" value={state.reporterName || ""} onChange={(e) => setState((s) => ({ ...s, reporterName: e.target.value }))} />
@@ -164,7 +164,7 @@ export function RequestIssueTab({ ticketId, projectId, state, setState }) {
       {!ticketId && <p className="text-xs text-amber-500 -mt-2.5 mb-2">บันทึก (Save Data) ก่อน จึงจะเพิ่มรายการปัญหาแยกตามอุปกรณ์ด้านล่างได้</p>}
 
       <div className="flex items-center justify-between mt-6 mb-3">
-        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">รายการปัญหาแยกตามอุปกรณ์</h4>
+        <h4 className="text-sm font-semibold text-stone-700 dark:text-stone-200">รายการปัญหาแยกตามอุปกรณ์</h4>
       </div>
 
       {ticketId && (
@@ -174,15 +174,15 @@ export function RequestIssueTab({ ticketId, projectId, state, setState }) {
             {deviceDetailRows?.map((d) => <option key={d.serial_no} value={d.serial_no}>{d.serial_no} ({d.model_code})</option>)}
           </Select>
           <TextInput placeholder="อาการที่พบ" value={newRow.symptom} onChange={(e) => setNewRow((r) => ({ ...r, symptom: e.target.value }))} />
-          <button onClick={handleAddIssue} disabled={saving} className="px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-60">
+          <button onClick={handleAddIssue} disabled={saving} className="px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white disabled:opacity-60">
             {saving ? "..." : "+ เพิ่มอุปกรณ์"}
           </button>
         </div>
       )}
 
-      <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="rounded-xl border border-stone-200 dark:border-stone-700 overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
+          <thead className="bg-stone-50 dark:bg-stone-900 text-stone-500 dark:text-stone-400">
             <tr>
               <th className="text-left font-medium px-4 py-2.5">Serial No.</th>
               <th className="text-left font-medium px-4 py-2.5">รุ่น</th>
@@ -191,20 +191,20 @@ export function RequestIssueTab({ ticketId, projectId, state, setState }) {
               <th className="text-right font-medium px-4 py-2.5"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-            {(!issues || issues.length === 0) && <tr><td colSpan={5} className="text-center text-slate-400 py-6">ยังไม่มีรายการ</td></tr>}
+          <tbody className="divide-y divide-stone-100 dark:divide-stone-700">
+            {(!issues || issues.length === 0) && <tr><td colSpan={5} className="text-center text-stone-400 py-6">ยังไม่มีรายการ</td></tr>}
             {issues?.map((row) => {
               const w = warrantyOf(row.serial_no);
               return (
                 <tr key={row.id}>
-                  <td className="px-4 py-2 font-mono text-xs text-slate-700 dark:text-slate-300">{row.serial_no}</td>
-                  <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{row.model_code || "-"}</td>
-                  <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{row.symptom || "-"}</td>
+                  <td className="px-4 py-2 font-mono text-xs text-stone-700 dark:text-stone-300">{row.serial_no}</td>
+                  <td className="px-4 py-2 text-stone-600 dark:text-stone-300">{row.model_code || "-"}</td>
+                  <td className="px-4 py-2 text-stone-600 dark:text-stone-300">{row.symptom || "-"}</td>
                   <td className="px-4 py-2 text-right">
-                    {w ? (w.inWarranty ? <Pill tone="green">ในประกัน</Pill> : <Pill tone="rose">หมดประกัน</Pill>) : <span className="text-slate-300">—</span>}
+                    {w ? (w.inWarranty ? <Pill tone="green">ในประกัน</Pill> : <Pill tone="rose">หมดประกัน</Pill>) : <span className="text-stone-300">—</span>}
                   </td>
                   <td className="px-4 py-2 text-right">
-                    <button onClick={() => handleDeleteIssue(row.id)} className="text-slate-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => handleDeleteIssue(row.id)} className="text-stone-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
                   </td>
                 </tr>
               );
@@ -255,7 +255,7 @@ export function SubcontractorTab({ ticketId }) {
 
   return (
     <div>
-      <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">มอบหมายช่างนอก (Subcontractor)</h4>
+      <h4 className="text-sm font-semibold text-stone-700 dark:text-stone-200 mb-4">มอบหมายช่างนอก (Subcontractor)</h4>
       <div className="grid grid-cols-2 gap-x-5">
         <Field label="บริษัท/ช่างนอก"><TextInput value={form.company_or_name} onChange={(e) => setForm((f) => ({ ...f, company_or_name: e.target.value }))} /></Field>
         <Field label="เบอร์ติดต่อ"><TextInput value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} /></Field>
@@ -263,18 +263,18 @@ export function SubcontractorTab({ ticketId }) {
         <Field label="ค่าใช้จ่าย (ถ้ามี)"><TextInput type="number" value={form.cost} onChange={(e) => setForm((f) => ({ ...f, cost: e.target.value }))} /></Field>
       </div>
       <Field label="หมายเหตุ"><TextArea rows={2} value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} /></Field>
-      <button onClick={handleAdd} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-60 mb-5">
+      <button onClick={handleAdd} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white shadow-sm disabled:opacity-60 mb-5">
         {saving ? "กำลังบันทึก..." : "+ เพิ่มช่างนอก"}
       </button>
 
       <div className="space-y-2">
         {rows?.map((r) => (
-          <div key={r.id} className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
+          <div key={r.id} className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700">
             <div>
-              <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{r.company_or_name}</p>
-              <p className="text-xs text-slate-400">{r.phone} {r.scheduled_date && `• นัด ${r.scheduled_date}`} {r.cost && `• ฿${Number(r.cost).toLocaleString()}`}</p>
+              <p className="text-sm font-medium text-stone-800 dark:text-stone-100">{r.company_or_name}</p>
+              <p className="text-xs text-stone-400">{r.phone} {r.scheduled_date && `• นัด ${r.scheduled_date}`} {r.cost && `• ฿${Number(r.cost).toLocaleString()}`}</p>
             </div>
-            <button onClick={() => handleDelete(r.id)} className="text-slate-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+            <button onClick={() => handleDelete(r.id)} className="text-stone-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
           </div>
         ))}
       </div>
@@ -347,8 +347,8 @@ export function StockMovementTab({ ticketId }) {
         const f = forms[s.type] || {};
         return (
           <div key={s.type}>
-            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">{s.title}</h4>
-            <p className="text-xs text-slate-400 mb-2.5">{s.hint}</p>
+            <h4 className="text-sm font-semibold text-stone-700 dark:text-stone-200">{s.title}</h4>
+            <p className="text-xs text-stone-400 mb-2.5">{s.hint}</p>
 
             <div className="grid grid-cols-5 gap-2 mb-2.5 items-start">
               <div className="col-span-2">
@@ -369,7 +369,7 @@ export function StockMovementTab({ ticketId }) {
               </div>
               <TextInput placeholder="Serial (ถ้ามี)" value={f.serialNo || ""} onChange={(e) => setFormField(s.type, "serialNo", e.target.value)} />
               <TextInput type="number" placeholder="จำนวน" value={f.qty || ""} onChange={(e) => setFormField(s.type, "qty", e.target.value)} />
-              <button onClick={() => handleAdd(s.type)} disabled={!canMoveStock} className="px-3 py-2.5 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed">บันทึก</button>
+              <button onClick={() => handleAdd(s.type)} disabled={!canMoveStock} className="px-3 py-2.5 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed">บันทึก</button>
             </div>
             {s.type !== "receive_old" && (
               <Select value={f.locationId || ""} onChange={(e) => setFormField(s.type, "locationId", e.target.value)}>
@@ -378,9 +378,9 @@ export function StockMovementTab({ ticketId }) {
               </Select>
             )}
 
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden mt-2.5">
+            <div className="rounded-xl border border-stone-200 dark:border-stone-700 overflow-hidden mt-2.5">
               <table className="w-full text-sm">
-                <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
+                <thead className="bg-stone-50 dark:bg-stone-900 text-stone-500 dark:text-stone-400">
                   <tr>
                     <th className="text-left font-medium px-4 py-2">รุ่น</th>
                     <th className="text-left font-medium px-4 py-2">Serial</th>
@@ -388,12 +388,12 @@ export function StockMovementTab({ ticketId }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.length === 0 && <tr><td colSpan={3} className="text-center text-slate-300 py-4">ยังไม่มีรายการ</td></tr>}
+                  {rows.length === 0 && <tr><td colSpan={3} className="text-center text-stone-300 py-4">ยังไม่มีรายการ</td></tr>}
                   {rows.map((r) => (
-                    <tr key={r.id} className="border-t border-slate-100 dark:border-slate-700">
-                      <td className="px-4 py-2 text-slate-700 dark:text-slate-200">{r.item?.model_code}</td>
-                      <td className="px-4 py-2 font-mono text-xs text-slate-500">{r.serial_no || "-"}</td>
-                      <td className="px-4 py-2 text-right text-slate-600 dark:text-slate-300">{r.qty}</td>
+                    <tr key={r.id} className="border-t border-stone-100 dark:border-stone-700">
+                      <td className="px-4 py-2 text-stone-700 dark:text-stone-200">{r.item?.model_code}</td>
+                      <td className="px-4 py-2 font-mono text-xs text-stone-500">{r.serial_no || "-"}</td>
+                      <td className="px-4 py-2 text-right text-stone-600 dark:text-stone-300">{r.qty}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -445,7 +445,7 @@ export function UpdateTab({ state, setState }) {
       <Field label="หมายเหตุ">
         <TextArea rows={3} value={state.remark || ""} onChange={(e) => setState((s) => ({ ...s, remark: e.target.value }))} />
       </Field>
-      <p className="text-xs text-slate-400 -mt-2.5">การเปลี่ยนสถานะตรงนี้จะอัปเดตแถบสถานะด้านบนและ Status Stepper ทันที</p>
+      <p className="text-xs text-stone-400 -mt-2.5">การเปลี่ยนสถานะตรงนี้จะอัปเดตแถบสถานะด้านบนและ Status Stepper ทันที</p>
     </div>
   );
 }

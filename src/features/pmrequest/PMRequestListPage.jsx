@@ -40,12 +40,12 @@ export default function PMRequestList() {
     <div>
       <div className="flex items-start justify-between mb-6 flex-wrap gap-3">
         <div>
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5">
-            <span>E-Service</span><span>/</span><span className="text-slate-900 font-medium">PM Request</span>
+          <div className="flex items-center gap-1.5 text-xs text-stone-400 mb-1.5">
+            <span>E-Service</span><span>/</span><span className="text-stone-900 font-medium">PM Request</span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">PM Request — คำขอสนับสนุนจากทีม PM</h1>
+          <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100 tracking-tight">PM Request — คำขอสนับสนุนจากทีม PM</h1>
         </div>
-        <button onClick={() => navigate("/pm-request/new")} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm">
+        <button onClick={() => navigate("/pm-request/new")} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white shadow-sm">
           <Plus className="w-4 h-4" /> สร้างคำขอใหม่
         </button>
       </div>
@@ -61,7 +61,7 @@ export default function PMRequestList() {
 
       <Card className="overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
+          <thead className="bg-stone-50 dark:bg-stone-900 text-stone-500 dark:text-stone-400">
             <tr>
               <th className="text-left font-medium px-4 py-3">Code</th>
               <th className="text-left font-medium px-4 py-3">ประเภท</th>
@@ -73,22 +73,22 @@ export default function PMRequestList() {
               <th className="text-right font-medium px-4 py-3"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-            {loading && <tr><td colSpan={8} className="text-center text-slate-400 py-10">กำลังโหลด...</td></tr>}
-            {!loading && rows?.length === 0 && <tr><td colSpan={8} className="text-center text-slate-400 py-10">ยังไม่มีคำขอ</td></tr>}
+          <tbody className="divide-y divide-stone-100 dark:divide-stone-700">
+            {loading && <tr><td colSpan={8} className="text-center text-stone-400 py-10">กำลังโหลด...</td></tr>}
+            {!loading && rows?.length === 0 && <tr><td colSpan={8} className="text-center text-stone-400 py-10">ยังไม่มีคำขอ</td></tr>}
             {rows?.map((r) => (
-              <tr key={r.id} onClick={() => navigate(`/pm-request/${r.id}`)} className="cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/5 transition-colors">
-                <td className="px-4 py-3 font-medium text-slate-900">{r.request_code}</td>
-                <td className="px-4 py-3 text-slate-700 dark:text-slate-200">{r.request_type}</td>
-                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.requester?.name || "-"}</td>
-                <td className="px-4 py-3 text-slate-500">{r.customer_name_free || r.project?.project_number || "-"}</td>
-                <td className="px-4 py-3 text-slate-500">{r.requested_at ? new Date(r.requested_at).toLocaleDateString("th-TH") : "-"}</td>
-                <td className={`px-4 py-3 ${r.needed_at && new Date(r.needed_at) < new Date() && r.status !== "เสร็จสิ้น" && r.status !== "ยกเลิก" ? "text-rose-500 font-medium" : "text-slate-500"}`}>
+              <tr key={r.id} onClick={() => navigate(`/pm-request/${r.id}`)} className="cursor-pointer hover:bg-stone-100/50 dark:hover:bg-stone-800/5 transition-colors">
+                <td className="px-4 py-3 font-medium text-stone-900">{r.request_code}</td>
+                <td className="px-4 py-3 text-stone-700 dark:text-stone-200">{r.request_type}</td>
+                <td className="px-4 py-3 text-stone-600 dark:text-stone-300">{r.requester?.name || "-"}</td>
+                <td className="px-4 py-3 text-stone-500">{r.customer_name_free || r.project?.project_number || "-"}</td>
+                <td className="px-4 py-3 text-stone-500">{r.requested_at ? new Date(r.requested_at).toLocaleDateString("th-TH") : "-"}</td>
+                <td className={`px-4 py-3 ${r.needed_at && new Date(r.needed_at) < new Date() && r.status !== "เสร็จสิ้น" && r.status !== "ยกเลิก" ? "text-rose-500 font-medium" : "text-stone-500"}`}>
                   {r.needed_at ? new Date(r.needed_at).toLocaleDateString("th-TH") : "-"}
                 </td>
                 <td className="px-4 py-3 text-right"><Pill tone={STATUS_TONE[r.status] || "slate"}>{r.status}</Pill></td>
                 <td className="px-4 py-3 text-right">
-                  <button onClick={(e) => handleDelete(e, r.id)} className="text-slate-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                  <button onClick={(e) => handleDelete(e, r.id)} className="text-stone-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
                 </td>
               </tr>
             ))}

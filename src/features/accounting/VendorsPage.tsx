@@ -36,7 +36,7 @@ export function VendorsPage() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
+        <h1 className="text-2xl font-bold tracking-tight text-stone-800 dark:text-stone-100">
           ผู้ขาย / ผู้รับเหมา
         </h1>
       </div>
@@ -58,7 +58,7 @@ export function VendorsPanel() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-stone-500">
           {q.data?.length ?? 0} ราย · ใช้ในใบสั่งซื้อและการหัก ณ ที่จ่าย
         </p>
         <PrimaryButton className="ml-auto"
@@ -72,16 +72,16 @@ export function VendorsPanel() {
       </div>
 
       <div className="relative max-w-sm">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
         <TextInput className="pl-9" placeholder="ค้นหาชื่อผู้ขาย…"
                    value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100
-        dark:border-slate-800 overflow-hidden">
+      <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100
+        dark:border-stone-800 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[860px]">
-            <thead className="bg-slate-50 dark:bg-slate-800/60 text-xs text-slate-500">
+            <thead className="bg-stone-50 dark:bg-stone-800/60 text-xs text-stone-500">
               <tr>
                 <th className="text-left font-medium px-4 py-3">ชื่อผู้ขาย</th>
                 <th className="text-left font-medium px-4 py-3 w-36">ประเภท</th>
@@ -97,37 +97,37 @@ export function VendorsPanel() {
                 <EmptyRow colSpan={6} text="ยังไม่มีผู้ขาย — กด “เพิ่มผู้ขาย” เพื่อเริ่ม" />
               )}
               {q.data?.map((v) => (
-                <tr key={v.id} className="border-t border-slate-50 dark:border-slate-800
-                  hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
+                <tr key={v.id} className="border-t border-stone-50 dark:border-stone-800
+                  hover:bg-stone-50/70 dark:hover:bg-stone-800/40">
                   <td className="px-4 py-3">
-                    <div className="font-medium text-slate-800 dark:text-slate-100
+                    <div className="font-medium text-stone-800 dark:text-stone-100
                       inline-flex items-center gap-2">
-                      <Building className="w-3.5 h-3.5 text-slate-400" />
+                      <Building className="w-3.5 h-3.5 text-stone-400" />
                       {v.display_name}
                     </div>
                     {v.contact_name && (
-                      <div className="text-[11px] text-slate-400">
+                      <div className="text-[11px] text-stone-400">
                         {v.contact_name}{v.phone ? ` · ${v.phone}` : ''}
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-slate-500">{TYPE_LABEL[v.vendor_type]}</td>
-                  <td className="px-4 py-3 text-slate-500 tabular-nums">
+                  <td className="px-4 py-3 text-stone-500">{TYPE_LABEL[v.vendor_type]}</td>
+                  <td className="px-4 py-3 text-stone-500 tabular-nums">
                     {v.tax_id ?? <span className="text-amber-600">ยังไม่มี</span>}
                     {v.tax_id && v.branch_code && (
-                      <span className="text-[11px] text-slate-400"> ({v.branch_code})</span>
+                      <span className="text-[11px] text-stone-400"> ({v.branch_code})</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-slate-500">
+                  <td className="px-4 py-3 text-stone-500">
                     {Number(v.wht_rate) > 0 ? `${v.wht_rate}%` : '—'}
                   </td>
-                  <td className="px-4 py-3 text-slate-500">
+                  <td className="px-4 py-3 text-stone-500">
                     {v.credit_term_days ? `${v.credit_term_days} วัน` : 'เงินสด'}
                   </td>
                   <td className="px-2">
                     <div className="inline-flex gap-0.5">
                       <button title="แก้ไข" onClick={() => setEditing(v)}
-                              className="text-slate-400 hover:text-slate-900 p-1.5">
+                              className="text-stone-400 hover:text-stone-900 p-1.5">
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
                       <button
@@ -144,7 +144,7 @@ export function VendorsPanel() {
                               : 'ลบไม่สำเร็จ', 'error');
                           }
                         }}
-                        className="text-slate-400 hover:text-rose-500 p-1.5"
+                        className="text-stone-400 hover:text-rose-500 p-1.5"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>

@@ -37,7 +37,7 @@ interface DocRow {
  */
 const TAG_TONE: Record<string, string> = {};
 const TAG_NEUTRAL =
-  'border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300';
+  'border border-stone-300 dark:border-stone-600 text-stone-600 dark:text-stone-300';
 
 export function TagChip({ tag }: { tag: { name: string; color: string } }) {
   return (
@@ -124,8 +124,8 @@ export function DocumentListPage() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">{label}</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <h1 className="text-2xl font-bold tracking-tight text-stone-800 dark:text-stone-100">{label}</h1>
+          <p className="text-xs text-stone-500 mt-0.5">
             {totals.count} ใบ · รวม {money(totals.total)} บาท
           </p>
         </div>
@@ -134,11 +134,11 @@ export function DocumentListPage() {
         </Link>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100
-        dark:border-slate-800 p-4 flex flex-wrap items-end gap-3">
+      <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100
+        dark:border-stone-800 p-4 flex flex-wrap items-end gap-3">
         <Field label="ค้นหา" className="flex-1 min-w-[200px]">
           <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
             <TextInput className="pl-9" placeholder="เลขที่เอกสาร / ชื่องาน…"
                        value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
@@ -170,8 +170,8 @@ export function DocumentListPage() {
           onClick={() => setGrouped((v) => !v)}
           className={`px-3 py-2 rounded-xl text-sm border inline-flex items-center gap-1.5
             ${grouped
-              ? 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100'
-              : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'}`}
+              ? 'bg-stone-100 dark:bg-stone-800 border-stone-300 dark:border-stone-600 text-stone-900 dark:text-stone-100'
+              : 'border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300'}`}
         >
           <TagIcon className="w-4 h-4" /> จัดกลุ่มตามประเภทงาน
         </button>
@@ -183,14 +183,14 @@ export function DocumentListPage() {
             <button
               key={t.id}
               onClick={() => setTagId(t.id === 'none' ? '' : t.id)}
-              className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100
-                dark:border-slate-800 px-3 py-2 text-left hover:border-slate-400"
+              className="bg-white dark:bg-stone-900 rounded-xl border border-stone-100
+                dark:border-stone-800 px-3 py-2 text-left hover:border-stone-400"
             >
               <TagChip tag={{ name: t.name, color: t.color }} />
-              <div className="text-sm font-semibold tabular-nums mt-1 text-slate-800 dark:text-slate-100">
+              <div className="text-sm font-semibold tabular-nums mt-1 text-stone-800 dark:text-stone-100">
                 {money(t.total)}
               </div>
-              <div className="text-[11px] text-slate-400">{t.count} ใบ</div>
+              <div className="text-[11px] text-stone-400">{t.count} ใบ</div>
             </button>
           ))}
         </div>
@@ -201,7 +201,7 @@ export function DocumentListPage() {
             <div key={g.label} className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <TagChip tag={{ name: g.label, color: g.color }} />
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-stone-400">
                   {g.rows.length} ใบ · {money(g.rows.reduce((a, r) => a + Number(r.grand_total || 0), 0))} บาท
                 </span>
               </div>
@@ -222,8 +222,8 @@ export function DocumentListPage() {
 function billingLabel(total: number, r?: BillingRollup) {
   if (!r || r.billed <= 0) return null;
   if (r.paid >= total - 0.01) return { text: 'ชำระแล้ว', tone: 'text-emerald-600' };
-  if (r.billed >= total - 0.01) return { text: 'วางบิลครบ', tone: 'text-slate-600' };
-  return { text: 'วางบิลบางส่วน', tone: 'text-slate-600' };
+  if (r.billed >= total - 0.01) return { text: 'วางบิลครบ', tone: 'text-stone-600' };
+  return { text: 'วางบิลบางส่วน', tone: 'text-stone-600' };
 }
 
 function DocTable({
@@ -254,11 +254,11 @@ function DocTable({
 
   const total = rows.reduce((a, r) => a + (Number(r.grand_total) || 0), 0);
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100
-      dark:border-slate-800 overflow-hidden">
+    <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100
+      dark:border-stone-800 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm min-w-[900px]">
-          <thead className="bg-slate-50 dark:bg-slate-800/60 text-xs text-slate-500">
+          <thead className="bg-stone-50 dark:bg-stone-800/60 text-xs text-stone-500">
             <tr>
               <th className="text-left font-medium px-4 py-3 w-28">วันที่</th>
               <th className="text-left font-medium px-4 py-3 w-40">เลขที่เอกสาร</th>
@@ -280,29 +280,29 @@ function DocTable({
                 ? billingLabel(Number(d.grand_total) || 0, rollup?.get(d.id))
                 : null;
               return (
-                <tr key={d.id} className="border-t border-slate-50 dark:border-slate-800
-                  hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300 tabular-nums">
+                <tr key={d.id} className="border-t border-stone-50 dark:border-stone-800
+                  hover:bg-stone-50/70 dark:hover:bg-stone-800/40">
+                  <td className="px-4 py-3 text-stone-600 dark:text-stone-300 tabular-nums">
                     {docDate(d.doc_date)}
                   </td>
                   <td className="px-4 py-3">
                     <Link to={`/accounting/${docType}/${d.id}`}
-                          className="font-medium text-slate-900 hover:underline inline-flex items-center gap-1.5">
+                          className="font-medium text-stone-900 hover:underline inline-flex items-center gap-1.5">
                       <FileText className="w-3.5 h-3.5" />
                       {d.doc_no ?? 'ร่าง'}
                     </Link>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="text-slate-700 dark:text-slate-200">{partyName ?? '—'}</div>
+                    <div className="text-stone-700 dark:text-stone-200">{partyName ?? '—'}</div>
                     {d.job_name && (
-                      <div className="text-[11px] text-slate-400 truncate max-w-md">{d.job_name}</div>
+                      <div className="text-[11px] text-stone-400 truncate max-w-md">{d.job_name}</div>
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    {d.tag ? <TagChip tag={d.tag} /> : <span className="text-slate-300">—</span>}
+                    {d.tag ? <TagChip tag={d.tag} /> : <span className="text-stone-300">—</span>}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums font-medium
-                    text-slate-800 dark:text-slate-100">
+                    text-stone-800 dark:text-stone-100">
                     {money(d.grand_total)}
                     {billing && (
                       <div className={`text-[11px] font-normal ${billing.tone}`}>
@@ -328,8 +328,8 @@ function DocTable({
                         onClick={() => void duplicate(d.id)}
                         disabled={duplicating !== null}
                         title="ทำสำเนาเป็นร่างใบใหม่ (ข้อมูลเหมือนเดิมทั้งหมด ได้เลขที่ใหม่)"
-                        className="p-1.5 rounded-lg text-slate-300 hover:text-slate-900
-                          hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40"
+                        className="p-1.5 rounded-lg text-stone-300 hover:text-stone-900
+                          hover:bg-stone-100 dark:hover:bg-stone-800 disabled:opacity-40"
                       >
                         <Copy className="w-4 h-4" />
                       </button>
@@ -341,13 +341,13 @@ function DocTable({
           </tbody>
           {rows.length > 0 && (
             <tfoot>
-              <tr className="border-t-2 border-slate-100 dark:border-slate-700
-                bg-slate-50/60 dark:bg-slate-800/40">
-                <td colSpan={4} className="px-4 py-3 text-xs text-slate-500">
+              <tr className="border-t-2 border-stone-100 dark:border-stone-700
+                bg-stone-50/60 dark:bg-stone-800/40">
+                <td colSpan={4} className="px-4 py-3 text-xs text-stone-500">
                   รวม {rows.length} ใบ
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums font-bold
-                  text-slate-800 dark:text-slate-100">{money(total)}</td>
+                  text-stone-800 dark:text-stone-100">{money(total)}</td>
                 <td />
                 {canDuplicate && <td />}
               </tr>

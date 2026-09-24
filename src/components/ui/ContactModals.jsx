@@ -38,7 +38,7 @@ export function AddCustomerModal({ onClose, onSave, initialName = "" }) {
         <button
           onClick={() => setType("individual")}
           className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
-            type === "individual" ? "bg-slate-900 text-white border-slate-900" : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
+            type === "individual" ? "bg-stone-900 text-white border-stone-900" : "border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300"
           }`}
         >
           บุคคลธรรมดา
@@ -46,7 +46,7 @@ export function AddCustomerModal({ onClose, onSave, initialName = "" }) {
         <button
           onClick={() => setType("company")}
           className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
-            type === "company" ? "bg-slate-900 text-white border-slate-900" : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
+            type === "company" ? "bg-stone-900 text-white border-stone-900" : "border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300"
           }`}
         >
           นิติบุคคล
@@ -83,13 +83,13 @@ export function AddCustomerModal({ onClose, onSave, initialName = "" }) {
         </div>
       )}
 
-      <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-slate-100 dark:border-slate-700">
-        <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">
+      <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-stone-100 dark:border-stone-700">
+        <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700">
           ยกเลิก
         </button>
         <button
           onClick={handleSave}
-          className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm"
+          className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white shadow-sm"
         >
           บันทึกและใช้งาน
         </button>
@@ -121,13 +121,13 @@ export function AddSiteModal({ onClose, onSave, initialName = "" }) {
         <Field label="จังหวัด" required><TextInput placeholder="จังหวัด" value={form.province} onChange={set("province")} /></Field>
         <Field label="Google Map"><TextInput placeholder="ลิงก์ Google Map" value={form.googleMap} onChange={set("googleMap")} /></Field>
       </div>
-      <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-slate-100 dark:border-slate-700">
-        <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">
+      <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-stone-100 dark:border-stone-700">
+        <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700">
           ยกเลิก
         </button>
         <button
           onClick={handleSave}
-          className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm"
+          className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white shadow-sm"
         >
           บันทึกและใช้งาน
         </button>

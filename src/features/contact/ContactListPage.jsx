@@ -84,50 +84,50 @@ export default function ContactList() {
     <div>
       <div className="flex items-start justify-between mb-6 flex-wrap gap-3">
         <div>
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5">
-            <span>E-Service</span><span>/</span><span className="text-slate-900 font-medium">Contact</span>
+          <div className="flex items-center gap-1.5 text-xs text-stone-400 mb-1.5">
+            <span>E-Service</span><span>/</span><span className="text-stone-900 font-medium">Contact</span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Contact — ฐานข้อมูลคู่ค้า</h1>
+          <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100 tracking-tight">Contact — ฐานข้อมูลคู่ค้า</h1>
         </div>
         {tab === "vendor" ? null : tab === "customer" ? (
-          <button onClick={() => setShowCustomerModal(true)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm">
+          <button onClick={() => setShowCustomerModal(true)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white shadow-sm">
             <Plus className="w-4 h-4" /> เพิ่มลูกค้า/บริษัท
           </button>
         ) : (
-          <button onClick={() => setShowSiteModal(true)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm">
+          <button onClick={() => setShowSiteModal(true)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white shadow-sm">
             <Plus className="w-4 h-4" /> เพิ่มโครงการ
           </button>
         )}
       </div>
 
-      <div className="flex gap-1 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-1.5 mb-5 w-fit">
+      <div className="flex gap-1 bg-white dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700 shadow-sm p-1.5 mb-5 w-fit">
         <button
           onClick={() => setTab("customer")}
-          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === "customer" ? "bg-slate-900 text-white shadow-sm" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"}`}
+          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === "customer" ? "bg-stone-900 text-white shadow-sm" : "text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-700"}`}
         >
           <Users className="w-3.5 h-3.5" /> Customer
         </button>
         <button
           onClick={() => setTab("project")}
-          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === "project" ? "bg-slate-900 text-white shadow-sm" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"}`}
+          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === "project" ? "bg-stone-900 text-white shadow-sm" : "text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-700"}`}
         >
           <MapPin className="w-3.5 h-3.5" /> Project (Project Name)
         </button>
         <button
           onClick={() => setTab("vendor")}
-          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === "vendor" ? "bg-slate-900 text-white shadow-sm" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"}`}
+          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === "vendor" ? "bg-stone-900 text-white shadow-sm" : "text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-700"}`}
         >
           <Building className="w-3.5 h-3.5" /> ผู้ขาย / ผู้รับเหมา
         </button>
       </div>
 
       <div className={`relative mb-5 ${tab === "vendor" ? "hidden" : ""}`}>
-        <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+        <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={tab === "customer" ? "ค้นหาชื่อลูกค้า/บริษัท..." : "ค้นหาชื่อโครงการ..."}
-          className="w-full max-w-md pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+          className="w-full max-w-md pl-10 pr-4 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-sm bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-stone-900"
         />
       </div>
 
@@ -136,32 +136,32 @@ export default function ContactList() {
       ) : tab === "customer" ? (
         <>
           {customerError && <div className="bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-300 text-sm rounded-xl p-4 mb-5">โหลดข้อมูลไม่สำเร็จ: {errMsg(customerError)}</div>}
-          {customerLoading && <div className="text-center text-slate-400 py-10">กำลังโหลด...</div>}
-          {!customerLoading && customers?.length === 0 && <div className="text-center text-slate-400 py-10">ยังไม่มีข้อมูลลูกค้า</div>}
+          {customerLoading && <div className="text-center text-stone-400 py-10">กำลังโหลด...</div>}
+          {!customerLoading && customers?.length === 0 && <div className="text-center text-stone-400 py-10">ยังไม่มีข้อมูลลูกค้า</div>}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {customers?.map((c) => (
               <div
                 key={c.id}
                 onClick={() => navigate(`/contact/customer/${c.id}`)}
-                className="relative text-left bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 hover:border-slate-300 transition-colors cursor-pointer"
+                className="relative text-left bg-white dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700 shadow-sm p-5 hover:border-stone-300 transition-colors cursor-pointer"
               >
                 <button
                   onClick={(e) => handleDeleteCustomer(e, c)}
-                  className="absolute top-4 right-4 text-slate-300 hover:text-rose-500 z-10"
+                  className="absolute top-4 right-4 text-stone-300 hover:text-rose-500 z-10"
                   title="ลบ"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
                 <div className="flex items-start justify-between mb-3 pr-6">
-                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${c.customer_type === "company" ? "bg-slate-800" : "bg-slate-500"}`}>
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${c.customer_type === "company" ? "bg-stone-800" : "bg-stone-500"}`}>
                     {c.customer_type === "company" ? <Building2 className="w-5 h-5 text-white" /> : <Users className="w-5 h-5 text-white" />}
                   </div>
                   <Pill tone={c.customer_type === "company" ? "indigo" : "green"}>{c.customer_type === "company" ? "นิติบุคคล" : "บุคคลธรรมดา"}</Pill>
                 </div>
-                <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">{c.display_name}</h3>
-                <p className="text-sm text-slate-500 mb-3">{c.phone || "-"}</p>
-                <div className="flex items-center gap-4 text-xs text-slate-400">
+                <h3 className="font-semibold text-stone-800 dark:text-stone-100 mb-1">{c.display_name}</h3>
+                <p className="text-sm text-stone-500 mb-3">{c.phone || "-"}</p>
+                <div className="flex items-center gap-4 text-xs text-stone-400">
                   <span>{c.contacts?.length ?? 0} Key Contact</span>
                 </div>
               </div>
@@ -171,19 +171,19 @@ export default function ContactList() {
       ) : (
         <>
           {siteError && <div className="bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-300 text-sm rounded-xl p-4 mb-5">โหลดข้อมูลไม่สำเร็จ: {errMsg(siteError)}</div>}
-          {siteLoading && <div className="text-center text-slate-400 py-10">กำลังโหลด...</div>}
-          {!siteLoading && sites?.length === 0 && <div className="text-center text-slate-400 py-10">ยังไม่มีโครงการ — สร้างได้ที่นี่ หรือจะสร้างจากหน้า Project ก็ได้</div>}
+          {siteLoading && <div className="text-center text-stone-400 py-10">กำลังโหลด...</div>}
+          {!siteLoading && sites?.length === 0 && <div className="text-center text-stone-400 py-10">ยังไม่มีโครงการ — สร้างได้ที่นี่ หรือจะสร้างจากหน้า Project ก็ได้</div>}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {sites?.map((s) => (
               <div
                 key={s.id}
                 onClick={() => navigate(`/contact/site/${s.id}`)}
-                className="relative text-left bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 hover:border-slate-300 transition-colors cursor-pointer"
+                className="relative text-left bg-white dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700 shadow-sm p-5 hover:border-stone-300 transition-colors cursor-pointer"
               >
                 <button
                   onClick={(e) => handleDeleteSite(e, s)}
-                  className="absolute top-4 right-4 text-slate-300 hover:text-rose-500 z-10"
+                  className="absolute top-4 right-4 text-stone-300 hover:text-rose-500 z-10"
                   title="ลบ"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -194,8 +194,8 @@ export default function ContactList() {
                   </div>
                   <Pill tone="slate">{s.province || "-"}</Pill>
                 </div>
-                <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">{s.name}</h3>
-                <p className="text-sm text-slate-500 line-clamp-2">{s.address || "-"}</p>
+                <h3 className="font-semibold text-stone-800 dark:text-stone-100 mb-1">{s.name}</h3>
+                <p className="text-sm text-stone-500 line-clamp-2">{s.address || "-"}</p>
               </div>
             ))}
           </div>

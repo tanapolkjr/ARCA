@@ -49,25 +49,25 @@ export function SourceRefPicker({
 
   if (value) {
     return (
-      <div className="rounded-xl border border-slate-300 dark:border-slate-600
-        bg-slate-100/60 dark:bg-slate-800/60 px-3 py-2 flex items-center gap-3">
-        <Link2 className="w-4 h-4 text-slate-900 shrink-0" />
+      <div className="rounded-xl border border-stone-300 dark:border-stone-600
+        bg-stone-100/60 dark:bg-stone-800/60 px-3 py-2 flex items-center gap-3">
+        <Link2 className="w-4 h-4 text-stone-900 shrink-0" />
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
+          <div className="text-sm font-medium text-stone-900 dark:text-stone-100">
             {value.docNo ?? label}
           </div>
           {value.jobName && (
-            <div className="text-[11px] text-slate-500 truncate">{value.jobName}</div>
+            <div className="text-[11px] text-stone-500 truncate">{value.jobName}</div>
           )}
           {remaining != null && sourceTotal != null && (
-            <div className="text-[11px] text-slate-500 tabular-nums">
+            <div className="text-[11px] text-stone-500 tabular-nums">
               ยอดต้นทาง {money(sourceTotal)} · ออกได้อีก{' '}
-              <span className="font-semibold text-slate-900">{money(remaining)}</span>
+              <span className="font-semibold text-stone-900">{money(remaining)}</span>
             </div>
           )}
         </div>
         {!disabled && (
-          <button onClick={onClear} className="text-slate-400 hover:text-rose-500 shrink-0"
+          <button onClick={onClear} className="text-stone-400 hover:text-rose-500 shrink-0"
                   title="ยกเลิกการอ้างอิง">
             <X className="w-4 h-4" />
           </button>
@@ -78,7 +78,7 @@ export function SourceRefPicker({
 
   return (
     <div className="relative">
-      <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+      <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
       <input
         className={`${inputCls} pl-9`}
         placeholder={`ค้นหาเลขที่${label}…`}
@@ -89,25 +89,25 @@ export function SourceRefPicker({
         onBlur={() => window.setTimeout(() => setOpen(false), 180)}
       />
       {open && !disabled && (
-        <div className="absolute z-30 left-0 right-0 mt-1 bg-white dark:bg-slate-800
-          border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg
+        <div className="absolute z-30 left-0 right-0 mt-1 bg-white dark:bg-stone-800
+          border border-stone-200 dark:border-stone-700 rounded-xl shadow-lg
           max-h-72 overflow-y-auto">
-          {loading && <div className="px-3 py-2 text-xs text-slate-400">กำลังค้นหา…</div>}
+          {loading && <div className="px-3 py-2 text-xs text-stone-400">กำลังค้นหา…</div>}
           {!loading && results.length === 0 && (
-            <div className="px-3 py-2 text-xs text-slate-400">ไม่พบ{label}ที่ออกเลขที่แล้ว</div>
+            <div className="px-3 py-2 text-xs text-stone-400">ไม่พบ{label}ที่ออกเลขที่แล้ว</div>
           )}
           {results.map((r) => (
             <button
               key={r.id} type="button"
               onMouseDown={() => { onPick(r); setOpen(false); setTerm(''); }}
-              className="block w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700"
+              className="block w-full text-left px-3 py-2 hover:bg-stone-100 dark:hover:bg-stone-700"
             >
               <div className="flex items-baseline gap-2">
-                <span className="text-sm font-medium text-slate-900">{r.doc_no}</span>
-                <span className="text-[11px] text-slate-400">{docDate(r.doc_date)}</span>
+                <span className="text-sm font-medium text-stone-900">{r.doc_no}</span>
+                <span className="text-[11px] text-stone-400">{docDate(r.doc_date)}</span>
                 <span className="ml-auto text-sm tabular-nums">{money(r.grand_total)}</span>
               </div>
-              <div className="text-[11px] text-slate-500 truncate">
+              <div className="text-[11px] text-stone-500 truncate">
                 {r.customer_name}{r.job_name ? ` · ${r.job_name}` : ''}
               </div>
             </button>

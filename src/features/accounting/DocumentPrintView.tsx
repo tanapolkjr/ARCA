@@ -433,7 +433,7 @@ function DocPage({
   const rest = blocks.filter((b) => !isRowLike(b));
 
   return (
-    <div className="doc-page bg-white text-slate-900"
+    <div className="doc-page bg-white text-stone-900"
          style={{ width: '210mm', height: '297mm', padding: `${PAGE_PAD_MM}mm`, overflow: 'hidden' }}>
       <DocHeader doc={doc} copyLabel={copyLabel} pageNo={pageNo} totalPages={totalPages}
                  issuedAsSet={issuedAsSet} />
@@ -453,7 +453,7 @@ function DocPage({
               }
               return (
                 <tr key={b.key}>
-                  <td colSpan={7} className="py-6 text-center text-slate-400">ยังไม่มีรายการ</td>
+                  <td colSpan={7} className="py-6 text-center text-stone-400">ยังไม่มีรายการ</td>
                 </tr>
               );
             })}
@@ -509,12 +509,12 @@ function DocHeader({
           <div className="text-[24px] font-bold leading-none" style={{ color }}>
             {labelTh(doc.doc_type)}
           </div>
-          {copyLabel && <div className="text-[9px] text-slate-500 mt-1.5">{copyLabel}</div>}
+          {copyLabel && <div className="text-[9px] text-stone-500 mt-1.5">{copyLabel}</div>}
           {/* ระบุ "ออกเป็นชุด" เฉพาะตอนที่ออกเป็นชุดจริง — พิมพ์แค่ต้นฉบับใบเดียวไม่ใช่ชุด */}
           {isTaxInvoice && copyLabel === 'ต้นฉบับ' && issuedAsSet && (
-            <div className="text-[8px] text-slate-500">(เอกสารออกเป็นชุด)</div>
+            <div className="text-[8px] text-stone-500">(เอกสารออกเป็นชุด)</div>
           )}
-          <div className="text-[9px] text-slate-500">หน้าที่ {pageNo}/{totalPages}</div>
+          <div className="text-[9px] text-stone-500">หน้าที่ {pageNo}/{totalPages}</div>
         </div>
       </div>
 
@@ -560,7 +560,7 @@ function DocHeader({
       {/* ชื่องานเต็มความกว้าง — ชื่อโครงการมักยาว ให้พื้นที่เต็มบรรทัด */}
       {doc.job_name && (
         <div className="flex gap-6 text-[11px] pt-5 pb-3">
-          <span className="w-[22mm] shrink-0 text-slate-500">ชื่องาน</span>
+          <span className="w-[22mm] shrink-0 text-stone-500">ชื่องาน</span>
           <span className="flex-1">{doc.job_name}</span>
         </div>
       )}
@@ -638,8 +638,8 @@ function ItemRow({ it, no, mk }: { it: DocumentItem; no: number; mk?: string }) 
 function GroupHeaderRow({ name, mk, cont }: { name: string; mk?: string; cont?: boolean }) {
   return (
     <tr data-mk={mk}>
-      <td colSpan={7} className="pt-3 pb-1 font-semibold border-b border-slate-300">
-        {name}{cont && <span className="font-normal text-slate-500"> (ต่อ)</span>}
+      <td colSpan={7} className="pt-3 pb-1 font-semibold border-b border-stone-300">
+        {name}{cont && <span className="font-normal text-stone-500"> (ต่อ)</span>}
       </td>
     </tr>
   );
@@ -655,8 +655,8 @@ function GroupHeaderRow({ name, mk, cont }: { name: string; mk?: string; cont?: 
 function GroupSubtotalRow({ name, subtotal, mk }: { name: string; subtotal: number; mk?: string }) {
   return (
     <tr data-mk={mk}>
-      <td colSpan={6} className="py-1 pr-3 text-right text-slate-500">รวม{name}</td>
-      <td className="py-1 text-right tabular-nums font-semibold pr-1 border-t border-slate-200">
+      <td colSpan={6} className="py-1 pr-3 text-right text-stone-500">รวม{name}</td>
+      <td className="py-1 text-right tabular-nums font-semibold pr-1 border-t border-stone-200">
         {money(subtotal)}
       </td>
     </tr>
@@ -683,7 +683,7 @@ function TotalsBlock({
                   {b.branch ? ` (${b.branch})` : ''}
                 </div>
               ))
-            : <div className="text-slate-400">ธนาคาร — เลขที่ :</div>}
+            : <div className="text-stone-400">ธนาคาร — เลขที่ :</div>}
         </div>
       </div>
 
@@ -729,7 +729,7 @@ function TextLine({ block, color }: { block: Block; color: string }) {
 
 function PaymentBlock() {
   return (
-    <div className="text-[10px] border-t border-slate-200 pt-2 mt-0">
+    <div className="text-[10px] border-t border-stone-200 pt-2 mt-0">
       <div className="mb-1">การชำระเงินจะสมบูรณ์เมื่อบริษัทได้รับเงินเรียบร้อยแล้ว</div>
       <div className="flex gap-5">
         {['เงินสด', 'เช็ค', 'โอนเงิน', 'บัตรเครดิต'].map((m) => <span key={m}>☐ {m}</span>)}
@@ -750,9 +750,9 @@ function SignBlock({ docType }: { docType: string }) {
     <div className="flex justify-between gap-16 text-[10px] pt-12 px-6">
       {[leftSign, rightSign].map((label) => (
         <div key={label} className="flex-1 text-center">
-          <div className="border-b border-slate-400 h-8" />
+          <div className="border-b border-stone-400 h-8" />
           <div className="mt-1.5">{label}</div>
-          <div className="text-slate-400 text-[9px]">วันที่</div>
+          <div className="text-stone-400 text-[9px]">วันที่</div>
         </div>
       ))}
     </div>
@@ -762,7 +762,7 @@ function SignBlock({ docType }: { docType: string }) {
 function Row({ k, v, bold }: { k: string; v: React.ReactNode; bold?: boolean }) {
   return (
     <div className="flex gap-2">
-      <span className="w-[22mm] shrink-0 text-slate-500">{k}</span>
+      <span className="w-[22mm] shrink-0 text-stone-500">{k}</span>
       <span className={`flex-1 ${bold ? 'font-semibold' : ''}`}>{v}</span>
     </div>
   );

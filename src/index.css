@@ -22,12 +22,16 @@ html, body, #root {
   --bg-app: #ffffff;        /* ขาวสนิท — ธีมมินิมอลไม่มีสีจางแฝง */
   --bg-surface: #ffffff;
   --bg-subtle: #f6f6f6;     /* เทาเป็นกลาง ไม่อมฟ้า */
-  --border: #e2e8f0;        /* slate-200 */
-  --text-1: #1e293b;        /* slate-800 */
-  --text-2: #64748b;        /* slate-500 */
-  --text-3: #94a3b8;        /* slate-400 */
-  --accent: #0f172a;        /* slate-900 — ธีมขาวดำ: สีเน้นคือหมึกดำ */
-  --accent-hover: #334155;  /* slate-700 */
+  /* โทนสีตามแคตตาล็อกบริษัท: เทาอุ่น ไม่อมฟ้าแบบ slate เดิม
+     เทียบจากสีจริงของสินค้า — ขาว / เบจ / เขียวมะกอก / น้ำตาลเข้ม */
+  --border: #e4e0da;        /* stone-200 อุ่น */
+  --text-1: #292524;        /* stone-800 */
+  --text-2: #78716c;        /* stone-500 */
+  --text-3: #a8a29e;        /* stone-400 */
+  --accent: #1c1917;        /* stone-900 — สีเน้นคือหมึกดำอุ่น */
+  --accent-hover: #44403c;  /* stone-700 */
+  --brand-sand: #cfc5a0;    /* เบจจากหน้ากากสวิตช์สี Sand */
+  --brand-olive: #5c5f52;   /* เขียวมะกอกจากรุ่น Modern Series */
   --c-green: #1f8a4c;
   --c-blue: #2563eb;
   --c-amber: #b45309;
@@ -39,12 +43,14 @@ html, body, #root {
   --bg-app: #0a0a0a;        /* ดำเป็นกลาง ไม่อมน้ำเงิน */
   --bg-surface: #141414;
   --bg-subtle: #1f1f1f;
-  --border: #1e293b;        /* slate-800 */
-  --text-1: #f1f5f9;        /* slate-100 */
-  --text-2: #94a3b8;        /* slate-400 */
-  --text-3: #64748b;        /* slate-500 */
-  --accent: #f1f5f9;        /* slate-100 — โหมดมืดกลับด้าน สีเน้นคือขาว */
-  --accent-hover: #cbd5e1;  /* slate-300 */
+  --border: #292524;        /* stone-800 */
+  --text-1: #f5f5f4;        /* stone-100 */
+  --text-2: #a8a29e;        /* stone-400 */
+  --text-3: #78716c;        /* stone-500 */
+  --accent: #f5f5f4;        /* stone-100 — โหมดมืดกลับด้าน สีเน้นคือขาว */
+  --accent-hover: #d6d3d1;  /* stone-300 */
+  --brand-sand: #cfc5a0;
+  --brand-olive: #8a8d7d;   /* สว่างขึ้นให้อ่านออกบนพื้นดำ */
   --c-green: #34c275;
   --c-blue: #5b8def;
   --c-amber: #d99a3d;

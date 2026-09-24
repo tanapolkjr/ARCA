@@ -79,10 +79,10 @@ export function CashBookPage() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
+          <h1 className="text-2xl font-bold tracking-tight text-stone-800 dark:text-stone-100">
             รายรับ-รายจ่าย
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-stone-500 mt-0.5">
             บันทึกเงินเข้า-ออกทุกกระเป๋า เพื่อประเมินรายได้ต่อเดือน
           </p>
         </div>
@@ -108,19 +108,19 @@ export function CashBookPage() {
       {/* ยอดคงเหลือแต่ละกระเป๋า — ยอดสะสม ไม่ตัดตามช่วงวันที่ */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {balancesQ.data?.map((b) => (
-          <div key={b.wallet.id} className="bg-white dark:bg-slate-900 rounded-2xl border
-            border-slate-100 dark:border-slate-800 p-4">
-            <div className="text-xs text-slate-500">{b.wallet.name}</div>
+          <div key={b.wallet.id} className="bg-white dark:bg-stone-900 rounded-2xl border
+            border-stone-100 dark:border-stone-800 p-4">
+            <div className="text-xs text-stone-500">{b.wallet.name}</div>
             <div className={`text-lg font-bold tabular-nums mt-1
-              ${b.balance < 0 ? 'text-rose-500' : 'text-slate-800 dark:text-slate-100'}`}>
+              ${b.balance < 0 ? 'text-rose-500' : 'text-stone-800 dark:text-stone-100'}`}>
               {money(b.balance)}
             </div>
           </div>
         ))}
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100
-        dark:border-slate-800 p-4 flex flex-wrap items-end gap-3">
+      <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100
+        dark:border-stone-800 p-4 flex flex-wrap items-end gap-3">
         <Field label="ตั้งแต่" className="w-40">
           <TextInput type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
         </Field>
@@ -151,7 +151,7 @@ export function CashBookPage() {
         </Field>
         <Field label="ค้นหา" className="w-52">
           <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
             <TextInput className="pl-9" placeholder="รายละเอียด…"
                        value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
@@ -160,15 +160,15 @@ export function CashBookPage() {
           <Stat label="รายรับ" value={period.income} tone="text-emerald-600" />
           <Stat label="รายจ่าย" value={period.expense} tone="text-rose-500" />
           <Stat label="คงเหลือ" value={period.net}
-                tone={period.net < 0 ? 'text-rose-500' : 'text-slate-800 dark:text-slate-100'} />
+                tone={period.net < 0 ? 'text-rose-500' : 'text-stone-800 dark:text-stone-100'} />
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100
-        dark:border-slate-800 overflow-hidden">
+      <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100
+        dark:border-stone-800 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[900px]">
-            <thead className="bg-slate-50 dark:bg-slate-800/60 text-xs text-slate-500">
+            <thead className="bg-stone-50 dark:bg-stone-800/60 text-xs text-stone-500">
               <tr>
                 <th className="text-left font-medium px-4 py-3 w-28">วันที่</th>
                 <th className="text-left font-medium px-4 py-3 w-20">ประเภท</th>
@@ -186,9 +186,9 @@ export function CashBookPage() {
                 <EmptyRow colSpan={8} text="ยังไม่มีรายการในช่วงนี้" />
               )}
               {entriesQ.data?.map((e) => (
-                <tr key={e.id} className="border-t border-slate-50 dark:border-slate-800
-                  hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
-                  <td className="px-4 py-3 tabular-nums text-slate-600 dark:text-slate-300">
+                <tr key={e.id} className="border-t border-stone-50 dark:border-stone-800
+                  hover:bg-stone-50/70 dark:hover:bg-stone-800/40">
+                  <td className="px-4 py-3 tabular-nums text-stone-600 dark:text-stone-300">
                     {docDate(e.entry_date)}
                   </td>
                   <td className="px-4 py-3">
@@ -203,51 +203,51 @@ export function CashBookPage() {
                       </span>
                     )}
                     {e.entry_type === 'transfer' && (
-                      <span className="inline-flex items-center gap-1 text-slate-500 text-xs">
+                      <span className="inline-flex items-center gap-1 text-stone-500 text-xs">
                         <Repeat className="w-3.5 h-3.5" /> ย้าย
                       </span>
                     )}
                   </td>
                   <td className="px-4 py-3">
                     <button onClick={() => setViewing(e)}
-                            className="text-left text-slate-700 dark:text-slate-200 hover:text-slate-900">
+                            className="text-left text-stone-700 dark:text-stone-200 hover:text-stone-900">
                       {e.description}
                     </button>
                     <div className="flex flex-wrap gap-2 mt-0.5">
                       {e.ar_document_id && (
-                        <span className="text-[11px] text-slate-600 inline-flex items-center gap-1">
+                        <span className="text-[11px] text-stone-600 inline-flex items-center gap-1">
                           <Link2 className="w-3 h-3" /> จากการรับชำระ
                         </span>
                       )}
                       {e.has_vat && (
-                        <span className="text-[11px] text-slate-400">
+                        <span className="text-[11px] text-stone-400">
                           VAT {money(e.vat_amount)}
                         </span>
                       )}
                       {e.wht_cert_no && (
-                        <span className="text-[11px] text-slate-400">
+                        <span className="text-[11px] text-stone-400">
                           หนังสือรับรอง {e.wht_cert_no}
                         </span>
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-slate-500">{e.category?.name ?? '—'}</td>
-                  <td className="px-4 py-3 text-slate-500">
+                  <td className="px-4 py-3 text-stone-500">{e.category?.name ?? '—'}</td>
+                  <td className="px-4 py-3 text-stone-500">
                     {e.wallet?.name}
                     {e.to_wallet && <span> → {e.to_wallet.name}</span>}
                   </td>
                   <td className={`px-4 py-3 text-right tabular-nums font-medium
                     ${e.entry_type === 'in' ? 'text-emerald-600'
-                      : e.entry_type === 'out' ? 'text-rose-500' : 'text-slate-500'}`}>
+                      : e.entry_type === 'out' ? 'text-rose-500' : 'text-stone-500'}`}>
                     {money(e.amount)}
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums text-slate-500">
+                  <td className="px-4 py-3 text-right tabular-nums text-stone-500">
                     {Number(e.wht_amount) > 0 ? money(e.wht_amount) : '—'}
                   </td>
                   <td className="px-2 whitespace-nowrap">
                     <div className="inline-flex items-center gap-0.5">
                       <button title="แก้ไข" onClick={() => setEditing(e)}
-                              className="text-slate-400 hover:text-slate-900 p-1.5">
+                              className="text-stone-400 hover:text-stone-900 p-1.5">
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
                       <button
@@ -261,7 +261,7 @@ export function CashBookPage() {
                             toast(err instanceof Error ? err.message : 'ทำซ้ำไม่สำเร็จ', 'error');
                           }
                         }}
-                        className="text-slate-400 hover:text-slate-900 p-1.5"
+                        className="text-stone-400 hover:text-stone-900 p-1.5"
                       >
                         <Copy className="w-3.5 h-3.5" />
                       </button>
@@ -273,7 +273,7 @@ export function CashBookPage() {
                           try { linkedDoc = (await cashEntryLinks(e.id)).paymentDocNo; } catch { /* ไม่สำคัญพอจะขวางการลบ */ }
                           setConfirmDelete({ entry: e, linkedDoc });
                         }}
-                        className="text-slate-400 hover:text-rose-500 p-1.5"
+                        className="text-stone-400 hover:text-rose-500 p-1.5"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -284,13 +284,13 @@ export function CashBookPage() {
             </tbody>
             {(entriesQ.data?.length ?? 0) > 0 && (
               <tfoot>
-                <tr className="border-t-2 border-slate-100 dark:border-slate-700
-                  bg-slate-50/60 dark:bg-slate-800/40">
-                  <td colSpan={5} className="px-4 py-3 text-xs text-slate-500">
+                <tr className="border-t-2 border-stone-100 dark:border-stone-700
+                  bg-stone-50/60 dark:bg-stone-800/40">
+                  <td colSpan={5} className="px-4 py-3 text-xs text-stone-500">
                     รวม {entriesQ.data?.length} รายการ · รับ {money(period.income)} · จ่าย {money(period.expense)}
                   </td>
                   <td className={`px-4 py-3 text-right tabular-nums font-bold
-                    ${period.net < 0 ? 'text-rose-500' : 'text-slate-800 dark:text-slate-100'}`}>
+                    ${period.net < 0 ? 'text-rose-500' : 'text-stone-800 dark:text-stone-100'}`}>
                     {money(period.net)}
                   </td>
                   <td colSpan={2} />
@@ -302,14 +302,14 @@ export function CashBookPage() {
       </div>
 
       {(summaryQ.data?.length ?? 0) > 0 && (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100
-          dark:border-slate-800 p-5">
-          <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-3">สรุปรายเดือน</h2>
-          <p className="text-xs text-slate-500 mb-3">
+        <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100
+          dark:border-stone-800 p-5">
+          <h2 className="font-semibold text-stone-800 dark:text-stone-100 mb-3">สรุปรายเดือน</h2>
+          <p className="text-xs text-stone-500 mb-3">
             การย้ายโอนระหว่างกระเป๋าไม่นับเป็นรายรับหรือรายจ่าย เพราะเงินยังอยู่ในบริษัท
           </p>
           <table className="w-full text-sm">
-            <thead className="text-xs text-slate-500">
+            <thead className="text-xs text-stone-500">
               <tr>
                 <th className="text-left font-medium py-2">เดือน</th>
                 <th className="text-right font-medium py-2">รายรับ</th>
@@ -320,15 +320,15 @@ export function CashBookPage() {
             </thead>
             <tbody>
               {summaryQ.data?.map((m) => (
-                <tr key={m.month} className="border-t border-slate-50 dark:border-slate-800">
-                  <td className="py-2 font-medium text-slate-700 dark:text-slate-200">{m.month}</td>
+                <tr key={m.month} className="border-t border-stone-50 dark:border-stone-800">
+                  <td className="py-2 font-medium text-stone-700 dark:text-stone-200">{m.month}</td>
                   <td className="py-2 text-right tabular-nums text-emerald-600">{money(m.income)}</td>
                   <td className="py-2 text-right tabular-nums text-rose-500">{money(m.expense)}</td>
                   <td className={`py-2 text-right tabular-nums font-semibold
-                    ${m.net < 0 ? 'text-rose-500' : 'text-slate-800 dark:text-slate-100'}`}>
+                    ${m.net < 0 ? 'text-rose-500' : 'text-stone-800 dark:text-stone-100'}`}>
                     {money(m.net)}
                   </td>
-                  <td className="py-2 pl-6 text-xs text-slate-500">
+                  <td className="py-2 pl-6 text-xs text-stone-500">
                     {m.byCategory.slice(0, 3).map((c) => `${c.name} ${money(c.amount)}`).join(' · ')}
                   </td>
                 </tr>
@@ -353,16 +353,16 @@ export function CashBookPage() {
           <div className="flex items-baseline gap-3">
             <span className={`text-2xl font-bold tabular-nums
               ${viewing.entry_type === 'in' ? 'text-emerald-600'
-                : viewing.entry_type === 'out' ? 'text-rose-500' : 'text-slate-600'}`}>
+                : viewing.entry_type === 'out' ? 'text-rose-500' : 'text-stone-600'}`}>
               {money(viewing.amount)}
             </span>
-            <span className="text-sm text-slate-500">
+            <span className="text-sm text-stone-500">
               {viewing.entry_type === 'in' ? 'รับเงิน'
                 : viewing.entry_type === 'out' ? 'จ่ายเงิน' : 'ย้ายโอน'}
             </span>
           </div>
 
-          <dl className="text-sm divide-y divide-slate-100 dark:divide-slate-800">
+          <dl className="text-sm divide-y divide-stone-100 dark:divide-stone-800">
             <Row2 k="วันที่" v={docDate(viewing.entry_date)} />
             <Row2 k="รายละเอียด" v={viewing.description} />
             {viewing.entry_type === 'transfer' ? (
@@ -400,11 +400,11 @@ export function CashBookPage() {
 
       {confirmDelete && (
         <Modal title="ลบรายการนี้?" onClose={() => setConfirmDelete(null)}>
-          <div className="text-sm text-slate-600 dark:text-slate-300">
-            <div className="font-medium text-slate-800 dark:text-slate-100">
+          <div className="text-sm text-stone-600 dark:text-stone-300">
+            <div className="font-medium text-stone-800 dark:text-stone-100">
               {confirmDelete.entry.description}
             </div>
-            <div className="text-xs text-slate-400 mt-0.5">
+            <div className="text-xs text-stone-400 mt-0.5">
               {docDate(confirmDelete.entry.entry_date)} · {money(confirmDelete.entry.amount)} ·{' '}
               {confirmDelete.entry.wallet?.name}
             </div>
@@ -459,8 +459,8 @@ export function CashBookPage() {
 function Row2({ k, v }: { k: string; v: string }) {
   return (
     <div className="flex gap-4 py-2">
-      <dt className="w-40 shrink-0 text-slate-500">{k}</dt>
-      <dd className="flex-1 text-slate-800 dark:text-slate-100 break-words">{v}</dd>
+      <dt className="w-40 shrink-0 text-stone-500">{k}</dt>
+      <dd className="flex-1 text-stone-800 dark:text-stone-100 break-words">{v}</dd>
     </div>
   );
 }
@@ -468,7 +468,7 @@ function Row2({ k, v }: { k: string; v: string }) {
 function Stat({ label, value, tone }: { label: string; value: number; tone: string }) {
   return (
     <div className="text-right">
-      <div className="text-xs text-slate-500">{label}</div>
+      <div className="text-xs text-stone-500">{label}</div>
       <div className={`font-bold tabular-nums ${tone}`}>{money(value)}</div>
     </div>
   );
@@ -506,8 +506,8 @@ function EntryModal({
       onClose={onClose} wide
     >
       {entry.ar_document_id && (
-        <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 px-4 py-2.5 text-xs
-          text-slate-500 flex gap-2">
+        <div className="rounded-xl bg-stone-50 dark:bg-stone-800/60 px-4 py-2.5 text-xs
+          text-stone-500 flex gap-2">
           <Link2 className="w-4 h-4 shrink-0" />
           รายการนี้เกิดจากการรับชำระเงินของเอกสารขาย แก้ไขที่นี่จะไม่ย้อนกลับไปแก้ยอดในบิล
         </div>
@@ -649,10 +649,10 @@ function WalletModal({
         {wallets.map((w) => (
           <WalletRow key={w.id} wallet={w} onEdit={() => setEditing(w)} />
         ))}
-        {wallets.length === 0 && <p className="text-sm text-slate-400">ยังไม่มีกระเป๋าเงิน</p>}
+        {wallets.length === 0 && <p className="text-sm text-stone-400">ยังไม่มีกระเป๋าเงิน</p>}
       </div>
 
-      <div className="grid grid-cols-3 gap-3 border-t border-slate-100 dark:border-slate-800 pt-4">
+      <div className="grid grid-cols-3 gap-3 border-t border-stone-100 dark:border-stone-800 pt-4">
         <Field label="ชื่อกระเป๋าใหม่">
           <TextInput value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
         </Field>
@@ -701,22 +701,22 @@ function WalletRow({ wallet, onEdit }: { wallet: Wallet; onEdit: () => void }) {
   const lockedQ = useQuery(() => walletHasPin(wallet.id), [wallet.id]);
   return (
     <div className="flex items-center justify-between text-sm border
-      border-slate-100 dark:border-slate-800 rounded-xl px-3 py-2">
+      border-stone-100 dark:border-stone-800 rounded-xl px-3 py-2">
       <div className="flex items-center gap-2 min-w-0">
         {lockedQ.data
           ? <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-          : <Unlock className="w-3.5 h-3.5 text-slate-300 shrink-0" />}
+          : <Unlock className="w-3.5 h-3.5 text-stone-300 shrink-0" />}
         <span className="truncate">{wallet.name}</span>
         {!wallet.is_active && (
-          <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800
-            text-slate-500">ปิดใช้งาน</span>
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800
+            text-stone-500">ปิดใช้งาน</span>
         )}
       </div>
       <div className="flex items-center gap-3 shrink-0">
-        <span className="text-xs text-slate-400 tabular-nums">
+        <span className="text-xs text-stone-400 tabular-nums">
           ยอดยกมา {money(wallet.opening_balance)}
         </span>
-        <button onClick={onEdit} className="text-slate-400 hover:text-slate-900 p-1">
+        <button onClick={onEdit} className="text-stone-400 hover:text-stone-900 p-1">
           <Pencil className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -756,8 +756,8 @@ function WalletEditModal({
           </span>
         </div>
       ) : (
-        <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 px-4 py-3 flex gap-2
-          text-xs text-slate-500">
+        <div className="rounded-xl bg-stone-50 dark:bg-stone-800/60 px-4 py-3 flex gap-2
+          text-xs text-stone-500">
           <Unlock className="w-4 h-4 shrink-0 mt-0.5" />
           <span>ยังไม่ได้ล็อกรหัส — ใครที่มีสิทธิ์บัญชีก็แก้ได้ ตั้งรหัสได้ที่ข้างล่าง</span>
         </div>
@@ -840,12 +840,12 @@ function WalletEditModal({
         </div>
       </div>
 
-      <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
-        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-2
+      <div className="border-t border-stone-100 dark:border-stone-800 pt-4">
+        <h3 className="text-sm font-semibold text-stone-800 dark:text-stone-100 mb-2
           flex items-center gap-1.5">
-          <KeyRound className="w-4 h-4 text-slate-400" /> รหัสกระเป๋าเงิน
+          <KeyRound className="w-4 h-4 text-stone-400" /> รหัสกระเป๋าเงิน
         </h3>
-        <p className="text-xs text-slate-500 mb-2">
+        <p className="text-xs text-stone-500 mb-2">
           ตั้งไว้ให้เฉพาะคนที่ถือเงินรู้ · รหัสเก็บแบบเข้ารหัส ไม่มีใครอ่านตัวเลขจริงได้
           {locked && ' · Super Admin รีเซ็ตให้ได้ถ้าลืม'}
         </p>
@@ -888,11 +888,11 @@ function WalletEditModal({
       </div>
 
       {(auditQ.data?.length ?? 0) > 0 && (
-        <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
-          <h3 className="text-xs font-semibold text-slate-500 mb-1.5">ประวัติการแก้ไข</h3>
+        <div className="border-t border-stone-100 dark:border-stone-800 pt-3">
+          <h3 className="text-xs font-semibold text-stone-500 mb-1.5">ประวัติการแก้ไข</h3>
           <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
             {auditQ.data?.map((a) => (
-              <div key={a.id} className="text-[11px] text-slate-400 flex gap-2">
+              <div key={a.id} className="text-[11px] text-stone-400 flex gap-2">
                 <span className="w-20 shrink-0">{docDate(a.changed_at.slice(0, 10))}</span>
                 <span className="w-24 shrink-0">{a.action}</span>
                 <span className="flex-1">{a.detail ?? ''}</span>

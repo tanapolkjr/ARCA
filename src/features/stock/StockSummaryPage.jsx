@@ -115,21 +115,21 @@ function ImportProductsModal({ onClose, onImported }) {
 
   return (
     <Modal title="นำเข้า Product Master จาก Excel" onClose={onClose}>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
+      <p className="text-sm text-stone-500 dark:text-stone-400 mb-3">
         ไฟล์ .xlsx ต้องมีหัวคอลัมน์ (แถวแรก) อย่างน้อย <strong>Model Number</strong> — คอลัมน์อื่นที่รองรับ:
         Product Name, Category, Unit, Reorder Point (ไม่บังคับ, ชื่อคอลัมน์เป็นภาษาไทยก็ได้ เช่น รหัสสินค้า, รายละเอียด, หมวดหมู่, หน่วย)
       </p>
-      <p className="text-xs text-slate-400 mb-4">
+      <p className="text-xs text-stone-400 mb-4">
         ถ้า Model Number ในไฟล์ตรงกับสินค้าที่มีอยู่แล้ว ระบบจะ<strong>อัปเดต</strong>ข้อมูลแถวนั้นแทนการสร้างซ้ำ — นำเข้าไฟล์เดิมซ้ำได้อย่างปลอดภัย
       </p>
 
-      <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl py-6 cursor-pointer hover:border-slate-400 mb-4">
-        <Upload className="w-5 h-5 text-slate-400" />
-        <span className="text-sm text-slate-500 dark:text-slate-400">{fileName || "คลิกเพื่อเลือกไฟล์ .xlsx / .xls"}</span>
+      <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-xl py-6 cursor-pointer hover:border-stone-400 mb-4">
+        <Upload className="w-5 h-5 text-stone-400" />
+        <span className="text-sm text-stone-500 dark:text-stone-400">{fileName || "คลิกเพื่อเลือกไฟล์ .xlsx / .xls"}</span>
         <input type="file" accept=".xlsx,.xls" onChange={handleFile} className="hidden" />
       </label>
 
-      {parsing && <p className="text-sm text-slate-400 text-center">กำลังอ่านไฟล์...</p>}
+      {parsing && <p className="text-sm text-stone-400 text-center">กำลังอ่านไฟล์...</p>}
       {parseError && <p className="text-sm text-rose-600 dark:text-rose-300 bg-rose-50 dark:bg-rose-500/10 rounded-lg px-3 py-2">{parseError}</p>}
 
       {rows.length > 0 && (() => {
@@ -148,10 +148,10 @@ function ImportProductsModal({ onClose, onImported }) {
 
       {rows.length > 0 && (
         <div>
-          <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">ตัวอย่างข้อมูล ({rows.length} รายการ)</p>
-          <div className="max-h-56 overflow-auto rounded-xl border border-slate-200 dark:border-slate-700">
+          <p className="text-sm font-medium text-stone-700 dark:text-stone-200 mb-2">ตัวอย่างข้อมูล ({rows.length} รายการ)</p>
+          <div className="max-h-56 overflow-auto rounded-xl border border-stone-200 dark:border-stone-700">
             <table className="w-full text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 sticky top-0">
+              <thead className="bg-stone-50 dark:bg-stone-900 text-stone-500 dark:text-stone-400 sticky top-0">
                 <tr>
                   <th className="text-left font-medium px-3 py-2">Model Number</th>
                   <th className="text-left font-medium px-3 py-2">Product Name</th>
@@ -160,26 +160,26 @@ function ImportProductsModal({ onClose, onImported }) {
                   <th className="text-left font-medium px-3 py-2">Unit</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+              <tbody className="divide-y divide-stone-100 dark:divide-stone-700">
                 {rows.slice(0, 50).map((r, i) => (
                   <tr key={i}>
-                    <td className="px-3 py-1.5 font-medium text-slate-800 dark:text-slate-100">{r.model_code}</td>
-                    <td className="px-3 py-1.5 text-slate-600 dark:text-slate-300">{r.description || "-"}</td>
-                    <td className="px-3 py-1.5 text-slate-600 dark:text-slate-300">{r.category || "-"}</td>
-                    <td className="px-3 py-1.5 text-slate-600 dark:text-slate-300">{r.sub_category || "-"}</td>
-                    <td className="px-3 py-1.5 text-slate-600 dark:text-slate-300">{r.unit || "ชิ้น"}</td>
+                    <td className="px-3 py-1.5 font-medium text-stone-800 dark:text-stone-100">{r.model_code}</td>
+                    <td className="px-3 py-1.5 text-stone-600 dark:text-stone-300">{r.description || "-"}</td>
+                    <td className="px-3 py-1.5 text-stone-600 dark:text-stone-300">{r.category || "-"}</td>
+                    <td className="px-3 py-1.5 text-stone-600 dark:text-stone-300">{r.sub_category || "-"}</td>
+                    <td className="px-3 py-1.5 text-stone-600 dark:text-stone-300">{r.unit || "ชิ้น"}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          {rows.length > 50 && <p className="text-xs text-slate-400 mt-1.5">แสดง 50 รายการแรก (มีทั้งหมด {rows.length} รายการ)</p>}
+          {rows.length > 50 && <p className="text-xs text-stone-400 mt-1.5">แสดง 50 รายการแรก (มีทั้งหมด {rows.length} รายการ)</p>}
         </div>
       )}
 
-      <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-slate-100 dark:border-slate-700">
-        <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">ยกเลิก</button>
-        <button onClick={handleImport} disabled={rows.length === 0 || importing} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
+      <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-stone-100 dark:border-stone-700">
+        <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700">ยกเลิก</button>
+        <button onClick={handleImport} disabled={rows.length === 0 || importing} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
           {importing ? "กำลังนำเข้า..." : `นำเข้า ${rows.length || ""} รายการ`}
         </button>
       </div>
@@ -253,7 +253,7 @@ function ProductModal({ item, onClose, onSaved }) {
   return (
     <Modal title={editing ? `แก้ไขสินค้า — ${item.model}` : "เพิ่มสินค้าใหม่ (Product Master)"} onClose={onClose}>
       {editing && item.sourceProductId && (
-        <div className="flex items-start gap-2 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 rounded-xl p-3 mb-1">
+        <div className="flex items-start gap-2 text-xs text-stone-500 dark:text-stone-400 bg-stone-50 dark:bg-stone-800 rounded-xl p-3 mb-1">
           <Link2 className="w-3.5 h-3.5 mt-0.5 shrink-0" />
           <span>สินค้านี้ถูกดึงมาจาก Sourcing — แก้ไขที่นี่จะไม่ย้อนกลับไปแก้ข้อมูลฝั่ง Sourcing</span>
         </div>
@@ -263,7 +263,7 @@ function ProductModal({ item, onClose, onSaved }) {
       <Field label="ราคาขาย (บาท/หน่วย)">
         <TextInput type="number" step="0.01" value={form.sale_price} placeholder="ยังไม่ตั้งราคา"
                    onChange={(e) => setForm((f) => ({ ...f, sale_price: e.target.value }))} />
-        <p className="text-xs text-slate-400 mt-1">ดึงไปใส่ใบเสนอราคาอัตโนมัติ · สินค้าที่มาจาก Sourcing จะเติมราคาที่แนะนำมาให้</p>
+        <p className="text-xs text-stone-400 mt-1">ดึงไปใส่ใบเสนอราคาอัตโนมัติ · สินค้าที่มาจาก Sourcing จะเติมราคาที่แนะนำมาให้</p>
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="หมวดหมู่ (Category)"><TextInput placeholder="เช่น Smart Home" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} /></Field>
@@ -273,9 +273,9 @@ function ProductModal({ item, onClose, onSaved }) {
         <Field label="หน่วยนับ"><TextInput value={form.unit} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))} /></Field>
         <Field label="จุดสั่งซื้อขั้นต่ำ"><TextInput type="number" value={form.reorder_point} onChange={(e) => setForm((f) => ({ ...f, reorder_point: e.target.value }))} /></Field>
       </div>
-      <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-slate-100 dark:border-slate-700">
-        <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">ยกเลิก</button>
-        <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
+      <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-stone-100 dark:border-stone-700">
+        <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700">ยกเลิก</button>
+        <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
           {saving ? "กำลังบันทึก..." : editing ? "บันทึกการแก้ไข" : "เพิ่มสินค้า"}
         </button>
       </div>
@@ -350,13 +350,13 @@ function ReceiveStockModal({ onClose, onCreated }) {
           value={serialsText}
           onChange={(e) => setSerialsText(e.target.value)}
           placeholder={"สแกน/พิมพ์ Serial ทีละบรรทัด เช่น\nBC340029B519\n6900051"}
-          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-sm font-mono"
+          className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900 text-sm font-mono"
         />
       </Field>
-      <p className="text-xs text-slate-400 -mt-2.5">สินค้าจะเข้าเป็น On Hand สถานะ "สินค้าปกติ" ทันที — ยังไม่เริ่มนับประกัน จนกว่าจะถูกเบิกไปติดตั้งจริง</p>
-      <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-slate-100 dark:border-slate-700">
-        <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">ยกเลิก</button>
-        <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
+      <p className="text-xs text-stone-400 -mt-2.5">สินค้าจะเข้าเป็น On Hand สถานะ "สินค้าปกติ" ทันที — ยังไม่เริ่มนับประกัน จนกว่าจะถูกเบิกไปติดตั้งจริง</p>
+      <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-stone-100 dark:border-stone-700">
+        <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700">ยกเลิก</button>
+        <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
           {saving ? "กำลังรับเข้า..." : "รับเข้าคลัง"}
         </button>
       </div>
@@ -413,23 +413,23 @@ export default function StockSummary() {
     <div>
       <div className="flex items-start justify-between mb-6 flex-wrap gap-3">
         <div>
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5">
-            <span>E-Service</span><span>/</span><span>Stock</span><span>/</span><span className="text-slate-900 font-medium">Inventory</span>
+          <div className="flex items-center gap-1.5 text-xs text-stone-400 mb-1.5">
+            <span>E-Service</span><span>/</span><span>Stock</span><span>/</span><span className="text-stone-900 font-medium">Inventory</span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Stock Summary</h1>
+          <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100 tracking-tight">Stock Summary</h1>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setShowImportModal(true)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">
+          <button onClick={() => setShowImportModal(true)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800">
             <FileSpreadsheet className="w-4 h-4" /> นำเข้าจาก Excel
           </button>
-          <button onClick={() => setShowProductModal(true)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">
+          <button onClick={() => setShowProductModal(true)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800">
             <Plus className="w-4 h-4" /> เพิ่มสินค้าใหม่
           </button>
           <button
             onClick={() => setShowReceiveModal(true)}
             disabled={!canReceive}
             title={!canReceive ? "เฉพาะ Super Admin/Manager/Store" : ""}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <PackagePlus className="w-4 h-4" /> รับสินค้าเข้าคลัง
           </button>
@@ -451,13 +451,13 @@ export default function StockSummary() {
           </Select>
           <div className="relative">
             <TextInput placeholder="ค้นหา Model Number / Product Name..." value={query} onChange={(e) => setQuery(e.target.value)} />
-            <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-stone-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={refetch} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm">ค้นหา</button>
-          <button onClick={refetch} className="p-2 rounded-xl text-slate-500 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"><RefreshCw className="w-4 h-4" /></button>
-          <button className="p-2 rounded-xl text-slate-500 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"><Download className="w-4 h-4" /></button>
+          <button onClick={refetch} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white shadow-sm">ค้นหา</button>
+          <button onClick={refetch} className="p-2 rounded-xl text-stone-500 border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800"><RefreshCw className="w-4 h-4" /></button>
+          <button className="p-2 rounded-xl text-stone-500 border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800"><Download className="w-4 h-4" /></button>
         </div>
       </Card>
 
@@ -465,7 +465,7 @@ export default function StockSummary() {
 
       <Card className="overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
+          <thead className="bg-stone-50 dark:bg-stone-900 text-stone-500 dark:text-stone-400">
             <tr>
               <th className="text-left font-medium px-4 py-3">Model Number</th>
               <th className="text-left font-medium px-4 py-3">Product Name</th>
@@ -479,47 +479,47 @@ export default function StockSummary() {
               <th className="text-right font-medium px-4 py-3"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-            {loading && <tr><td colSpan={10} className="text-center text-slate-400 py-10">กำลังโหลด...</td></tr>}
+          <tbody className="divide-y divide-stone-100 dark:divide-stone-700">
+            {loading && <tr><td colSpan={10} className="text-center text-stone-400 py-10">กำลังโหลด...</td></tr>}
             {!loading && (!rows || rows.length === 0) && (
-              <tr><td colSpan={10} className="text-center text-slate-400 py-10">ยังไม่มีสินค้าในระบบ — กด "เพิ่มสินค้าใหม่" ก่อน</td></tr>
+              <tr><td colSpan={10} className="text-center text-stone-400 py-10">ยังไม่มีสินค้าในระบบ — กด "เพิ่มสินค้าใหม่" ก่อน</td></tr>
             )}
             {pagedRows.map((r) => {
               const available = r.onHand - r.reserved;
               return (
-                <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30">
-                  <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">
+                <tr key={r.id} className="hover:bg-stone-50/50 dark:hover:bg-stone-700/30">
+                  <td className="px-4 py-3 font-medium text-stone-800 dark:text-stone-100">
                     <span className="inline-flex items-center gap-1.5">
                       {r.model}
                       {r.sourceProductId && (
-                        <span title="ดึงมาจาก Sourcing" className="text-slate-400"><Link2 className="w-3.5 h-3.5" /></span>
+                        <span title="ดึงมาจาก Sourcing" className="text-stone-400"><Link2 className="w-3.5 h-3.5" /></span>
                       )}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.desc}</td>
-                  <td className="px-4 py-3 text-slate-500">{r.category || "-"}</td>
-                  <td className="px-4 py-3 text-slate-500">{r.subCategory || "-"}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-slate-700 dark:text-slate-200">
+                  <td className="px-4 py-3 text-stone-600 dark:text-stone-300">{r.desc}</td>
+                  <td className="px-4 py-3 text-stone-500">{r.category || "-"}</td>
+                  <td className="px-4 py-3 text-stone-500">{r.subCategory || "-"}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-stone-700 dark:text-stone-200">
                     {r.salePrice != null
                       ? Number(r.salePrice).toLocaleString("th-TH", { minimumFractionDigits: 2 })
-                      : <span className="text-slate-300">—</span>}
+                      : <span className="text-stone-300">—</span>}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums">
                     {incoming.get(r.id) ? (
-                      <span className="text-slate-600 dark:text-slate-400 font-medium">
+                      <span className="text-stone-600 dark:text-stone-400 font-medium">
                         +{Number(incoming.get(r.id)).toLocaleString("th-TH")}
                       </span>
-                    ) : <span className="text-slate-300">—</span>}
+                    ) : <span className="text-stone-300">—</span>}
                   </td>
-                  <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-200">{r.onHand}</td>
+                  <td className="px-4 py-3 text-right text-stone-700 dark:text-stone-200">{r.onHand}</td>
                   <td className="px-4 py-3 text-right text-amber-600">{r.reserved}</td>
                   <td className="px-4 py-3 text-right font-medium">
                     {available <= 0 ? <Pill tone="rose">{available}</Pill> : <span className="text-emerald-600">{available}</span>}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="inline-flex items-center gap-1">
-                      <button onClick={() => setEditItem(r)} title="แก้ไขข้อมูลสินค้า" className="text-slate-400 hover:text-slate-900 p-1"><Pencil className="w-4 h-4" /></button>
-                      <button onClick={() => handleDeleteItem(r)} title="ลบสินค้า" className="text-slate-400 hover:text-rose-500 p-1"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={() => setEditItem(r)} title="แก้ไขข้อมูลสินค้า" className="text-stone-400 hover:text-stone-900 p-1"><Pencil className="w-4 h-4" /></button>
+                      <button onClick={() => handleDeleteItem(r)} title="ลบสินค้า" className="text-stone-400 hover:text-rose-500 p-1"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   </td>
                 </tr>
@@ -527,7 +527,7 @@ export default function StockSummary() {
             })}
           </tbody>
         </table>
-        <div className="flex items-center justify-between px-4 py-3 text-xs text-slate-400 border-t border-slate-100 dark:border-slate-700">
+        <div className="flex items-center justify-between px-4 py-3 text-xs text-stone-400 border-t border-stone-100 dark:border-stone-700">
           <span>
             แสดง {rows?.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, rows?.length || 0)} จากทั้งหมด {rows?.length ?? 0} รายการ
           </span>
@@ -536,15 +536,15 @@ export default function StockSummary() {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-2.5 py-1.5 rounded-lg border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 ก่อนหน้า
               </button>
-              <span className="px-2 text-slate-500 dark:text-slate-400">หน้า {page} / {totalPages}</span>
+              <span className="px-2 text-stone-500 dark:text-stone-400">หน้า {page} / {totalPages}</span>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-2.5 py-1.5 rounded-lg border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 ถัดไป
               </button>

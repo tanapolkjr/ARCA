@@ -56,22 +56,22 @@ function NewPurchaseRequestModal({ onClose, onCreated }) {
       <Field label="วันที่ต้องการใช้"><TextInput type="date" value={neededBy} onChange={(e) => setNeededBy(e.target.value)} /></Field>
       <Field label="รายละเอียดคำขอ"><TextArea rows={2} value={detail} onChange={(e) => setDetail(e.target.value)} /></Field>
 
-      <p className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">รายการสินค้า</p>
+      <p className="text-sm font-medium text-stone-600 dark:text-stone-300 mb-2">รายการสินค้า</p>
       <div className="space-y-2 mb-2">
         {items.map((it, i) => (
           <div key={i} className="grid grid-cols-12 gap-2">
-            <input className="col-span-6 px-2.5 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-sm" placeholder="รายการ" value={it.description} onChange={(e) => updateItem(i, "description", e.target.value)} />
-            <input className="col-span-2 px-2.5 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-sm" type="number" placeholder="จำนวน" value={it.qty} onChange={(e) => updateItem(i, "qty", e.target.value)} />
-            <input className="col-span-3 px-2.5 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-sm" type="number" placeholder="ราคาประมาณ" value={it.est_price} onChange={(e) => updateItem(i, "est_price", e.target.value)} />
-            <button onClick={() => setItems((rows) => rows.filter((_, idx) => idx !== i))} className="col-span-1 text-slate-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+            <input className="col-span-6 px-2.5 py-2 rounded-lg border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900 text-sm" placeholder="รายการ" value={it.description} onChange={(e) => updateItem(i, "description", e.target.value)} />
+            <input className="col-span-2 px-2.5 py-2 rounded-lg border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900 text-sm" type="number" placeholder="จำนวน" value={it.qty} onChange={(e) => updateItem(i, "qty", e.target.value)} />
+            <input className="col-span-3 px-2.5 py-2 rounded-lg border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900 text-sm" type="number" placeholder="ราคาประมาณ" value={it.est_price} onChange={(e) => updateItem(i, "est_price", e.target.value)} />
+            <button onClick={() => setItems((rows) => rows.filter((_, idx) => idx !== i))} className="col-span-1 text-stone-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
           </div>
         ))}
       </div>
-      <button onClick={() => setItems((rows) => [...rows, { description: "", qty: 1, est_price: "" }])} className="text-sm font-medium text-slate-900 hover:text-slate-900 mb-4">+ เพิ่มรายการ</button>
+      <button onClick={() => setItems((rows) => [...rows, { description: "", qty: 1, est_price: "" }])} className="text-sm font-medium text-stone-900 hover:text-stone-900 mb-4">+ เพิ่มรายการ</button>
 
-      <div className="flex justify-end gap-2 mt-2 pt-4 border-t border-slate-100 dark:border-slate-700">
-        <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">ยกเลิก</button>
-        <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
+      <div className="flex justify-end gap-2 mt-2 pt-4 border-t border-stone-100 dark:border-stone-700">
+        <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700">ยกเลิก</button>
+        <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
           {saving ? "กำลังบันทึก..." : "ส่งใบขอซื้อ"}
         </button>
       </div>
@@ -119,17 +119,17 @@ export default function PurchaseRequestPage() {
     <div>
       <div className="flex items-start justify-between mb-6">
         <div>
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5"><span>Stock</span><span>/</span><span className="text-slate-900 font-medium">ใบขอซื้อ</span></div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">ใบขอซื้อ (Purchase Request)</h1>
+          <div className="flex items-center gap-1.5 text-xs text-stone-400 mb-1.5"><span>Stock</span><span>/</span><span className="text-stone-900 font-medium">ใบขอซื้อ</span></div>
+          <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100 tracking-tight">ใบขอซื้อ (Purchase Request)</h1>
         </div>
-        <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm">
+        <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white shadow-sm">
           <Plus className="w-4 h-4" /> สร้างใบขอซื้อ
         </button>
       </div>
 
       <Card className="overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
+          <thead className="bg-stone-50 dark:bg-stone-900 text-stone-500 dark:text-stone-400">
             <tr>
               <th className="text-left font-medium px-4 py-3">เลขที่</th>
               <th className="text-left font-medium px-4 py-3">Project</th>
@@ -138,14 +138,14 @@ export default function PurchaseRequestPage() {
               <th className="text-right font-medium px-4 py-3"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-            {loading && <tr><td colSpan={5} className="text-center text-slate-400 py-10">กำลังโหลด...</td></tr>}
-            {!loading && requests?.length === 0 && <tr><td colSpan={5} className="text-center text-slate-400 py-10">ยังไม่มีใบขอซื้อ</td></tr>}
+          <tbody className="divide-y divide-stone-100 dark:divide-stone-700">
+            {loading && <tr><td colSpan={5} className="text-center text-stone-400 py-10">กำลังโหลด...</td></tr>}
+            {!loading && requests?.length === 0 && <tr><td colSpan={5} className="text-center text-stone-400 py-10">ยังไม่มีใบขอซื้อ</td></tr>}
             {requests?.map((r) => (
               <tr key={r.id}>
-                <td className="px-4 py-3 font-medium text-slate-900">{r.request_no}</td>
-                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.project?.project_number || "-"}</td>
-                <td className="px-4 py-3 text-right text-slate-500">{r.items?.length || 0} รายการ</td>
+                <td className="px-4 py-3 font-medium text-stone-900">{r.request_no}</td>
+                <td className="px-4 py-3 text-stone-600 dark:text-stone-300">{r.project?.project_number || "-"}</td>
+                <td className="px-4 py-3 text-right text-stone-500">{r.items?.length || 0} รายการ</td>
                 <td className="px-4 py-3 text-right"><Pill tone={STATUS_TONE[r.status] || "slate"}>{r.status}</Pill></td>
                 <td className="px-4 py-3 text-right">
                   <div className="inline-flex items-center gap-3">
@@ -157,13 +157,13 @@ export default function PurchaseRequestPage() {
                           onClick={() => advance(r.id, r.status)}
                           disabled={blocked}
                           title={blocked ? "อนุมัติได้เฉพาะ Manager / Super Admin" : ""}
-                          className="text-xs font-medium text-slate-900 hover:underline disabled:text-slate-300 disabled:no-underline disabled:cursor-not-allowed"
+                          className="text-xs font-medium text-stone-900 hover:underline disabled:text-stone-300 disabled:no-underline disabled:cursor-not-allowed"
                         >
                           {blocked ? "รออนุมัติ (Manager)" : "ขั้นถัดไป"}
                         </button>
                       );
                     })()}
-                    <button onClick={() => handleDelete(r.id)} className="text-slate-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => handleDelete(r.id)} className="text-stone-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </td>
               </tr>

@@ -105,7 +105,7 @@ export default function CustomerDetailPage() {
     }
   }
 
-  if (loading || !form) return <div className="text-center text-slate-400 py-20">กำลังโหลด...</div>;
+  if (loading || !form) return <div className="text-center text-stone-400 py-20">กำลังโหลด...</div>;
   if (loadError) return <div className="bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-300 text-sm rounded-xl p-4">โหลดไม่สำเร็จ: {errMsg(loadError)}</div>;
 
   const isCompany = form.customer_type === "company";
@@ -114,11 +114,11 @@ export default function CustomerDetailPage() {
     <div>
       <div className="flex items-start justify-between mb-6 flex-wrap gap-3">
         <div>
-          <button onClick={goBack} className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-900 mb-1.5">
+          <button onClick={goBack} className="flex items-center gap-1 text-xs text-stone-400 hover:text-stone-900 mb-1.5">
             <ArrowLeft className="w-3.5 h-3.5" /> Contact
           </button>
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">{customer.display_name}</h1>
+            <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100 tracking-tight">{customer.display_name}</h1>
             <Pill tone={isCompany ? "indigo" : "green"}>{isCompany ? "นิติบุคคล" : "บุคคลธรรมดา"}</Pill>
           </div>
         </div>
@@ -127,8 +127,8 @@ export default function CustomerDetailPage() {
           <button onClick={handleDelete} title="ลบลูกค้ารายนี้" className="p-2 rounded-xl text-rose-500 border border-rose-200 dark:border-rose-500/30 hover:bg-rose-50 dark:hover:bg-rose-500/10">
             <Trash2 className="w-4 h-4" />
           </button>
-          <button onClick={goBack} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">ย้อนกลับ</button>
-          <button onClick={handleSave} disabled={saving} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
+          <button onClick={goBack} className="px-4 py-2 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800">ย้อนกลับ</button>
+          <button onClick={handleSave} disabled={saving} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
             <Save className="w-4 h-4" /> {saving ? "กำลังบันทึก..." : "Save Data"}
           </button>
         </div>
@@ -159,14 +159,14 @@ export default function CustomerDetailPage() {
           </Card>
 
           <Card className="p-6">
-            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-3">Key Contacts</h3>
+            <h3 className="text-sm font-semibold text-stone-800 dark:text-stone-100 mb-3">Key Contacts</h3>
             <div className="space-y-2 mb-4">
-              {(customer.contacts || []).length === 0 && <p className="text-sm text-slate-400">ยังไม่มีผู้ติดต่อ</p>}
+              {(customer.contacts || []).length === 0 && <p className="text-sm text-stone-400">ยังไม่มีผู้ติดต่อ</p>}
               {customer.contacts?.map((c) => (
-                <div key={c.id} className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-slate-100 dark:border-slate-700">
+                <div key={c.id} className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-stone-100 dark:border-stone-700">
                   <div>
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{c.name} {c.position && <span className="text-slate-400 font-normal">({c.position})</span>}</p>
-                    <p className="text-xs text-slate-400">{c.phone} {c.email && `• ${c.email}`}</p>
+                    <p className="text-sm font-medium text-stone-800 dark:text-stone-100">{c.name} {c.position && <span className="text-stone-400 font-normal">({c.position})</span>}</p>
+                    <p className="text-xs text-stone-400">{c.phone} {c.email && `• ${c.email}`}</p>
                   </div>
                 </div>
               ))}
@@ -175,7 +175,7 @@ export default function CustomerDetailPage() {
               <TextInput placeholder="ชื่อ" value={newContact.name} onChange={(e) => setNewContact((c) => ({ ...c, name: e.target.value }))} />
               <TextInput placeholder="ตำแหน่ง" value={newContact.position} onChange={(e) => setNewContact((c) => ({ ...c, position: e.target.value }))} />
               <TextInput placeholder="เบอร์โทร" value={newContact.phone} onChange={(e) => setNewContact((c) => ({ ...c, phone: e.target.value }))} />
-              <button onClick={handleAddContact} disabled={addingContact} className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-60">
+              <button onClick={handleAddContact} disabled={addingContact} className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white disabled:opacity-60">
                 <Plus className="w-4 h-4" /> เพิ่ม
               </button>
             </div>
@@ -184,12 +184,12 @@ export default function CustomerDetailPage() {
 
         <div className="col-span-12 lg:col-span-4">
           <Card className="p-5">
-            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-3">Project ของลูกค้านี้</h3>
-            {(!linkedProjects || linkedProjects.length === 0) && <p className="text-sm text-slate-400">ยังไม่มี Project</p>}
+            <h3 className="text-sm font-semibold text-stone-800 dark:text-stone-100 mb-3">Project ของลูกค้านี้</h3>
+            {(!linkedProjects || linkedProjects.length === 0) && <p className="text-sm text-stone-400">ยังไม่มี Project</p>}
             <div className="space-y-2">
               {linkedProjects?.map((p) => (
-                <button key={p.id} onClick={() => navigate(`/project/${p.id}`)} className="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-left">
-                  <span className="text-sm font-medium text-slate-900">{p.project_number}</span>
+                <button key={p.id} onClick={() => navigate(`/project/${p.id}`)} className="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-stone-100 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 text-left">
+                  <span className="text-sm font-medium text-stone-900">{p.project_number}</span>
                   <Pill tone={projectStatusTone(p.status)}>{p.status}</Pill>
                 </button>
               ))}

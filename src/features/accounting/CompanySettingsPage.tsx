@@ -29,10 +29,10 @@ export function CompanySettingsPage() {
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
+          <h1 className="text-2xl font-bold tracking-tight text-stone-800 dark:text-stone-100">
             บริษัทผู้ออกเอกสาร
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-stone-500 mt-0.5">
             เปลี่ยนหัวบิลได้เหมือนเปลี่ยนลูกค้า — เลือกตอนสร้างเอกสาร
           </p>
         </div>
@@ -43,16 +43,16 @@ export function CompanySettingsPage() {
 
       <div className="grid gap-3">
         {companiesQ.data?.map((c) => (
-          <div key={c.id} className="bg-white dark:bg-slate-900 rounded-2xl border
-            border-slate-100 dark:border-slate-800 p-5">
+          <div key={c.id} className="bg-white dark:bg-stone-900 rounded-2xl border
+            border-stone-100 dark:border-stone-800 p-5">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800
+              <div className="w-10 h-10 rounded-xl bg-stone-100 dark:bg-stone-800
                 flex items-center justify-center shrink-0">
-                <Building2 className="w-4 h-4 text-slate-900 dark:text-slate-100" />
+                <Building2 className="w-4 h-4 text-stone-900 dark:text-stone-100" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-semibold text-slate-800 dark:text-slate-100">{c.name_th}</span>
+                  <span className="font-semibold text-stone-800 dark:text-stone-100">{c.name_th}</span>
                   {c.is_default && (
                     <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100
                       text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">ตั้งต้น</span>
@@ -64,8 +64,8 @@ export function CompanySettingsPage() {
                     </span>
                   )}
                 </div>
-                {c.name_en && <div className="text-xs text-slate-500">{c.name_en}</div>}
-                <div className="text-xs text-slate-500 mt-1 space-y-0.5">
+                {c.name_en && <div className="text-xs text-stone-500">{c.name_en}</div>}
+                <div className="text-xs text-stone-500 mt-1 space-y-0.5">
                   {c.tax_id && <div>เลขประจำตัวผู้เสียภาษี {c.tax_id} · {c.branch_name}</div>}
                   {c.address_th && <div className="whitespace-pre-line">{c.address_th}</div>}
                   {c.phone && <div>โทร. {c.phone}</div>}
@@ -77,7 +77,7 @@ export function CompanySettingsPage() {
                 <GhostButton className="!px-3 !py-1.5 text-xs" onClick={() => setSeedFor(c)}>เลขเอกสาร</GhostButton>
                 {!c.is_default && (
                   <button
-                    className="text-xs text-slate-400 hover:text-slate-900 px-3"
+                    className="text-xs text-stone-400 hover:text-stone-900 px-3"
                     onClick={async () => {
                       await setDefaultCompany(c.id);
                       toast('ตั้งเป็นบริษัทตั้งต้นแล้ว');
@@ -120,13 +120,13 @@ function TagSettings() {
   const [busy, setBusy] = useState(false);
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100
-      dark:border-slate-800 p-5">
+    <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100
+      dark:border-stone-800 p-5">
       <div className="flex items-center gap-2 mb-1">
-        <TagIcon className="w-4 h-4 text-slate-400" />
-        <h2 className="font-semibold text-slate-800 dark:text-slate-100">ประเภทงาน (Tag)</h2>
+        <TagIcon className="w-4 h-4 text-stone-400" />
+        <h2 className="font-semibold text-stone-800 dark:text-stone-100">ประเภทงาน (Tag)</h2>
       </div>
-      <p className="text-xs text-slate-500 mb-3">
+      <p className="text-xs text-stone-500 mb-3">
         ใช้จัดกลุ่มและรวมยอดในทุกหน้าเอกสาร · ตั้งที่ใบเสนอราคาแล้วไหลตามไปทุกใบที่แปลงต่อ ·
         ลบได้เฉพาะประเภทที่ยังไม่มีเอกสารใช้อยู่
       </p>
@@ -134,7 +134,7 @@ function TagSettings() {
       <div className="flex flex-wrap gap-2 mb-4">
         {tagsQ.data?.map((t) => (
           <span key={t.id} className="group pl-3 pr-1.5 py-1 rounded-full text-xs font-medium
-            bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300
+            bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300
             inline-flex items-center gap-1.5">
             {t.name}
             <button
@@ -148,14 +148,14 @@ function TagSettings() {
                   toast(e instanceof Error ? e.message : 'ลบไม่สำเร็จ', 'error');
                 }
               }}
-              className="text-slate-300 hover:text-rose-500"
+              className="text-stone-300 hover:text-rose-500"
             >
               <X className="w-3 h-3" />
             </button>
           </span>
         ))}
         {(tagsQ.data?.length ?? 0) === 0 && (
-          <span className="text-sm text-slate-400">ยังไม่มีประเภทงาน</span>
+          <span className="text-sm text-stone-400">ยังไม่มีประเภทงาน</span>
         )}
       </div>
 
@@ -259,29 +259,29 @@ function BankModal({ company, onClose }: { company: Company; onClose: () => void
 
   return (
     <Modal title={`บัญชีธนาคาร — ${company.name_th}`} onClose={onClose} wide>
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-stone-500">
         พิมพ์อยู่ท้ายใบเสนอราคาและใบแจ้งหนี้ในส่วน &ldquo;ข้อมูลการรับชำระ&rdquo;
       </p>
       <div className="flex flex-col gap-2">
         {list.map((b) => (
-          <div key={b.id} className="flex items-center gap-3 text-sm border border-slate-100
-            dark:border-slate-800 rounded-xl px-3 py-2">
+          <div key={b.id} className="flex items-center gap-3 text-sm border border-stone-100
+            dark:border-stone-800 rounded-xl px-3 py-2">
             <div className="flex-1">
               <div className="font-medium tabular-nums">{b.account_no}</div>
-              <div className="text-xs text-slate-500">
+              <div className="text-xs text-stone-500">
                 ธ. {b.bank_name}{b.branch ? ` (${b.branch})` : ''} · {b.account_name}
               </div>
             </div>
-            <button className="text-slate-300 hover:text-rose-500"
+            <button className="text-stone-300 hover:text-rose-500"
                     onClick={async () => { await deleteBankAccount(b.id); void reload(); }}>
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
         ))}
-        {list.length === 0 && <p className="text-sm text-slate-400">ยังไม่มีบัญชี</p>}
+        {list.length === 0 && <p className="text-sm text-stone-400">ยังไม่มีบัญชี</p>}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 border-t border-slate-100 dark:border-slate-800 pt-4">
+      <div className="grid grid-cols-2 gap-3 border-t border-stone-100 dark:border-stone-800 pt-4">
         <Field label="ธนาคาร"><TextInput value={draft.bank_name}
           onChange={(e) => setDraft({ ...draft, bank_name: e.target.value })} /></Field>
         <Field label="สาขา"><TextInput value={draft.branch}
@@ -329,8 +329,8 @@ function SeedModal({ company, onClose }: { company: Company; onClose: () => void
       </div>
       <div className="grid grid-cols-3 gap-3">
         <Field label="ประเภท">
-          <select className="w-full px-3 py-2 rounded-xl border border-slate-200
-            dark:border-slate-700 bg-white dark:bg-slate-800 text-sm"
+          <select className="w-full px-3 py-2 rounded-xl border border-stone-200
+            dark:border-stone-700 bg-white dark:bg-stone-800 text-sm"
             value={docType} onChange={(e) => setDocType(e.target.value)}>
             {DOC_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>

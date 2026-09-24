@@ -116,7 +116,7 @@ export function CustomerTab({ state, setState, openCustomerModal, openSiteModal 
       <Field label="ต้องการตรวจสอบการชำระเงินหรือไม่">
         <div className="flex items-center gap-2">
           <Toggle checked={!!state.paymentVerificationRequired} onChange={() => setState((s) => ({ ...s, paymentVerificationRequired: !s.paymentVerificationRequired }))} />
-          <span className="text-sm text-slate-600 dark:text-slate-300">{state.paymentVerificationRequired ? "ต้องการ" : "ไม่ต้องการ"}</span>
+          <span className="text-sm text-stone-600 dark:text-stone-300">{state.paymentVerificationRequired ? "ต้องการ" : "ไม่ต้องการ"}</span>
         </div>
       </Field>
 
@@ -143,7 +143,7 @@ export function CustomerTab({ state, setState, openCustomerModal, openSiteModal 
       </div>
 
 
-      <p className="text-xs text-slate-400 -mt-2.5 mb-4 flex items-center gap-1.5">
+      <p className="text-xs text-stone-400 -mt-2.5 mb-4 flex items-center gap-1.5">
         <MapPin className="w-3.5 h-3.5" /> Project Contact / Tel / Address / Province / Google Map ด้านล่างดึงค่าอัตโนมัติจาก Site ที่เลือก — แก้ไขได้เฉพาะโปรเจคนี้โดยไม่กระทบข้อมูลต้นฉบับ
       </p>
 
@@ -189,7 +189,7 @@ export function CustomerTab({ state, setState, openCustomerModal, openSiteModal 
         />
       </Field>
 
-      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-5 mb-2.5">กำหนดการ</p>
+      <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide mt-5 mb-2.5">กำหนดการ</p>
       <div className="grid grid-cols-2 gap-x-5">
         <Field label="Estimated Installation">
           <TextInput type="date" value={state.estimatedInstallation || ""} onChange={(e) => setState((s) => ({ ...s, estimatedInstallation: e.target.value }))} />
@@ -205,7 +205,7 @@ export function CustomerTab({ state, setState, openCustomerModal, openSiteModal 
         </Field>
       </div>
 
-      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-5 mb-2.5">ประกัน & สถานะ</p>
+      <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide mt-5 mb-2.5">ประกัน & สถานะ</p>
       <div className="grid grid-cols-2 gap-x-5">
         <Field label="Warranty (month)">
           <TextInput
@@ -221,7 +221,7 @@ export function CustomerTab({ state, setState, openCustomerModal, openSiteModal 
           </Select>
         </Field>
       </div>
-      <p className="text-xs text-slate-400 -mt-2.5 flex items-center gap-1.5">
+      <p className="text-xs text-stone-400 -mt-2.5 flex items-center gap-1.5">
         <CheckCircle2 className="w-3.5 h-3.5" /> ค่านี้คือสถานะจริงของ Project — เปลี่ยนตรงนี้แล้วแถบสถานะด้านบนและ Status Stepper จะอัปเดตตามทันที
       </p>
     </div>
@@ -268,8 +268,8 @@ export function SoInfoTab({ projectId }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">ใบเสนอราคาที่เกี่ยวข้อง</h4>
-        <button onClick={() => setShowForm((v) => !v)} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-900 hover:text-slate-900">
+        <h4 className="text-sm font-semibold text-stone-700 dark:text-stone-200">ใบเสนอราคาที่เกี่ยวข้อง</h4>
+        <button onClick={() => setShowForm((v) => !v)} className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-900 hover:text-stone-900">
           <Plus className="w-4 h-4" /> เพิ่มใบเสนอราคา
         </button>
       </div>
@@ -279,15 +279,15 @@ export function SoInfoTab({ projectId }) {
           <TextInput placeholder="เลขที่เอกสาร" value={docNo} onChange={(e) => setDocNo(e.target.value)} />
           <TextInput placeholder="ประเภทสินค้า" value={productType} onChange={(e) => setProductType(e.target.value)} />
           <TextInput placeholder="ราคา" type="number" value={price} onChange={(e) => setPrice(e.target.value)} />
-          <button onClick={handleAdd} disabled={saving} className="px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-60">
+          <button onClick={handleAdd} disabled={saving} className="px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white disabled:opacity-60">
             {saving ? "..." : "บันทึก"}
           </button>
         </div>
       )}
 
-      <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="rounded-xl border border-stone-200 dark:border-stone-700 overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
+          <thead className="bg-stone-50 dark:bg-stone-900 text-stone-500 dark:text-stone-400">
             <tr>
               <th className="text-left font-medium px-4 py-2.5">วันที่สร้าง</th>
               <th className="text-left font-medium px-4 py-2.5">ประเภทสินค้า</th>
@@ -296,17 +296,17 @@ export function SoInfoTab({ projectId }) {
               <th className="text-right font-medium px-4 py-2.5"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-            {loading && <tr><td colSpan={5} className="text-center text-slate-400 py-6">กำลังโหลด...</td></tr>}
-            {!loading && rows?.length === 0 && <tr><td colSpan={5} className="text-center text-slate-400 py-6">ยังไม่มีใบเสนอราคา</td></tr>}
+          <tbody className="divide-y divide-stone-100 dark:divide-stone-700">
+            {loading && <tr><td colSpan={5} className="text-center text-stone-400 py-6">กำลังโหลด...</td></tr>}
+            {!loading && rows?.length === 0 && <tr><td colSpan={5} className="text-center text-stone-400 py-6">ยังไม่มีใบเสนอราคา</td></tr>}
             {rows?.map((r) => (
               <tr key={r.id}>
-                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{new Date(r.created_at).toLocaleString("th-TH")}</td>
-                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.product_type || "-"}</td>
-                <td className="px-4 py-3 text-slate-900 font-medium">{r.document_no}</td>
-                <td className="px-4 py-3 text-right text-slate-800 dark:text-slate-100 font-medium">{r.price ? `฿${Number(r.price).toLocaleString()}` : "-"}</td>
+                <td className="px-4 py-3 text-stone-600 dark:text-stone-300">{new Date(r.created_at).toLocaleString("th-TH")}</td>
+                <td className="px-4 py-3 text-stone-600 dark:text-stone-300">{r.product_type || "-"}</td>
+                <td className="px-4 py-3 text-stone-900 font-medium">{r.document_no}</td>
+                <td className="px-4 py-3 text-right text-stone-800 dark:text-stone-100 font-medium">{r.price ? `฿${Number(r.price).toLocaleString()}` : "-"}</td>
                 <td className="px-4 py-3 text-right">
-                  <button onClick={() => handleDelete(r.id)} className="text-slate-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                  <button onClick={() => handleDelete(r.id)} className="text-stone-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
                 </td>
               </tr>
             ))}
@@ -319,16 +319,16 @@ export function SoInfoTab({ projectId }) {
 
 function JobHistoryPanel({ projectId, modelCode }) {
   const { data: jobs, loading } = useQuery(() => listJobsForModel(projectId, modelCode), [projectId, modelCode]);
-  if (loading) return <p className="text-xs text-slate-400 py-2">กำลังโหลด...</p>;
-  if (!jobs || jobs.length === 0) return <p className="text-xs text-slate-400 py-2">ยังไม่มีการเบิกสำหรับรุ่นนี้</p>;
+  if (loading) return <p className="text-xs text-stone-400 py-2">กำลังโหลด...</p>;
+  if (!jobs || jobs.length === 0) return <p className="text-xs text-stone-400 py-2">ยังไม่มีการเบิกสำหรับรุ่นนี้</p>;
   return (
     <div className="py-2 space-y-2">
       {jobs.map((j) => (
-        <div key={j.jobId} className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-900 rounded-lg px-3 py-2">
+        <div key={j.jobId} className="flex items-center justify-between text-xs bg-stone-50 dark:bg-stone-900 rounded-lg px-3 py-2">
           <div>
-            <span className="font-medium text-slate-900">{j.jobCode}</span>
-            <span className="text-slate-400 ml-2">{new Date(j.createdAt).toLocaleString("th-TH")}</span>
-            <span className="text-slate-400 ml-2">— {j.serials.length} ชิ้น: {j.serials.join(", ")}</span>
+            <span className="font-medium text-stone-900">{j.jobCode}</span>
+            <span className="text-stone-400 ml-2">{new Date(j.createdAt).toLocaleString("th-TH")}</span>
+            <span className="text-stone-400 ml-2">— {j.serials.length} ชิ้น: {j.serials.join(", ")}</span>
           </div>
           <Pill tone={j.status === "ยกเลิกแล้ว" ? "rose" : "green"}>{j.status}</Pill>
         </div>
@@ -415,13 +415,13 @@ export function DeviceInstallTab({ projectId }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">รายการที่วางแผนใช้ (Estimate)</h4>
-        <button onClick={() => setShowForm((v) => !v)} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-900 hover:text-slate-900">
+        <h4 className="text-sm font-semibold text-stone-700 dark:text-stone-200">รายการที่วางแผนใช้ (Estimate)</h4>
+        <button onClick={() => setShowForm((v) => !v)} className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-900 hover:text-stone-900">
           <Plus className="w-4 h-4" /> เพิ่มรายการ
         </button>
       </div>
-      <p className="text-xs text-slate-400 mb-4">
-        สลับปุ่ม "จองสต็อก" ได้ต่อรายการ — ถ้าเปิดไว้ จะขึ้นยอด <span className="font-medium text-slate-600">Reserved</span> ในหน้า Stock ทันที (ไม่ตัด On Hand จริง) ถ้าปิดไว้ รายการนี้จะเป็นแค่ประมาณการ ไม่กันสต็อกให้
+      <p className="text-xs text-stone-400 mb-4">
+        สลับปุ่ม "จองสต็อก" ได้ต่อรายการ — ถ้าเปิดไว้ จะขึ้นยอด <span className="font-medium text-stone-600">Reserved</span> ในหน้า Stock ทันที (ไม่ตัด On Hand จริง) ถ้าปิดไว้ รายการนี้จะเป็นแค่ประมาณการ ไม่กันสต็อกให้
       </p>
 
       {showForm && (
@@ -445,16 +445,16 @@ export function DeviceInstallTab({ projectId }) {
             <TextInput type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} />
           </Field>
           <div className="pt-6">
-            <button onClick={handleAdd} disabled={saving} className="w-full px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-60">
+            <button onClick={handleAdd} disabled={saving} className="w-full px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white disabled:opacity-60">
               {saving ? "..." : "เพิ่ม"}
             </button>
           </div>
         </div>
       )}
 
-      <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="rounded-xl border border-stone-200 dark:border-stone-700 overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
+          <thead className="bg-stone-50 dark:bg-stone-900 text-stone-500 dark:text-stone-400">
             <tr>
               <th className="text-left font-medium px-4 py-2.5">รุ่น</th>
               <th className="text-left font-medium px-4 py-2.5">รายละเอียด</th>
@@ -466,16 +466,16 @@ export function DeviceInstallTab({ projectId }) {
               <th className="text-right font-medium px-4 py-2.5"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-            {loading && <tr><td colSpan={8} className="text-center text-slate-400 py-6">กำลังโหลด...</td></tr>}
-            {!loading && rows?.length === 0 && <tr><td colSpan={8} className="text-center text-slate-400 py-6">ยังไม่มีรายการ</td></tr>}
+          <tbody className="divide-y divide-stone-100 dark:divide-stone-700">
+            {loading && <tr><td colSpan={8} className="text-center text-stone-400 py-6">กำลังโหลด...</td></tr>}
+            {!loading && rows?.length === 0 && <tr><td colSpan={8} className="text-center text-stone-400 py-6">ยังไม่มีรายการ</td></tr>}
             {rows?.map((r) => (
               <React.Fragment key={r.id}>
                 <tr>
-                  <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">{r.model_code}</td>
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.description}</td>
-                  <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-300">{r.planned_qty}</td>
-                  <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-300">{r.withdrawn_qty}</td>
+                  <td className="px-4 py-3 font-medium text-stone-800 dark:text-stone-100">{r.model_code}</td>
+                  <td className="px-4 py-3 text-stone-600 dark:text-stone-300">{r.description}</td>
+                  <td className="px-4 py-3 text-right text-stone-600 dark:text-stone-300">{r.planned_qty}</td>
+                  <td className="px-4 py-3 text-right text-stone-600 dark:text-stone-300">{r.withdrawn_qty}</td>
                   <td className="px-4 py-3 text-center"><Toggle checked={r.is_reserved} onChange={() => toggleReserve(r)} /></td>
                   <td className="px-4 py-3 text-right">
                     {!r.is_reserved ? (
@@ -490,19 +490,19 @@ export function DeviceInstallTab({ projectId }) {
                     {r.withdrawn_qty > 0 && (
                       <button
                         onClick={() => setExpandedModel(expandedModel === r.model_code ? null : r.model_code)}
-                        className="text-xs font-medium text-slate-900 hover:underline"
+                        className="text-xs font-medium text-stone-900 hover:underline"
                       >
                         {expandedModel === r.model_code ? "ซ่อน" : "ดู Job"}
                       </button>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button onClick={() => handleDelete(r.id)} className="text-slate-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => handleDelete(r.id)} className="text-stone-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
                   </td>
                 </tr>
                 {expandedModel === r.model_code && (
                   <tr>
-                    <td colSpan={8} className="px-4 bg-slate-50/50 dark:bg-slate-900/40">
+                    <td colSpan={8} className="px-4 bg-stone-50/50 dark:bg-stone-900/40">
                       <JobHistoryPanel projectId={projectId} modelCode={r.model_code} />
                     </td>
                   </tr>
@@ -646,7 +646,7 @@ function NewJobModal({ projectId, warrantyMonths, deviceInstallRows, existingJob
 
       {canFulfill && (
         pending.length === 0 ? (
-          <p className="text-sm text-slate-400 py-4 text-center">ไม่มีรายการค้างเบิก (เบิกครบตามแผนแล้วทุกรายการ)</p>
+          <p className="text-sm text-stone-400 py-4 text-center">ไม่มีรายการค้างเบิก (เบิกครบตามแผนแล้วทุกรายการ)</p>
         ) : (
           <div className="space-y-4">
             {pending.map((r) => {
@@ -654,8 +654,8 @@ function NewJobModal({ projectId, warrantyMonths, deviceInstallRows, existingJob
               const serials = serialArrayFor(serialInputs, r.id, remaining);
               return (
                 <div key={r.id}>
-                  <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
-                    {r.model_code} — {r.description} <span className="text-slate-400 font-normal">(ค้างเบิก {remaining} ชิ้น — กรอก Serial ทีละช่อง)</span>
+                  <p className="text-sm font-medium text-stone-700 dark:text-stone-200 mb-1.5">
+                    {r.model_code} — {r.description} <span className="text-stone-400 font-normal">(ค้างเบิก {remaining} ชิ้น — กรอก Serial ทีละช่อง)</span>
                   </p>
                   <div className="grid grid-cols-2 gap-2">
                     {serials.map((val, idx) => (
@@ -664,7 +664,7 @@ function NewJobModal({ projectId, warrantyMonths, deviceInstallRows, existingJob
                         value={val}
                         onChange={(e) => setSerialAt(r.id, idx, e.target.value)}
                         placeholder={`Serial #${idx + 1}`}
-                        className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-sm font-mono"
+                        className="px-3 py-2 rounded-lg border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900 text-sm font-mono"
                       />
                     ))}
                   </div>
@@ -675,14 +675,14 @@ function NewJobModal({ projectId, warrantyMonths, deviceInstallRows, existingJob
         )
       )}
 
-      <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-slate-100 dark:border-slate-700">
-        <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">ยกเลิก</button>
+      <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-stone-100 dark:border-stone-700">
+        <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700">ยกเลิก</button>
         {canFulfill ? (
-          <button onClick={handleFulfill} disabled={saving || pending.length === 0} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
+          <button onClick={handleFulfill} disabled={saving || pending.length === 0} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
             {saving ? "กำลังเบิก..." : "ยืนยันเบิกสินค้า"}
           </button>
         ) : (
-          <button onClick={handleSubmitRequest} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
+          <button onClick={handleSubmitRequest} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
             {saving ? "กำลังส่ง..." : "ส่งคำขอเบิก"}
           </button>
         )}
@@ -715,17 +715,17 @@ export function InstallPeriodTab({ projectId, warrantyMonths }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">การเบิกสินค้าออกจากคลัง</h4>
-        <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-1.5 text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white px-3 py-1.5 rounded-lg shadow-sm">
+        <h4 className="text-sm font-semibold text-stone-700 dark:text-stone-200">การเบิกสินค้าออกจากคลัง</h4>
+        <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-1.5 text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white px-3 py-1.5 rounded-lg shadow-sm">
           <Plus className="w-4 h-4" /> New Jobs
         </button>
       </div>
-      <p className="text-xs text-slate-400 mb-4">
+      <p className="text-xs text-stone-400 mb-4">
         Job ที่เบิกแล้วสามารถกด "ยกเลิกการเบิก" ได้ (เฉพาะ Store/Manager/Super Admin) — ระบบคืนสต็อกและลบ Serial/Warranty ที่ผูกกับ Job นั้นให้อัตโนมัติ ไม่ต้องกรอกข้อมูลอะไรเพิ่ม
       </p>
-      <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="rounded-xl border border-stone-200 dark:border-stone-700 overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
+          <thead className="bg-stone-50 dark:bg-stone-900 text-stone-500 dark:text-stone-400">
             <tr>
               <th className="text-left font-medium px-4 py-2.5">Job Code</th>
               <th className="text-left font-medium px-4 py-2.5">วันที่สร้าง</th>
@@ -735,15 +735,15 @@ export function InstallPeriodTab({ projectId, warrantyMonths }) {
               <th className="text-right font-medium px-4 py-2.5"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-            {loading && <tr><td colSpan={6} className="text-center text-slate-400 py-6">กำลังโหลด...</td></tr>}
-            {!loading && jobs?.length === 0 && <tr><td colSpan={6} className="text-center text-slate-400 py-6">ยังไม่มีการเบิกสินค้า</td></tr>}
+          <tbody className="divide-y divide-stone-100 dark:divide-stone-700">
+            {loading && <tr><td colSpan={6} className="text-center text-stone-400 py-6">กำลังโหลด...</td></tr>}
+            {!loading && jobs?.length === 0 && <tr><td colSpan={6} className="text-center text-stone-400 py-6">ยังไม่มีการเบิกสินค้า</td></tr>}
             {jobs?.map((j) => (
               <tr key={j.id}>
-                <td className="px-4 py-3 font-medium text-slate-900">{j.job_code}</td>
-                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{new Date(j.created_at).toLocaleString("th-TH")}</td>
-                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{j.due_date || "-"}</td>
-                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{j.requester?.name || "-"}</td>
+                <td className="px-4 py-3 font-medium text-stone-900">{j.job_code}</td>
+                <td className="px-4 py-3 text-stone-600 dark:text-stone-300">{new Date(j.created_at).toLocaleString("th-TH")}</td>
+                <td className="px-4 py-3 text-stone-600 dark:text-stone-300">{j.due_date || "-"}</td>
+                <td className="px-4 py-3 text-stone-600 dark:text-stone-300">{j.requester?.name || "-"}</td>
                 <td className="px-4 py-3 text-right">
                   {j.status === "เบิกสินค้าแล้ว" ? (
                     <Pill tone="green">{j.status}</Pill>
@@ -755,7 +755,7 @@ export function InstallPeriodTab({ projectId, warrantyMonths }) {
                 </td>
                 <td className="px-4 py-3 text-right">
                   {j.status !== "เบิกสินค้าแล้ว" && j.status !== "ยกเลิกแล้ว" && (
-                    <button onClick={() => setFulfillJob(j)} className="text-xs font-medium text-slate-900 hover:underline">ดำเนินการเบิก</button>
+                    <button onClick={() => setFulfillJob(j)} className="text-xs font-medium text-stone-900 hover:underline">ดำเนินการเบิก</button>
                   )}
                   {j.status === "เบิกสินค้าแล้ว" && canCancel && (
                     <button onClick={() => handleCancel(j)} className="text-xs font-medium text-rose-500 hover:underline">ยกเลิกการเบิก</button>
@@ -822,8 +822,8 @@ function ReturnToStockModal({ row, projectId, onClose, onReturned }) {
       <p className="text-sm text-rose-600 dark:text-rose-300 bg-rose-50 dark:bg-rose-500/10 rounded-lg px-3 py-2.5 mb-4">
         ⚠️ การกระทำนี้จะ<strong>ลบสินค้าออกจากระบบ</strong> (ออกจาก Device Detail และหยุดนับประกัน) และคืนยอดกลับเข้าคลัง ยืนยันที่จะทำหรือไม่?
       </p>
-      <div className="text-sm text-slate-600 dark:text-slate-300 mb-3">
-        รุ่น: <span className="font-medium text-slate-800 dark:text-slate-100">{row.model_code}</span> — {row.description}
+      <div className="text-sm text-stone-600 dark:text-stone-300 mb-3">
+        รุ่น: <span className="font-medium text-stone-800 dark:text-stone-100">{row.model_code}</span> — {row.description}
       </div>
       <Field label={`พิมพ์ Serial Number "${row.serial_no}" เพื่อยืนยัน`} required>
         <TextInput
@@ -834,8 +834,8 @@ function ReturnToStockModal({ row, projectId, onClose, onReturned }) {
         />
       </Field>
       {typedSerial && !matches && <p className="text-xs text-rose-500 -mt-2.5">Serial ไม่ตรงกัน</p>}
-      <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-slate-100 dark:border-slate-700">
-        <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">ยกเลิก</button>
+      <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-stone-100 dark:border-stone-700">
+        <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700">ยกเลิก</button>
         <button
           onClick={handleConfirm}
           disabled={!matches || returning}
@@ -863,11 +863,11 @@ export function DeviceDetailTab({ projectId }) {
 
   return (
     <div>
-      <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">สินค้าที่เบิกจริง พร้อม Serial + Warranty</h4>
-      <p className="text-xs text-slate-400 mb-4">ข้อมูลชุดนี้ถูกสร้างอัตโนมัติจากแท็บ Install Period ตอนกด "ยืนยันเบิกสินค้า" — ไม่มีการพิมพ์ซ้ำ</p>
-      <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <h4 className="text-sm font-semibold text-stone-700 dark:text-stone-200 mb-1">สินค้าที่เบิกจริง พร้อม Serial + Warranty</h4>
+      <p className="text-xs text-stone-400 mb-4">ข้อมูลชุดนี้ถูกสร้างอัตโนมัติจากแท็บ Install Period ตอนกด "ยืนยันเบิกสินค้า" — ไม่มีการพิมพ์ซ้ำ</p>
+      <div className="rounded-xl border border-stone-200 dark:border-stone-700 overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
+          <thead className="bg-stone-50 dark:bg-stone-900 text-stone-500 dark:text-stone-400">
             <tr>
               <th className="text-left font-medium px-4 py-2.5">Serial No.</th>
               <th className="text-left font-medium px-4 py-2.5">รุ่น</th>
@@ -877,15 +877,15 @@ export function DeviceDetailTab({ projectId }) {
               <th className="text-right font-medium px-4 py-2.5"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-            {loading && <tr><td colSpan={6} className="text-center text-slate-400 py-6">กำลังโหลด...</td></tr>}
-            {!loading && rows?.length === 0 && <tr><td colSpan={6} className="text-center text-slate-400 py-6">ยังไม่มีสินค้าที่เบิกจริง — เบิกได้ที่แท็บ Install Period</td></tr>}
+          <tbody className="divide-y divide-stone-100 dark:divide-stone-700">
+            {loading && <tr><td colSpan={6} className="text-center text-stone-400 py-6">กำลังโหลด...</td></tr>}
+            {!loading && rows?.length === 0 && <tr><td colSpan={6} className="text-center text-stone-400 py-6">ยังไม่มีสินค้าที่เบิกจริง — เบิกได้ที่แท็บ Install Period</td></tr>}
             {rows?.map((r) => (
               <tr key={r.id}>
-                <td className="px-4 py-3 font-mono text-xs text-slate-700 dark:text-slate-300">{r.serial_no}</td>
-                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.model_code}</td>
-                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.start_date}</td>
-                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.warranty_months} เดือน</td>
+                <td className="px-4 py-3 font-mono text-xs text-stone-700 dark:text-stone-300">{r.serial_no}</td>
+                <td className="px-4 py-3 text-stone-600 dark:text-stone-300">{r.model_code}</td>
+                <td className="px-4 py-3 text-stone-600 dark:text-stone-300">{r.start_date}</td>
+                <td className="px-4 py-3 text-stone-600 dark:text-stone-300">{r.warranty_months} เดือน</td>
                 <td className="px-4 py-3 text-right">
                   {warrantyStatus(r) ? <Pill tone="green">ในประกัน</Pill> : <Pill tone="rose">หมดประกัน</Pill>}
                 </td>
@@ -964,8 +964,8 @@ export function PaymentPeriodTab({ projectId }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">เงื่อนไขการชำระเงิน</h4>
-        <button onClick={() => setShowForm((v) => !v)} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-900 hover:text-slate-900">
+        <h4 className="text-sm font-semibold text-stone-700 dark:text-stone-200">เงื่อนไขการชำระเงิน</h4>
+        <button onClick={() => setShowForm((v) => !v)} className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-900 hover:text-stone-900">
           <Plus className="w-4 h-4" /> เพิ่มงวดชำระ
         </button>
       </div>
@@ -974,15 +974,15 @@ export function PaymentPeriodTab({ projectId }) {
         <div className="grid grid-cols-3 gap-2 mb-4 items-end">
           <TextInput placeholder="ยอดชำระ" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
           <TextInput placeholder="เงื่อนไข เช่น ชำระหลังส่งมอบงาน" value={condition} onChange={(e) => setCondition(e.target.value)} />
-          <button onClick={handleAdd} disabled={saving} className="px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-60">
+          <button onClick={handleAdd} disabled={saving} className="px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white disabled:opacity-60">
             {saving ? "..." : "บันทึก"}
           </button>
         </div>
       )}
 
-      <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="rounded-xl border border-stone-200 dark:border-stone-700 overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
+          <thead className="bg-stone-50 dark:bg-stone-900 text-stone-500 dark:text-stone-400">
             <tr>
               <th className="text-left font-medium px-4 py-2.5">งวดที่</th>
               <th className="text-left font-medium px-4 py-2.5">เงื่อนไข</th>
@@ -992,30 +992,30 @@ export function PaymentPeriodTab({ projectId }) {
               <th className="text-right font-medium px-4 py-2.5"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-            {loading && <tr><td colSpan={6} className="text-center text-slate-400 py-6">กำลังโหลด...</td></tr>}
-            {!loading && rows?.length === 0 && <tr><td colSpan={6} className="text-center text-slate-400 py-6">ยังไม่มีงวดชำระ</td></tr>}
+          <tbody className="divide-y divide-stone-100 dark:divide-stone-700">
+            {loading && <tr><td colSpan={6} className="text-center text-stone-400 py-6">กำลังโหลด...</td></tr>}
+            {!loading && rows?.length === 0 && <tr><td colSpan={6} className="text-center text-stone-400 py-6">ยังไม่มีงวดชำระ</td></tr>}
             {rows?.map((r) => (
               <tr key={r.id}>
-                <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">งวดที่ {r.period_no}</td>
-                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.condition_text || "-"}</td>
-                <td className="px-4 py-3 text-right text-slate-800 dark:text-slate-100 font-medium">{r.amount ? `฿${Number(r.amount).toLocaleString()}` : "-"}</td>
-                <td className="px-4 py-3 text-right text-slate-500">{r.received_amount ? `฿${Number(r.received_amount).toLocaleString()}` : "฿0"}</td>
+                <td className="px-4 py-3 font-medium text-stone-800 dark:text-stone-100">งวดที่ {r.period_no}</td>
+                <td className="px-4 py-3 text-stone-600 dark:text-stone-300">{r.condition_text || "-"}</td>
+                <td className="px-4 py-3 text-right text-stone-800 dark:text-stone-100 font-medium">{r.amount ? `฿${Number(r.amount).toLocaleString()}` : "-"}</td>
+                <td className="px-4 py-3 text-right text-stone-500">{r.received_amount ? `฿${Number(r.received_amount).toLocaleString()}` : "฿0"}</td>
                 <td className="px-4 py-3 text-right">
                   {r.paid ? <Pill tone="green">ชำระแล้ว</Pill> : <Pill tone="amber">รอชำระ</Pill>}
                 </td>
                 <td className="px-4 py-3 text-right flex items-center justify-end gap-2">
-                  {!r.paid && <button onClick={() => handleMarkPaid(r)} className="text-xs font-medium text-slate-900 hover:underline">แจ้งชำระแล้ว</button>}
-                  <button onClick={() => handleDelete(r.id)} className="text-slate-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                  {!r.paid && <button onClick={() => handleMarkPaid(r)} className="text-xs font-medium text-stone-900 hover:underline">แจ้งชำระแล้ว</button>}
+                  <button onClick={() => handleDelete(r.id)} className="text-stone-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
                 </td>
               </tr>
             ))}
           </tbody>
           {rows?.length > 0 && (
             <tfoot>
-              <tr className="bg-slate-50 dark:bg-slate-900 font-medium">
-                <td colSpan={2} className="px-4 py-2.5 text-right text-slate-600 dark:text-slate-300">รวม / คงเหลือ</td>
-                <td className="px-4 py-2.5 text-right text-slate-800 dark:text-slate-100">฿{totalAmount.toLocaleString()}</td>
+              <tr className="bg-stone-50 dark:bg-stone-900 font-medium">
+                <td colSpan={2} className="px-4 py-2.5 text-right text-stone-600 dark:text-stone-300">รวม / คงเหลือ</td>
+                <td className="px-4 py-2.5 text-right text-stone-800 dark:text-stone-100">฿{totalAmount.toLocaleString()}</td>
                 <td className="px-4 py-2.5 text-right text-emerald-600">฿{totalReceived.toLocaleString()}</td>
                 <td colSpan={2} className="px-4 py-2.5 text-right text-rose-500">ค้าง ฿{(totalAmount - totalReceived).toLocaleString()}</td>
               </tr>
@@ -1092,65 +1092,65 @@ export function FileTab({ projectId, projectNumber }) {
 
   return (
     <div>
-      <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Document Checked</h4>
+      <h4 className="text-sm font-semibold text-stone-700 dark:text-stone-200 mb-3">Document Checked</h4>
       <div className="grid grid-cols-4 gap-2 mb-6">
         {docs.map((d) => (
-          <label key={d} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-            <input type="checkbox" className="rounded accent-slate-600" />
+          <label key={d} className="flex items-center gap-2 text-sm text-stone-600 dark:text-stone-300">
+            <input type="checkbox" className="rounded accent-stone-600" />
             {d}
           </label>
         ))}
       </div>
 
       <div className="flex items-center justify-between mb-1.5">
-        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">ไฟล์แนบ</h4>
+        <h4 className="text-sm font-semibold text-stone-700 dark:text-stone-200">ไฟล์แนบ</h4>
         <FileUploader pathPrefix={`projects/${projectNumber || projectId}`} onUploaded={handleUploaded} />
       </div>
-      <p className="text-xs text-slate-400 mb-3">รองรับไฟล์ขนาดใหญ่ 100MB+ — คลิกชื่อไฟล์ในรายการด้านล่างเพื่อเปิด/ดาวน์โหลดกลับได้ทุกเมื่อ</p>
+      <p className="text-xs text-stone-400 mb-3">รองรับไฟล์ขนาดใหญ่ 100MB+ — คลิกชื่อไฟล์ในรายการด้านล่างเพื่อเปิด/ดาวน์โหลดกลับได้ทุกเมื่อ</p>
 
-      <div className="flex items-end gap-2 mb-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-900">
+      <div className="flex items-end gap-2 mb-4 p-3 rounded-xl bg-stone-50 dark:bg-stone-900">
         <div className="flex-1">
-          <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">เพิ่มลิงก์ภายนอก (เช่น Google Drive, OneDrive)</label>
+          <label className="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">เพิ่มลิงก์ภายนอก (เช่น Google Drive, OneDrive)</label>
           <input
             value={linkUrl}
             onChange={(e) => setLinkUrl(e.target.value)}
             placeholder="https://drive.google.com/..."
-            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-100"
+            className="w-full px-3 py-2 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm text-stone-800 dark:text-stone-100"
           />
         </div>
         <div className="w-48">
-          <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">ชื่อที่แสดง (ไม่บังคับ)</label>
+          <label className="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">ชื่อที่แสดง (ไม่บังคับ)</label>
           <input
             value={linkLabel}
             onChange={(e) => setLinkLabel(e.target.value)}
             placeholder="เช่น แบบก่อสร้าง"
-            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-100"
+            className="w-full px-3 py-2 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm text-stone-800 dark:text-stone-100"
           />
         </div>
-        <button onClick={handleAddLink} disabled={addingLink} className="px-3.5 py-2 rounded-lg text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-60">
+        <button onClick={handleAddLink} disabled={addingLink} className="px-3.5 py-2 rounded-lg text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white disabled:opacity-60">
           {addingLink ? "..." : "เพิ่มลิงก์"}
         </button>
       </div>
 
       <div className="space-y-2">
-        {loading && <p className="text-sm text-slate-400 text-center py-4">กำลังโหลด...</p>}
-        {!loading && files?.length === 0 && <p className="text-sm text-slate-400 text-center py-4">ยังไม่มีไฟล์แนบ</p>}
+        {loading && <p className="text-sm text-stone-400 text-center py-4">กำลังโหลด...</p>}
+        {!loading && files?.length === 0 && <p className="text-sm text-stone-400 text-center py-4">ยังไม่มีไฟล์แนบ</p>}
         {files?.map((f) => {
           const isLink = /^https?:\/\//i.test(f.storage_path);
           return (
-            <div key={f.id} className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm">
+            <div key={f.id} className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-sm">
               <a
                 href={hrefFor(f)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-slate-900 hover:text-slate-900 hover:underline min-w-0"
+                className="flex items-center gap-2 text-stone-900 hover:text-stone-900 hover:underline min-w-0"
               >
                 {isLink ? <LinkIcon className="w-4 h-4 shrink-0" /> : <FileText className="w-4 h-4 shrink-0" />}
                 <span className="truncate">{f.file_name}</span>
               </a>
               <span className="flex items-center gap-3 shrink-0">
-                <span className="text-slate-400 text-xs">{f.uploader?.name || "-"}</span>
-                <button onClick={() => handleDelete(f.id)} className="text-slate-400 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                <span className="text-stone-400 text-xs">{f.uploader?.name || "-"}</span>
+                <button onClick={() => handleDelete(f.id)} className="text-stone-400 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>
               </span>
             </div>
           );
@@ -1200,8 +1200,8 @@ export function AppDataTab({ projectId }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">บัญชี Application ของโปรเจคนี้</h4>
-        <button onClick={() => setShowForm((v) => !v)} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-900 hover:text-slate-900">
+        <h4 className="text-sm font-semibold text-stone-700 dark:text-stone-200">บัญชี Application ของโปรเจคนี้</h4>
+        <button onClick={() => setShowForm((v) => !v)} className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-900 hover:text-stone-900">
           <Plus className="w-4 h-4" /> เพิ่มบัญชี
         </button>
       </div>
@@ -1212,15 +1212,15 @@ export function AppDataTab({ projectId }) {
           <TextInput placeholder="ID" value={form.account_id} onChange={(e) => setForm((f) => ({ ...f, account_id: e.target.value }))} />
           <TextInput placeholder="Password" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} />
           <TextInput placeholder="Email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
-          <button onClick={handleAdd} disabled={saving} className="px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-60">
+          <button onClick={handleAdd} disabled={saving} className="px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white disabled:opacity-60">
             {saving ? "..." : "บันทึก"}
           </button>
         </div>
       )}
 
-      <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="rounded-xl border border-stone-200 dark:border-stone-700 overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
+          <thead className="bg-stone-50 dark:bg-stone-900 text-stone-500 dark:text-stone-400">
             <tr>
               <th className="text-left font-medium px-4 py-2.5">Application</th>
               <th className="text-left font-medium px-4 py-2.5">ID</th>
@@ -1229,31 +1229,31 @@ export function AppDataTab({ projectId }) {
               <th className="text-right font-medium px-4 py-2.5"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-            {loading && <tr><td colSpan={5} className="text-center text-slate-400 py-6">กำลังโหลด...</td></tr>}
-            {!loading && rows?.length === 0 && <tr><td colSpan={5} className="text-center text-slate-400 py-6">ยังไม่มีบัญชี Application</td></tr>}
+          <tbody className="divide-y divide-stone-100 dark:divide-stone-700">
+            {loading && <tr><td colSpan={5} className="text-center text-stone-400 py-6">กำลังโหลด...</td></tr>}
+            {!loading && rows?.length === 0 && <tr><td colSpan={5} className="text-center text-stone-400 py-6">ยังไม่มีบัญชี Application</td></tr>}
             {rows?.map((r, i) => (
               <tr key={r.id}>
-                <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">{r.application}</td>
-                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.account_id}</td>
-                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                <td className="px-4 py-3 font-medium text-stone-800 dark:text-stone-100">{r.application}</td>
+                <td className="px-4 py-3 text-stone-600 dark:text-stone-300">{r.account_id}</td>
+                <td className="px-4 py-3 text-stone-600 dark:text-stone-300">
                   <div className="flex items-center gap-2">
                     <span className="font-mono">{visible[r.id] ? (r.password || "-") : "•".repeat((r.password || "").length || 8)}</span>
-                    <button onClick={() => setVisible((v) => ({ ...v, [r.id]: !v[r.id] }))} className="text-slate-400 hover:text-slate-900">
+                    <button onClick={() => setVisible((v) => ({ ...v, [r.id]: !v[r.id] }))} className="text-stone-400 hover:text-stone-900">
                       {visible[r.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.email || "-"}</td>
+                <td className="px-4 py-3 text-stone-600 dark:text-stone-300">{r.email || "-"}</td>
                 <td className="px-4 py-3 text-right">
-                  <button onClick={() => handleDelete(r.id)} className="text-slate-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                  <button onClick={() => handleDelete(r.id)} className="text-stone-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-slate-400 mt-3">ข้อมูลรหัสผ่านถูกจำกัดการมองเห็นตามสิทธิ์ผู้ใช้งาน และมีการบันทึก Log ทุกครั้งที่มีการเปิดดู</p>
+      <p className="text-xs text-stone-400 mt-3">ข้อมูลรหัสผ่านถูกจำกัดการมองเห็นตามสิทธิ์ผู้ใช้งาน และมีการบันทึก Log ทุกครั้งที่มีการเปิดดู</p>
     </div>
   );
 }

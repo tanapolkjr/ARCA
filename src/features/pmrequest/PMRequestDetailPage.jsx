@@ -106,49 +106,49 @@ function AttachmentSection({ pmRequestId }) {
   return (
     <Card className="p-6 mt-5">
       <div className="flex items-center justify-between mb-1.5">
-        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">ไฟล์แนบ / ลิงก์ (เช่น แบบบ้าน, สเปค)</h4>
+        <h4 className="text-sm font-semibold text-stone-700 dark:text-stone-200">ไฟล์แนบ / ลิงก์ (เช่น แบบบ้าน, สเปค)</h4>
         <FileUploader pathPrefix={`pm-requests/${pmRequestId}`} onUploaded={handleUploaded} />
       </div>
-      <p className="text-xs text-slate-400 mb-3">รองรับไฟล์ขนาดใหญ่ 100MB+ หรือแปะลิงก์จาก Google Drive/OneDrive ก็ได้</p>
+      <p className="text-xs text-stone-400 mb-3">รองรับไฟล์ขนาดใหญ่ 100MB+ หรือแปะลิงก์จาก Google Drive/OneDrive ก็ได้</p>
 
-      <div className="flex items-end gap-2 mb-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-900">
+      <div className="flex items-end gap-2 mb-4 p-3 rounded-xl bg-stone-50 dark:bg-stone-900">
         <div className="flex-1">
-          <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">แปะลิงก์ภายนอก</label>
+          <label className="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">แปะลิงก์ภายนอก</label>
           <input
             value={linkUrl}
             onChange={(e) => setLinkUrl(e.target.value)}
             placeholder="https://drive.google.com/..."
-            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-100"
+            className="w-full px-3 py-2 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm text-stone-800 dark:text-stone-100"
           />
         </div>
         <div className="w-48">
-          <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">ชื่อที่แสดง (ไม่บังคับ)</label>
+          <label className="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">ชื่อที่แสดง (ไม่บังคับ)</label>
           <input
             value={linkLabel}
             onChange={(e) => setLinkLabel(e.target.value)}
             placeholder="เช่น แบบบ้าน"
-            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-100"
+            className="w-full px-3 py-2 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm text-stone-800 dark:text-stone-100"
           />
         </div>
-        <button onClick={handleAddLink} disabled={addingLink} className="px-3.5 py-2 rounded-lg text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-60">
+        <button onClick={handleAddLink} disabled={addingLink} className="px-3.5 py-2 rounded-lg text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white disabled:opacity-60">
           {addingLink ? "..." : "เพิ่มลิงก์"}
         </button>
       </div>
 
       <div className="space-y-2">
-        {loading && <p className="text-sm text-slate-400 text-center py-4">กำลังโหลด...</p>}
-        {!loading && files?.length === 0 && <p className="text-sm text-slate-400 text-center py-4">ยังไม่มีไฟล์แนบ</p>}
+        {loading && <p className="text-sm text-stone-400 text-center py-4">กำลังโหลด...</p>}
+        {!loading && files?.length === 0 && <p className="text-sm text-stone-400 text-center py-4">ยังไม่มีไฟล์แนบ</p>}
         {files?.map((f) => {
           const isLink = /^https?:\/\//i.test(f.storage_path);
           return (
-            <div key={f.id} className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm">
-              <a href={hrefFor(f)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-slate-900 hover:text-slate-900 hover:underline min-w-0">
+            <div key={f.id} className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-sm">
+              <a href={hrefFor(f)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-stone-900 hover:text-stone-900 hover:underline min-w-0">
                 {isLink ? <LinkIcon className="w-4 h-4 shrink-0" /> : <FileText className="w-4 h-4 shrink-0" />}
                 <span className="truncate">{f.file_name}</span>
               </a>
               <span className="flex items-center gap-3 shrink-0">
-                <span className="text-slate-400 text-xs">{f.uploader?.name || "-"}</span>
-                <button onClick={() => handleDelete(f.id)} className="text-slate-400 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                <span className="text-stone-400 text-xs">{f.uploader?.name || "-"}</span>
+                <button onClick={() => handleDelete(f.id)} className="text-stone-400 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>
               </span>
             </div>
           );
@@ -231,22 +231,22 @@ export default function PMRequestDetail() {
     }
   }
 
-  if (!isNew && loading) return <div className="text-center text-slate-400 py-20">กำลังโหลด...</div>;
+  if (!isNew && loading) return <div className="text-center text-stone-400 py-20">กำลังโหลด...</div>;
   if (!isNew && loadError) return <div className="bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-300 text-sm rounded-xl p-4">โหลดไม่สำเร็จ: {errMsg(loadError)}</div>;
 
   return (
     <div>
       <div className="flex items-start justify-between mb-6 flex-wrap gap-3">
         <div>
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5">
-            <button onClick={() => goBack()} className="hover:text-slate-900 flex items-center gap-1">
+          <div className="flex items-center gap-1.5 text-xs text-stone-400 mb-1.5">
+            <button onClick={() => goBack()} className="hover:text-stone-900 flex items-center gap-1">
               <ArrowLeft className="w-3.5 h-3.5" /> PM Request
             </button>
             <span>/</span>
             <span>{isNew ? "New Request" : "Edit Request"}</span>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">{isNew ? "คำขอใหม่" : reqData?.request_code}</h1>
+            <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100 tracking-tight">{isNew ? "คำขอใหม่" : reqData?.request_code}</h1>
             <Pill tone={STATUS_TONE[state.status] || "slate"}>{state.status}</Pill>
           </div>
         </div>
@@ -259,10 +259,10 @@ export default function PMRequestDetail() {
               <Trash2 className="w-4 h-4" />
             </button>
           )}
-          <button onClick={() => goBack()} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">
+          <button onClick={() => goBack()} className="px-4 py-2 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800">
             ย้อนกลับ
           </button>
-          <button onClick={handleSave} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm">
+          <button onClick={handleSave} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white shadow-sm">
             <Save className="w-4 h-4" /> Save Data
           </button>
         </div>
@@ -307,10 +307,10 @@ export default function PMRequestDetail() {
             <Field label="รายละเอียดคำขอ">
               <TextArea rows={4} value={state.detail} onChange={(e) => markDirty((s) => ({ ...s, detail: e.target.value }))} />
             </Field>
-            <p className="text-xs text-slate-400 -mt-2.5">เปลี่ยนสถานะเป็น "เสร็จสิ้น" เมื่อจบงานแล้ว ตัวเลือกอยู่ในช่อง Status ด้านบน</p>
+            <p className="text-xs text-stone-400 -mt-2.5">เปลี่ยนสถานะเป็น "เสร็จสิ้น" เมื่อจบงานแล้ว ตัวเลือกอยู่ในช่อง Status ด้านบน</p>
           </Card>
           {isNew ? (
-            <p className="text-sm text-slate-400 text-center py-6">บันทึกข้อมูลก่อน (กด Save Data) จึงจะแนบไฟล์/ลิงก์ได้</p>
+            <p className="text-sm text-stone-400 text-center py-6">บันทึกข้อมูลก่อน (กด Save Data) จึงจะแนบไฟล์/ลิงก์ได้</p>
           ) : (
             <AttachmentSection pmRequestId={id} />
           )}

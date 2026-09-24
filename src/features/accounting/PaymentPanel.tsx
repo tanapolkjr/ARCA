@@ -56,9 +56,9 @@ export function ReceivePaymentModal({
 
   return (
     <Modal title={`รับชำระเงิน — ${docNo ?? 'เอกสาร'}`} onClose={onClose} wide>
-      <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 px-4 py-3 text-sm flex justify-between">
-        <span className="text-slate-500">ยอดค้างชำระ</span>
-        <span className="font-bold tabular-nums text-slate-800 dark:text-slate-100">
+      <div className="rounded-xl bg-stone-50 dark:bg-stone-800/60 px-4 py-3 text-sm flex justify-between">
+        <span className="text-stone-500">ยอดค้างชำระ</span>
+        <span className="font-bold tabular-nums text-stone-800 dark:text-stone-100">
           {money(outstanding)}
         </span>
       </div>
@@ -107,18 +107,18 @@ export function ReceivePaymentModal({
         </Field>
       </div>
 
-      <div className="rounded-xl border border-slate-100 dark:border-slate-800 p-4 text-sm space-y-1">
+      <div className="rounded-xl border border-stone-100 dark:border-stone-800 p-4 text-sm space-y-1">
         <Row k="เงินเข้าบัญชีจริง" v={cash} strong />
         <Row k="หัก ณ ที่จ่าย" v={whtN} />
         <Row k="ค่าธรรมเนียม" v={feeN} />
-        <div className="border-t border-slate-100 dark:border-slate-800 pt-1">
+        <div className="border-t border-stone-100 dark:border-stone-800 pt-1">
           <Row k="รวมยอดที่ตัดหนี้" v={alloc} strong />
         </div>
         <Row k="คงเหลือค้างชำระ" v={remaining} tone={remaining > 0 ? 'text-amber-600' : 'text-emerald-600'} />
       </div>
 
       {walletId && cash > 0 && (
-        <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+        <label className="flex items-center gap-2 text-sm text-stone-600 dark:text-stone-300">
           <input type="checkbox" checked={postCash} onChange={(e) => setPostCash(e.target.checked)} />
           <WalletIcon className="w-4 h-4" /> บันทึกเงินเข้าในสมุดรายรับ-รายจ่ายด้วย
         </label>
@@ -159,8 +159,8 @@ export function ReceivePaymentModal({
 function Row({ k, v, strong, tone }: { k: string; v: number; strong?: boolean; tone?: string }) {
   return (
     <div className="flex justify-between">
-      <span className="text-slate-500">{k}</span>
-      <span className={`tabular-nums ${strong ? 'font-semibold' : ''} ${tone ?? 'text-slate-800 dark:text-slate-100'}`}>
+      <span className="text-stone-500">{k}</span>
+      <span className={`tabular-nums ${strong ? 'font-semibold' : ''} ${tone ?? 'text-stone-800 dark:text-stone-100'}`}>
         {money(v)}
       </span>
     </div>
@@ -181,33 +181,33 @@ export function PaymentHistory({
   if ((q.data?.length ?? 0) === 0) return null;
 
   return (
-    <div className="no-print bg-white dark:bg-slate-900 rounded-2xl border border-slate-100
-      dark:border-slate-800 p-4">
+    <div className="no-print bg-white dark:bg-stone-900 rounded-2xl border border-stone-100
+      dark:border-stone-800 p-4">
       <div className="flex items-baseline gap-3 mb-2">
-        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">ประวัติการรับชำระ</h3>
+        <h3 className="text-sm font-semibold text-stone-800 dark:text-stone-100">ประวัติการรับชำระ</h3>
         <span className="text-sm font-bold tabular-nums text-emerald-600">{money(paid)}</span>
-        <span className="text-xs text-slate-400">
+        <span className="text-xs text-stone-400">
           จาก {money(grandTotal)} · คงเหลือ {money(Math.max(0, grandTotal - paid))}
         </span>
       </div>
       <div className="flex flex-col gap-1">
         {q.data?.map((p) => (
           <div key={p.id} className="flex items-center gap-3 text-xs">
-            <span className="w-20 text-slate-400 tabular-nums">{docDate(p.payment_date)}</span>
+            <span className="w-20 text-stone-400 tabular-nums">{docDate(p.payment_date)}</span>
             <span className="tabular-nums font-medium">{money(p.allocations?.[0]?.amount ?? 0)}</span>
             {Number(p.wht_amount) > 0 && (
-              <span className="text-slate-400">หัก ณ ที่จ่าย {money(p.wht_amount)}</span>
+              <span className="text-stone-400">หัก ณ ที่จ่าย {money(p.wht_amount)}</span>
             )}
-            <span className="text-slate-400">
+            <span className="text-stone-400">
               {p.wallet?.name ?? (
                 <span className="text-amber-600 inline-flex items-center gap-1">
                   <AlertTriangle className="w-3 h-3" /> ยังไม่ระบุกระเป๋าเงิน
                 </span>
               )}
             </span>
-            {p.note && <span className="text-slate-400 truncate">{p.note}</span>}
+            {p.note && <span className="text-stone-400 truncate">{p.note}</span>}
             <button
-              className="ml-auto text-slate-300 hover:text-rose-500"
+              className="ml-auto text-stone-300 hover:text-rose-500"
               title="ลบรายการรับชำระนี้"
               onClick={async () => {
                 try {

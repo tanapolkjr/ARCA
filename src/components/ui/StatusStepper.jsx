@@ -3,7 +3,7 @@ import { Check } from "lucide-react";
 
 export default function StatusStepper({ steps, currentIndex }) {
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 mb-6 overflow-x-auto">
+    <div className="bg-white dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700 shadow-sm p-5 mb-6 overflow-x-auto">
       <div className="flex items-center min-w-max">
         {steps.map((step, i) => {
           const done = i < currentIndex;
@@ -16,18 +16,18 @@ export default function StatusStepper({ steps, currentIndex }) {
                     done
                       ? "bg-emerald-500 border-emerald-500 text-white"
                       : active
-                      ? "bg-slate-900 border-slate-900 text-white"
-                      : "bg-white border-slate-200 text-slate-400"
+                      ? "bg-stone-900 border-stone-900 text-white"
+                      : "bg-white border-stone-200 text-stone-400"
                   }`}
                 >
                   {done ? <Check className="w-4 h-4" /> : i + 1}
                 </div>
-                <span className={`text-xs text-center w-24 ${active ? "text-slate-900 font-semibold" : "text-slate-400"}`}>
+                <span className={`text-xs text-center w-24 ${active ? "text-stone-900 font-semibold" : "text-stone-400"}`}>
                   {step}
                 </span>
               </div>
               {i < steps.length - 1 && (
-                <div className={`h-0.5 w-10 shrink-0 ${i < currentIndex ? "bg-emerald-500" : "bg-slate-200"}`} />
+                <div className={`h-0.5 w-10 shrink-0 ${i < currentIndex ? "bg-emerald-500" : "bg-stone-200"}`} />
               )}
             </React.Fragment>
           );

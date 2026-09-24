@@ -41,16 +41,16 @@ export function ExportPage() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
+        <h1 className="text-2xl font-bold tracking-tight text-stone-800 dark:text-stone-100">
           ส่งออกให้สำนักงานบัญชี
         </h1>
-        <p className="text-xs text-slate-500 mt-0.5">
+        <p className="text-xs text-stone-500 mt-0.5">
           Excel เล่มเดียว 5 ชีต — ภาษีขาย · ภาษีซื้อ · หัก ณ ที่จ่าย · ลูกหนี้คงเหลือ · รายรับ-รายจ่าย
         </p>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100
-        dark:border-slate-800 p-5 flex flex-wrap items-end gap-4">
+      <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100
+        dark:border-stone-800 p-5 flex flex-wrap items-end gap-4">
         <Field label="บริษัท" className="w-64">
           <Select value={companyId || company?.id || ''}
                   onChange={(e) => { setCompanyId(e.target.value); setPreview(null); }}>
@@ -87,10 +87,10 @@ export function ExportPage() {
             <Stat label="ภาษีซื้อ" value={preview.summary.purchaseVat} />
             <Stat label="ต้องนำส่ง (ภ.พ.30)"
                   value={preview.summary.salesVat - preview.summary.purchaseVat} strong />
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100
-              dark:border-slate-800 p-4">
-              <div className="text-xs text-slate-500">เอกสารขาย</div>
-              <div className="text-lg font-bold mt-1 text-slate-800 dark:text-slate-100">
+            <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100
+              dark:border-stone-800 p-4">
+              <div className="text-xs text-stone-500">เอกสารขาย</div>
+              <div className="text-lg font-bold mt-1 text-stone-800 dark:text-stone-100">
                 {preview.summary.docCount} ใบ
               </div>
             </div>
@@ -104,9 +104,9 @@ export function ExportPage() {
               ตรวจแล้วไม่พบปัญหา ส่งไฟล์ให้บัญชีได้เลย
             </div>
           ) : (
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100
-              dark:border-slate-800 p-5">
-              <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-2">
+            <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100
+              dark:border-stone-800 p-5">
+              <h2 className="text-sm font-semibold text-stone-800 dark:text-stone-100 mb-2">
                 ตรวจพบ {errors.length + warns.length} รายการที่ควรแก้ก่อนส่ง
               </h2>
               <ul className="flex flex-col gap-1.5">
@@ -118,16 +118,16 @@ export function ExportPage() {
                   </li>
                 ))}
               </ul>
-              <p className="text-[11px] text-slate-400 mt-3">
+              <p className="text-[11px] text-stone-400 mt-3">
                 ดาวน์โหลดได้อยู่ แต่รายการสีแดงหมายถึงเอกสารที่ลูกค้าเอาไปขอคืนภาษีซื้อไม่ได้
               </p>
             </div>
           )}
 
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100
-            dark:border-slate-800 overflow-hidden">
+          <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100
+            dark:border-stone-800 overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-800/60 text-xs text-slate-500">
+              <thead className="bg-stone-50 dark:bg-stone-800/60 text-xs text-stone-500">
                 <tr>
                   <th className="text-left font-medium px-4 py-3">ชีตในไฟล์</th>
                   <th className="text-right font-medium px-4 py-3 w-32">จำนวนแถว</th>
@@ -135,9 +135,9 @@ export function ExportPage() {
               </thead>
               <tbody>
                 {preview.sheets.map((s) => (
-                  <tr key={s.name} className="border-t border-slate-50 dark:border-slate-800">
-                    <td className="px-4 py-2.5 text-slate-700 dark:text-slate-200">{s.name}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums text-slate-500">
+                  <tr key={s.name} className="border-t border-stone-50 dark:border-stone-800">
+                    <td className="px-4 py-2.5 text-stone-700 dark:text-stone-200">{s.name}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums text-stone-500">
                       {s.rows.length}
                     </td>
                   </tr>
@@ -148,7 +148,7 @@ export function ExportPage() {
         </>
       )}
 
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-stone-400">
         รอบยื่น: ภ.พ.30 ภายในวันที่ 15 ของเดือนถัดไป (ออนไลน์ถึงวันที่ 23) ·
         ภ.ง.ด.3/53 ภายในวันที่ 7 (ออนไลน์ถึงวันที่ 15) — ควรส่งไฟล์ให้บัญชีภายในวันที่ 3–5
       </p>
@@ -158,11 +158,11 @@ export function ExportPage() {
 
 function Stat({ label, value, strong }: { label: string; value: number; strong?: boolean }) {
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100
-      dark:border-slate-800 p-4">
-      <div className="text-xs text-slate-500">{label}</div>
+    <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100
+      dark:border-stone-800 p-4">
+      <div className="text-xs text-stone-500">{label}</div>
       <div className={`text-lg font-bold tabular-nums mt-1
-        ${strong ? 'text-slate-900' : 'text-slate-800 dark:text-slate-100'}`}>
+        ${strong ? 'text-stone-900' : 'text-stone-800 dark:text-stone-100'}`}>
         {money(value)}
       </div>
     </div>

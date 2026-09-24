@@ -18,7 +18,7 @@ import {
 } from '../accounting/ui';
 
 const STATUS_TONE: Record<ShipmentStatus, string> = {
-  in_transit: 'bg-slate-100 text-slate-700 dark:bg-slate-900/40 dark:text-slate-300',
+  in_transit: 'bg-stone-100 text-stone-700 dark:bg-stone-900/40 dark:text-stone-300',
   partial: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
   received: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
   cancelled: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
@@ -61,10 +61,10 @@ export function IncomingPage() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
+          <h1 className="text-2xl font-bold tracking-tight text-stone-800 dark:text-stone-100">
             On the way — สินค้ากำลังมา
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-stone-500 mt-0.5">
             ของที่ยังไม่ถึงไม่นับเป็นยอดคงคลัง จนกว่าจะรับเข้าจริง
           </p>
         </div>
@@ -82,11 +82,11 @@ export function IncomingPage() {
               tone={summary.late > 0 ? 'text-rose-500' : undefined} />
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100
-        dark:border-slate-800 p-4 flex flex-wrap items-end gap-3">
+      <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100
+        dark:border-stone-800 p-4 flex flex-wrap items-end gap-3">
         <Field label="ค้นหา" className="flex-1 min-w-[220px]">
           <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
             <TextInput className="pl-9" placeholder="เลขล็อต / เลข order / เลขพัสดุ / หมายเหตุ…"
                        value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
@@ -103,9 +103,9 @@ export function IncomingPage() {
       </div>
 
       <div className="flex flex-col gap-3">
-        {q.loading && <p className="text-sm text-slate-400 py-8 text-center">กำลังโหลด…</p>}
+        {q.loading && <p className="text-sm text-stone-400 py-8 text-center">กำลังโหลด…</p>}
         {!q.loading && (q.data?.length ?? 0) === 0 && (
-          <p className="text-sm text-slate-400 py-12 text-center">
+          <p className="text-sm text-stone-400 py-12 text-center">
             ยังไม่มีล็อตขนส่ง — กด “สร้างล็อตขนส่ง” เพื่อเริ่ม
           </p>
         )}
@@ -115,16 +115,16 @@ export function IncomingPage() {
           const overdue = Boolean(s.eta_date && s.eta_date < today()
             && (s.status === 'in_transit' || s.status === 'partial'));
           return (
-            <div key={s.id} className="bg-white dark:bg-slate-900 rounded-2xl border
-              border-slate-100 dark:border-slate-800 p-4">
+            <div key={s.id} className="bg-white dark:bg-stone-900 rounded-2xl border
+              border-stone-100 dark:border-stone-800 p-4">
               <div className="flex flex-wrap items-start gap-3">
-                <div className="w-9 h-9 rounded-xl bg-slate-50 dark:bg-slate-900/30
+                <div className="w-9 h-9 rounded-xl bg-stone-50 dark:bg-stone-900/30
                   flex items-center justify-center shrink-0">
-                  <Truck className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+                  <Truck className="w-4 h-4 text-stone-600 dark:text-stone-300" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold text-slate-800 dark:text-slate-100">
+                    <span className="font-semibold text-stone-800 dark:text-stone-100">
                       {s.shipment_no}
                     </span>
                     <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium
@@ -138,7 +138,7 @@ export function IncomingPage() {
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-x-4 gap-y-0.5">
+                  <div className="text-xs text-stone-500 mt-1 flex flex-wrap gap-x-4 gap-y-0.5">
                     {s.order_no && <span>Order: {s.order_no}</span>}
                     {s.vendor && <span>{s.vendor.display_name}</span>}
                     {s.carrier && <span>{s.carrier}</span>}
@@ -151,13 +151,13 @@ export function IncomingPage() {
                     {s.arrived_date && <span>ถึงแล้ว {docDate(s.arrived_date)}</span>}
                     {s.project && <span>งาน {s.project.project_number}</span>}
                   </div>
-                  {s.note && <p className="text-xs text-slate-400 mt-1">{s.note}</p>}
+                  {s.note && <p className="text-xs text-stone-400 mt-1">{s.note}</p>}
                 </div>
                 <div className="flex flex-col items-end gap-1.5 shrink-0">
                   {outstanding > 0 && (
                     <div className="text-right">
-                      <div className="text-[11px] text-slate-400">ยังไม่ได้รับ</div>
-                      <div className="font-bold tabular-nums text-slate-800 dark:text-slate-100">
+                      <div className="text-[11px] text-stone-400">ยังไม่ได้รับ</div>
+                      <div className="font-bold tabular-nums text-stone-800 dark:text-stone-100">
                         {qtyText(outstanding)}
                       </div>
                     </div>
@@ -175,7 +175,7 @@ export function IncomingPage() {
                           แก้ไข
                         </GhostButton>
                         <button title="ยกเลิกล็อต" onClick={() => setCancelling(s)}
-                                className="p-1.5 text-slate-400 hover:text-rose-500">
+                                className="p-1.5 text-stone-400 hover:text-rose-500">
                           <Ban className="w-4 h-4" />
                         </button>
                       </>
@@ -192,7 +192,7 @@ export function IncomingPage() {
                             toast(e instanceof Error ? e.message : 'ลบไม่สำเร็จ', 'error');
                           }
                         }}
-                        className="p-1.5 text-slate-400 hover:text-rose-500"
+                        className="p-1.5 text-stone-400 hover:text-rose-500"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -202,8 +202,8 @@ export function IncomingPage() {
               </div>
 
               <table className="w-full text-xs mt-3">
-                <thead className="text-slate-400">
-                  <tr className="border-b border-slate-100 dark:border-slate-800">
+                <thead className="text-stone-400">
+                  <tr className="border-b border-stone-100 dark:border-stone-800">
                     <th className="text-left font-medium py-1.5">สินค้า</th>
                     <th className="text-right font-medium py-1.5 w-24">สั่ง</th>
                     <th className="text-right font-medium py-1.5 w-24">รับแล้ว</th>
@@ -215,12 +215,12 @@ export function IncomingPage() {
                   {(s.items ?? []).map((i) => {
                     const left = Math.max(0, Number(i.qty_ordered) - Number(i.qty_received));
                     return (
-                      <tr key={i.id} className="border-b border-slate-50 dark:border-slate-800/60">
+                      <tr key={i.id} className="border-b border-stone-50 dark:border-stone-800/60">
                         <td className="py-1.5">
-                          <span className="font-medium text-slate-700 dark:text-slate-200">
+                          <span className="font-medium text-stone-700 dark:text-stone-200">
                             {i.stock_item?.model_code}
                           </span>
-                          <span className="text-slate-400"> · {i.stock_item?.description}</span>
+                          <span className="text-stone-400"> · {i.stock_item?.description}</span>
                         </td>
                         <td className="py-1.5 text-right tabular-nums">{qtyText(i.qty_ordered)}</td>
                         <td className="py-1.5 text-right tabular-nums text-emerald-600">
@@ -229,7 +229,7 @@ export function IncomingPage() {
                         <td className="py-1.5 text-right tabular-nums font-medium">
                           {left > 0 ? qtyText(left) : '—'}
                         </td>
-                        <td className="py-1.5 pl-4 text-slate-400">{i.note ?? ''}</td>
+                        <td className="py-1.5 pl-4 text-stone-400">{i.note ?? ''}</td>
                       </tr>
                     );
                   })}
@@ -250,7 +250,7 @@ export function IncomingPage() {
       )}
       {cancelling && (
         <Modal title={`ยกเลิกล็อต ${cancelling.shipment_no}`} onClose={() => setCancelling(null)}>
-          <p className="text-sm text-slate-600 dark:text-slate-300">
+          <p className="text-sm text-stone-600 dark:text-stone-300">
             ยกเลิกได้เฉพาะล็อตที่ยังไม่มีของเข้าคลัง จำนวนที่ “กำลังมา” จะหายออกจากหน้า Inventory
           </p>
           <div className="flex justify-end gap-2">
@@ -281,10 +281,10 @@ function Stat({ icon, label, value, tone }: {
   icon: React.ReactNode; label: string; value: string; tone?: string;
 }) {
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100
-      dark:border-slate-800 p-4">
-      <div className="text-xs text-slate-500 flex items-center gap-1.5">{icon} {label}</div>
-      <div className={`text-lg font-bold mt-1 ${tone ?? 'text-slate-800 dark:text-slate-100'}`}>
+    <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100
+      dark:border-stone-800 p-4">
+      <div className="text-xs text-stone-500 flex items-center gap-1.5">{icon} {label}</div>
+      <div className={`text-lg font-bold mt-1 ${tone ?? 'text-stone-800 dark:text-stone-100'}`}>
         {value}
       </div>
     </div>
@@ -369,8 +369,8 @@ function ShipmentModal({ shipment, onClose, onSaved }: {
         </Field>
       </div>
 
-      <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
-        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-2">
+      <div className="border-t border-stone-100 dark:border-stone-800 pt-4">
+        <h3 className="text-sm font-semibold text-stone-800 dark:text-stone-100 mb-2">
           รายการสินค้าในล็อต
         </h3>
         <div className="flex flex-col gap-2">
@@ -396,7 +396,7 @@ function ShipmentModal({ shipment, onClose, onSaved }: {
               </Field>
               {lines.length > 1 && (
                 <button onClick={() => setLines((p) => p.filter((_, x) => x !== i))}
-                        className="p-2 text-slate-300 hover:text-rose-500">
+                        className="p-2 text-stone-300 hover:text-rose-500">
                   <Trash2 className="w-4 h-4" />
                 </button>
               )}
@@ -508,8 +508,8 @@ function ReceiveModal({ shipment, onClose, onReceived }: {
 
       {line && (
         <>
-          <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 px-4 py-3 text-sm flex justify-between">
-            <span className="text-slate-500">{line.stock_item?.model_code} · ยังไม่ได้รับ</span>
+          <div className="rounded-xl bg-stone-50 dark:bg-stone-800/60 px-4 py-3 text-sm flex justify-between">
+            <span className="text-stone-500">{line.stock_item?.model_code} · ยังไม่ได้รับ</span>
             <span className="font-bold tabular-nums">{qtyText(outstanding)}</span>
           </div>
 
@@ -529,9 +529,9 @@ function ReceiveModal({ shipment, onClose, onReceived }: {
           </Field>
 
           {scans.length > 0 && (
-            <div className="rounded-xl border border-slate-100 dark:border-slate-800 p-3">
+            <div className="rounded-xl border border-stone-100 dark:border-stone-800 p-3">
               <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                <span className="text-sm font-semibold text-stone-800 dark:text-stone-100">
                   ยิงแล้ว {scans.length} / {qtyText(outstanding)}
                 </span>
                 <button onClick={() => setScans([])}
@@ -542,11 +542,11 @@ function ReceiveModal({ shipment, onClose, onReceived }: {
               <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
                 {scans.map((sn) => (
                   <span key={sn} className="px-2 py-0.5 rounded-lg text-[11px]
-                    bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300
+                    bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300
                     inline-flex items-center gap-1">
                     {sn}
                     <button onClick={() => setScans((p) => p.filter((x) => x !== sn))}
-                            className="text-slate-400 hover:text-rose-500">×</button>
+                            className="text-stone-400 hover:text-rose-500">×</button>
                   </span>
                 ))}
               </div>
@@ -563,9 +563,9 @@ function ReceiveModal({ shipment, onClose, onReceived }: {
       )}
 
       <div className="flex items-center justify-end gap-2">
-        <span className="text-sm text-slate-500 mr-auto">
+        <span className="text-sm text-stone-500 mr-auto">
           จะรับเข้าคลัง{' '}
-          <strong className="tabular-nums text-slate-800 dark:text-slate-100">
+          <strong className="tabular-nums text-stone-800 dark:text-stone-100">
             {qtyText(willReceive)}
           </strong>{' '}ชิ้น
         </span>

@@ -37,7 +37,7 @@ export function ToastProvider({ children }) {
           <div
             key={t.id}
             className={`flex items-start gap-2.5 px-4 py-3 rounded-xl shadow-lg text-sm font-medium max-w-sm ${
-              t.type === "error" ? "bg-rose-600 text-white" : "bg-slate-900 text-white"
+              t.type === "error" ? "bg-rose-600 text-white" : "bg-stone-900 text-white"
             }`}
           >
             {t.type === "error" ? <XCircle className="w-4 h-4 shrink-0 mt-0.5" /> : <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />}

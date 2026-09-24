@@ -126,3 +126,130 @@ export async function getWarrantyStats() {
   const inPct = Math.round((inWarranty / total) * 100);
   return { inWarrantyPct: inPct, outWarrantyPct: 100 - inPct, total };
 }
+
+// ---------------------------------------------------------------------------
+// ตัวเลขฝั่งขายและคลังสำหรับหน้า Dashboard
+//
+// ทั้งสามฟังก์ชันอ่านอย่างเดียว ไม่แตะสูตรคำนวณของโมดูลบัญชี — ยอดที่ใช้คือ
+// grand_total / paid_amount ที่ saveArDocument คำนวณและแช่ไว้ในเอกสารแล้ว
+// ---------------------------------------------------------------------------
+
+/**
+ * มูลค่าใบเสนอราคาที่เสนอออกไป แยกตามหมวดสินค้า (Tag ประเภทงาน)
+ *
+ * นับเฉพาะใบที่ยังไม่ถูกยกเลิก เพราะใบที่ยกเลิกแล้วไม่ใช่ข้อเสนอที่ยังอยู่บนโต๊ะ
+ * ใบที่ไม่ได้ติด Tag รวมไว้ใต้ "ไม่ระบุหมวด" แทนที่จะถูกตัดทิ้งเงียบๆ —
+ * ยอดรวมบนการ์ดจึงตรงกับยอดรวมในหน้าใบเสนอราคาเสมอ
+ */
+export async function getQuotationsByCategory({ from, to } = {}) {
+  let q = supabase
+    .from("ar_documents")
+    .select("id, grand_total, status, tag:document_tags(id, name, color)")
+    .eq("doc_type", "QT")
+    .neq("status", "cancelled");
+  if (from) q = q.gte("doc_date", from);
+  if (to) q = q.lte("doc_date", to);
+
+  const { data, error } = await q;
+  if (error) throw error;
+
+  const byCat = new Map();
+  let total = 0;
+  let count = 0;
+  (data ?? []).forEach((d) => {
+    const name = d.tag?.name || "ไม่ระบุหมวด";
+    const amount = Number(d.grand_total) || 0;
+    const cur = byCat.get(name) ?? { name, amount: 0, count: 0 };
+    cur.amount += amount;
+    cur.count += 1;
+    byCat.set(name, cur);
+    total += amount;
+    count += 1;
+  });
+
+  const categories = [...byCat.values()].sort((a, b) => b.amount - a.amount);
+  // สัดส่วนคิดจากยอดรวม ใช้วาดแถบเทียบสายตา
+  categories.forEach((c) => { c.share = total > 0 ? c.amount / total : 0; });
+  return { categories, total, count };
+}
+
+/**
+ * ใบแจ้งหนี้/ใบกำกับที่ออกไปแล้วแต่ยังเก็บเงินไม่ครบ
+ *
+ * "ค้างชำระ" = grand_total − paid_amount ของใบที่ออกเลขแล้วและยังไม่ถูกยกเลิก
+ * เรียงจากค้างนานที่สุดก่อน เพราะใบที่เลยกำหนดมานานคือใบที่ต้องโทรตามก่อน
+ */
+export async function getUnpaidBills({ limit = 8 } = {}) {
+  const { data, error } = await supabase
+    .from("ar_documents")
+    .select(`id, doc_no, doc_type, doc_date, due_date, grand_total, paid_amount, status,
+             customer:customers(display_name, company_name)`)
+    .in("doc_type", ["BL", "INV"])
+    .neq("status", "cancelled")
+    .not("doc_no", "is", null)
+    .order("doc_date", { ascending: true });
+  if (error) throw error;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const rows = (data ?? [])
+    .map((d) => {
+      const total = Number(d.grand_total) || 0;
+      const paid = Number(d.paid_amount) || 0;
+      const outstanding = Math.round((total - paid) * 100) / 100;
+      const dueOn = d.due_date || null;
+      return {
+        id: d.id,
+        docNo: d.doc_no,
+        docType: d.doc_type,
+        docDate: d.doc_date,
+        dueDate: dueOn,
+        customer: d.customer?.company_name || d.customer?.display_name || "—",
+        total,
+        paid,
+        outstanding,
+        // เลยกำหนดเมื่อมีวันครบกำหนดและวันนั้นผ่านไปแล้ว ใบที่ไม่ได้ตั้งวันไม่นับว่าเลย
+        overdueDays: dueOn && dueOn < today ? daysAgo(dueOn) : 0,
+      };
+    })
+    // ปัดเศษสตางค์ทิ้ง: ใบที่เหลือค้างไม่ถึงสลึงถือว่าเก็บครบแล้ว
+    .filter((r) => r.outstanding > 0.01)
+    .sort((a, b) => b.overdueDays - a.overdueDays || b.outstanding - a.outstanding);
+
+  return {
+    rows: rows.slice(0, limit),
+    totalOutstanding: Math.round(rows.reduce((a, r) => a + r.outstanding, 0) * 100) / 100,
+    count: rows.length,
+    overdueCount: rows.filter((r) => r.overdueDays > 0).length,
+  };
+}
+
+/**
+ * สินค้าที่มีของในคลังมากที่สุด
+ *
+ * รวม on_hand ข้ามทุกคลัง แต่เฉพาะ pool 'normal' — ของชำรุด ของที่ถูกยืมไป
+ * และของที่หายไม่ใช่ของที่หยิบมาขายได้ จึงไม่ควรนับรวมในอันดับนี้
+ */
+export async function getTopStockItems({ limit = 5 } = {}) {
+  const { data, error } = await supabase
+    .from("stock_balances")
+    .select("on_hand, stock_item:stock_items(id, model_code, description, unit, category)")
+    .eq("pool", "normal");
+  if (error) throw error;
+
+  const byItem = new Map();
+  (data ?? []).forEach((b) => {
+    const it = b.stock_item;
+    if (!it) return;
+    const cur = byItem.get(it.id) ?? {
+      id: it.id, modelCode: it.model_code, description: it.description,
+      unit: it.unit || "ชิ้น", category: it.category, onHand: 0,
+    };
+    cur.onHand += Number(b.on_hand) || 0;
+    byItem.set(it.id, cur);
+  });
+
+  return [...byItem.values()]
+    .filter((r) => r.onHand > 0)
+    .sort((a, b) => b.onHand - a.onHand)
+    .slice(0, limit);
+}

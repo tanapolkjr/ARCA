@@ -90,10 +90,10 @@ function NewBorrowModal({ onClose, onCreated, items, locations }) {
         <Field label="กำหนดคืน"><TextInput type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></Field>
       </div>
 
-      <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">รายการสินค้าที่ยืม</p>
+      <p className="text-sm font-medium text-stone-700 dark:text-stone-200 mb-2">รายการสินค้าที่ยืม</p>
       <div className="space-y-3 mb-3">
         {lines.map((line, idx) => (
-          <div key={idx} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900">
+          <div key={idx} className="p-3 rounded-xl bg-stone-50 dark:bg-stone-900">
             <div className="flex items-start gap-2 mb-2">
               <div className="flex-1">
                 <SearchSelect
@@ -115,7 +115,7 @@ function NewBorrowModal({ onClose, onCreated, items, locations }) {
                 <TextInput type="number" min="1" value={line.qty} onChange={(e) => updateLine(idx, { qty: e.target.value })} />
               </div>
               {lines.length > 1 && (
-                <button onClick={() => removeLine(idx)} className="p-2 text-slate-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                <button onClick={() => removeLine(idx)} className="p-2 text-stone-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
               )}
             </div>
             {line.stockItemId && (
@@ -130,7 +130,7 @@ function NewBorrowModal({ onClose, onCreated, items, locations }) {
                       updateLine(idx, { serials: next });
                     }}
                     placeholder={`Serial #${si + 1}`}
-                    className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-mono"
+                    className="px-3 py-2 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-mono"
                   />
                 ))}
               </div>
@@ -138,11 +138,11 @@ function NewBorrowModal({ onClose, onCreated, items, locations }) {
           </div>
         ))}
       </div>
-      <button onClick={addLine} className="text-sm font-medium text-slate-900 hover:text-slate-900 mb-4">+ เพิ่มสินค้าอีกรายการ</button>
+      <button onClick={addLine} className="text-sm font-medium text-stone-900 hover:text-stone-900 mb-4">+ เพิ่มสินค้าอีกรายการ</button>
 
-      <div className="flex justify-end gap-2 mt-2 pt-4 border-t border-slate-100 dark:border-slate-700">
-        <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">ยกเลิก</button>
-        <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
+      <div className="flex justify-end gap-2 mt-2 pt-4 border-t border-stone-100 dark:border-stone-700">
+        <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700">ยกเลิก</button>
+        <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
           {saving ? "กำลังบันทึก..." : "สร้างใบยืม"}
         </button>
       </div>
@@ -185,17 +185,17 @@ export default function StockBorrowPage() {
     <div>
       <div className="flex items-start justify-between mb-6">
         <div>
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5"><span>Stock</span><span>/</span><span className="text-slate-900 font-medium">ยืมคืนสินค้า</span></div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">ยืมคืนสินค้า</h1>
+          <div className="flex items-center gap-1.5 text-xs text-stone-400 mb-1.5"><span>Stock</span><span>/</span><span className="text-stone-900 font-medium">ยืมคืนสินค้า</span></div>
+          <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100 tracking-tight">ยืมคืนสินค้า</h1>
         </div>
-        <button onClick={() => setShowModal(true)} disabled={!canManage} title={!canManage ? "เฉพาะ Super Admin/Manager/Store" : ""} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+        <button onClick={() => setShowModal(true)} disabled={!canManage} title={!canManage ? "เฉพาะ Super Admin/Manager/Store" : ""} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           <Plus className="w-4 h-4" /> สร้างใบยืม
         </button>
       </div>
 
       <Card className="overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
+          <thead className="bg-stone-50 dark:bg-stone-900 text-stone-500 dark:text-stone-400">
             <tr>
               <th className="text-left font-medium px-4 py-3"></th>
               <th className="text-left font-medium px-4 py-3">เลขที่</th>
@@ -207,32 +207,32 @@ export default function StockBorrowPage() {
               <th className="text-right font-medium px-4 py-3"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-            {loading && <tr><td colSpan={8} className="text-center text-slate-400 py-10">กำลังโหลด...</td></tr>}
-            {!loading && borrows?.length === 0 && <tr><td colSpan={8} className="text-center text-slate-400 py-10">ยังไม่มีรายการยืม</td></tr>}
+          <tbody className="divide-y divide-stone-100 dark:divide-stone-700">
+            {loading && <tr><td colSpan={8} className="text-center text-stone-400 py-10">กำลังโหลด...</td></tr>}
+            {!loading && borrows?.length === 0 && <tr><td colSpan={8} className="text-center text-stone-400 py-10">ยังไม่มีรายการยืม</td></tr>}
             {borrows?.map((b) => (
               <React.Fragment key={b.id}>
-                <tr className="cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-700/30" onClick={() => setExpanded(expanded === b.id ? null : b.id)}>
-                  <td className="px-4 py-3 text-slate-400">
+                <tr className="cursor-pointer hover:bg-stone-50/50 dark:hover:bg-stone-700/30" onClick={() => setExpanded(expanded === b.id ? null : b.id)}>
+                  <td className="px-4 py-3 text-stone-400">
                     {expanded === b.id ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                   </td>
-                  <td className="px-4 py-3 font-medium text-slate-900">{b.borrow_no}</td>
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{b.location?.name || "-"}</td>
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{b.borrower_name}</td>
-                  <td className="px-4 py-3 text-slate-500">{b.due_date || "-"}</td>
-                  <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-300">{b.items?.length ?? 0} ชิ้น</td>
+                  <td className="px-4 py-3 font-medium text-stone-900">{b.borrow_no}</td>
+                  <td className="px-4 py-3 text-stone-600 dark:text-stone-300">{b.location?.name || "-"}</td>
+                  <td className="px-4 py-3 text-stone-600 dark:text-stone-300">{b.borrower_name}</td>
+                  <td className="px-4 py-3 text-stone-500">{b.due_date || "-"}</td>
+                  <td className="px-4 py-3 text-right text-stone-600 dark:text-stone-300">{b.items?.length ?? 0} ชิ้น</td>
                   <td className="px-4 py-3 text-right">
                     {b.status === "returned" ? <Pill tone="green">คืนแล้ว</Pill> : <Pill tone="amber">ยืมอยู่</Pill>}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button onClick={(e) => { e.stopPropagation(); handleDelete(b.id); }} className="text-slate-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); handleDelete(b.id); }} className="text-stone-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
                   </td>
                 </tr>
                 {expanded === b.id && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-3 bg-slate-50/50 dark:bg-slate-900/40">
+                    <td colSpan={8} className="px-4 py-3 bg-stone-50/50 dark:bg-stone-900/40">
                       <table className="w-full text-xs">
-                        <thead className="text-slate-400">
+                        <thead className="text-stone-400">
                           <tr>
                             <th className="text-left font-medium py-1.5">Model</th>
                             <th className="text-left font-medium py-1.5">Serial No.</th>
@@ -240,17 +240,17 @@ export default function StockBorrowPage() {
                             <th className="text-right font-medium py-1.5"></th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                        <tbody className="divide-y divide-stone-100 dark:divide-stone-700">
                           {(b.items || []).map((it) => (
                             <tr key={it.id}>
-                              <td className="py-2 text-slate-700 dark:text-slate-200">{it.item?.model_code}</td>
-                              <td className="py-2 font-mono text-slate-600 dark:text-slate-300">{it.serial_no}</td>
+                              <td className="py-2 text-stone-700 dark:text-stone-200">{it.item?.model_code}</td>
+                              <td className="py-2 font-mono text-stone-600 dark:text-stone-300">{it.serial_no}</td>
                               <td className="py-2 text-right">
                                 {it.returned ? <Pill tone="green">คืนแล้ว</Pill> : <Pill tone="amber">ยืมอยู่</Pill>}
                               </td>
                               <td className="py-2 text-right">
                                 {!it.returned && canManage && (
-                                  <button onClick={() => handleReturnItem(it.id)} className="text-slate-900 hover:underline font-medium">บันทึกคืนชิ้นนี้</button>
+                                  <button onClick={() => handleReturnItem(it.id)} className="text-stone-900 hover:underline font-medium">บันทึกคืนชิ้นนี้</button>
                                 )}
                               </td>
                             </tr>

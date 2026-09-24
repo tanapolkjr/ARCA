@@ -69,7 +69,7 @@ export default function FileUploader({ pathPrefix, onUploaded, accept }) {
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={uploading}
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-900 hover:text-slate-900 disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-900 hover:text-stone-900 disabled:opacity-50"
       >
         <Paperclip className="w-4 h-4" /> {uploading ? "กำลังอัปโหลด..." : "แนบไฟล์"}
       </button>
@@ -77,14 +77,14 @@ export default function FileUploader({ pathPrefix, onUploaded, accept }) {
 
       {uploading && (
         <div className="mt-2.5 max-w-sm">
-          <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+          <div className="flex items-center justify-between text-xs text-stone-500 mb-1">
             <span className="truncate">{fileName}</span>
             <span>{progress}%</span>
           </div>
-          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-            <div className="h-full bg-slate-900 transition-all" style={{ width: `${progress}%` }} />
+          <div className="h-1.5 bg-stone-100 rounded-full overflow-hidden">
+            <div className="h-full bg-stone-900 transition-all" style={{ width: `${progress}%` }} />
           </div>
-          <p className="text-xs text-slate-400 mt-1">อัปโหลดแบบ Resumable — หากเน็ตหลุด สามารถอัปโหลดไฟล์เดิมซ้ำเพื่อทำต่อจากจุดที่ค้างได้</p>
+          <p className="text-xs text-stone-400 mt-1">อัปโหลดแบบ Resumable — หากเน็ตหลุด สามารถอัปโหลดไฟล์เดิมซ้ำเพื่อทำต่อจากจุดที่ค้างได้</p>
         </div>
       )}
 
