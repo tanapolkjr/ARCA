@@ -437,6 +437,82 @@ export async function convertArDocument(
   }, userId);
 }
 
+/**
+ * ทำสำเนาใบเสนอราคาเป็นร่างใบใหม่ — สำหรับงานที่เสนอราคาคล้ายของเดิมแต่ไม่อยากคีย์ใหม่
+ *
+ * เฉพาะใบเสนอราคา (QT) เท่านั้น จงใจไม่เปิดให้ใบแจ้งหนี้/ใบกำกับภาษี เพราะ
+ * สำเนาใบกำกับภาษีคือใบกำกับภาษีใบที่สองของการขายครั้งเดียวกัน (คนละเลขที่) ซึ่งผิด
+ * ทั้งทางบัญชีและทางกฎหมาย และเอกสารกลุ่มนั้นต้องมีใบต้นทางเสมอเพื่อคุมยอดไม่ให้
+ * วางบิลเกิน — ถ้าอยากออกใบแจ้งหนี้/ใบกำกับใบใหม่ ให้ใช้ปุ่มแปลงเอกสารจากใบต้นทาง
+ *
+ * สิ่งที่ "ไม่" ลอกไปด้วย เพราะเป็นของเฉพาะใบเดิม:
+ *   เลขที่เอกสาร (ออกเลขใหม่) · สถานะ (กลับเป็นร่าง) · ผู้อนุมัติ/วันที่อนุมัติ ·
+ *   การยกเลิก · ยอดที่ชำระมาแล้ว · ไฟล์ PDF ที่เคยพิมพ์
+ * ทั้งหมดนี้ถูกตัดออกเองอยู่แล้วเพราะ saveArDocument ประกอบหัวเอกสารขึ้นใหม่จาก
+ * SaveArInput ไม่ได้ลอกทั้งแถว
+ *
+ * ที่ต้องระวังที่สุดคือ source_document_id ต้องเป็น null:
+ * สำเนาเป็นเอกสารตั้งต้นใบใหม่ ไม่ใช่เอกสารลูกของใบเดิม ถ้าลอกไปด้วยระบบจะนับยอด
+ * ของสำเนาไปกินโควตา "ยอดคงเหลือ" ของใบต้นทาง แล้วใบที่วางบิลจริงจะออกไม่ได้
+ */
+export async function duplicateArDocument(sourceId: string, userId: string): Promise<string> {
+  const src = await getArDocument(sourceId);
+  if (src.doc_type !== 'QT') {
+    throw new Error(
+      'ทำสำเนาได้เฉพาะใบเสนอราคา — ใบแจ้งหนี้และใบกำกับภาษีต้องสร้างจากใบต้นทางด้วยปุ่มแปลงเอกสาร'
+    );
+  }
+
+  // กลุ่มรายการเป็นของใครของมันต่อเอกสาร (id เป็น primary key ต่อแถว ไม่ใช่รหัสกลุ่ม
+  // ที่ใช้ร่วมข้ามใบ) — ต้องออก id ใหม่แล้วชี้ item ตามไป เหมือนตอนแปลงเอกสาร
+  const groupIdMap = new Map<string, string>();
+  const groups = (src.groups ?? []).map((g) => {
+    const newId = crypto.randomUUID();
+    groupIdMap.set(g.id, newId);
+    return { ...g, id: newId };
+  });
+  const items = (src.items ?? []).map((i) => ({
+    ...i,
+    id: undefined,
+    group_id: i.group_id ? groupIdMap.get(i.group_id) ?? null : null,
+  }));
+
+  // ใบเสนอราคาที่ยืนราคาหมดอายุไปแล้ว ลอกวันเดิมมาก็ใช้ไม่ได้ทันทีตั้งแต่วันแรก
+  // ยังไม่หมดอายุ = คงไว้ตามเดิม · หมดอายุแล้ว = สิ้นปีปัจจุบัน (ค่าตั้งต้นของใบใหม่)
+  const today = new Date().toISOString().slice(0, 10);
+  const validUntil = src.valid_until && src.valid_until >= today
+    ? src.valid_until
+    : `${new Date().getFullYear()}-12-31`;
+
+  return saveArDocument({
+    company_id: src.company_id,
+    doc_type: 'QT',
+    doc_date: today,
+    valid_until: validUntil,
+    customer_id: src.customer_id,
+    project_id: src.project_id,
+    ticket_id: src.ticket_id,
+    job_name: src.job_name,
+    contact_name: src.contact_name,
+    contact_phone: src.contact_phone,
+    sales_user_id: src.sales_user_id,
+    fulfilment_type: src.fulfilment_type,
+    tag_id: src.tag_id,
+    customer_po_no: src.customer_po_no,
+    extra_discount_type: src.extra_discount_type,
+    extra_discount_value: src.extra_discount_value,
+    price_include_vat: src.price_include_vat,
+    vat_rate: src.vat_rate,
+    wht_rate: src.wht_rate,
+    billing_percent: src.billing_percent,
+    note_text: src.note_text,
+    terms_text: src.terms_text,
+    // ตั้งใจไม่ส่ง source_document_id และ contract_total — สำเนาเป็นใบตั้งต้นของตัวเอง
+    items,
+    groups,
+  }, userId);
+}
+
 // ================================================================= ฝั่งซื้อ
 
 const AP_SELECT = `*, vendor:vendors(*), tag:document_tags(id, name, color),

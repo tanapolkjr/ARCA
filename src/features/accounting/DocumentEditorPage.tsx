@@ -18,6 +18,7 @@ import { getDefaultCompany, listBankAccounts, listCompanies, listTemplates, list
 import {
   approveQuotation, cancelApDocument, cancelDocument, childBillingPercent, childExtraDiscount,
   companySnapshot, convertArDocument, customerSnapshotFrom, deleteApDraft, deleteArDocument,
+  duplicateArDocument,
   loadSource, resetQuotationToDraft,
   getApDocument, getArDocument, getDocNo, issueApDocument, issueArDocument,
   latestPaymentDate, listChildDocuments,
@@ -460,6 +461,29 @@ function DocumentEditorInner() {
     } finally { setBusy(false); }
   }
 
+  /**
+   * ทำสำเนาใบเสนอราคาเป็นร่างใบใหม่ แล้วเด้งไปที่ใบใหม่ทันที
+   *
+   * ใบที่ยังแก้ไขได้ต้องบันทึกก่อน เพราะสำเนาอ่านจากฐานข้อมูล ไม่ได้อ่านจากหน้าจอ —
+   * ถ้าไม่บันทึกก่อน สิ่งที่เพิ่งพิมพ์ค้างไว้จะไม่ติดไปกับสำเนา แล้วจะงงว่าทำไมหาย
+   */
+  async function handleDuplicate() {
+    let sourceId = savedId;
+    if (!locked) {
+      sourceId = await handleSave() ?? undefined;
+      if (!sourceId) return;   // บันทึกไม่ผ่าน (ข้อมูลไม่ครบ) — handleSave แจ้งเหตุผลแล้ว
+    }
+    if (!sourceId) return;
+    setBusy(true);
+    try {
+      const newId = await duplicateArDocument(sourceId, userId);
+      toast('ทำสำเนาเป็นร่างใบใหม่แล้ว — ได้เลขที่ใหม่ แก้ไขต่อได้เลย');
+      nav(`/accounting/QT/${newId}`);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'ทำสำเนาไม่สำเร็จ', 'error');
+    } finally { setBusy(false); }
+  }
+
   async function handleDelete() {
     if (!savedId) { nav(-1); return; }
     try {
@@ -557,6 +581,13 @@ function DocumentEditorInner() {
             <GhostButton onClick={() => setShowCancel(true)} disabled={busy}
                          className="!text-rose-600 !border-rose-200 dark:!border-rose-900">
               <Ban className="w-4 h-4" /> ยกเลิกเอกสาร
+            </GhostButton>
+          )}
+          {/* ทำสำเนาได้ทุกสถานะ รวมถึงใบที่อนุมัติหรือยกเลิกไปแล้ว —
+              เสนอราคางานคล้ายของเดิมคือเหตุผลหลักที่ต้องใช้ปุ่มนี้ */}
+          {isQt && savedId && (
+            <GhostButton onClick={() => void handleDuplicate()} disabled={busy}>
+              <Copy className="w-4 h-4" /> ทำสำเนา
             </GhostButton>
           )}
           {isQt && status === 'approved' && (

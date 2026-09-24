@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { FileText, Plus, Search, Tag as TagIcon } from 'lucide-react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Copy, FileText, Plus, Search, Tag as TagIcon } from 'lucide-react';
 import { useQuery } from '@/hooks/useSourcingQuery';
+import { useToast } from '@/hooks/useToast.jsx';
+import { useUserId } from '@/hooks/useAuth.jsx';
 import { docDate, money, round2 } from '@/accounting-lib/calc';
 import { AP_DOC_LABEL, AR_DOC_LABEL } from '@/accounting-lib/types';
 import type { ApDocType, ArDocType } from '@/accounting-lib/types';
 import {
-  billingRollup, listApDocuments, listArDocuments, listDocumentTags,
+  billingRollup, duplicateArDocument, listApDocuments, listArDocuments, listDocumentTags,
 } from '@/accounting-api/documents';
 import type { BillingRollup } from '@/accounting-api/documents';
 import { EmptyRow, Field, PrimaryButton, Select, StatusPill, TextInput } from './ui';
@@ -230,6 +232,26 @@ function DocTable({
   rows: DocRow[]; ar: boolean; docType: string; loading: boolean;
   rollup?: Map<string, BillingRollup>;
 }) {
+  const nav = useNavigate();
+  const { toast } = useToast();
+  const userId = useUserId();
+  /** id ของใบที่กำลังทำสำเนาอยู่ — กันกดรัวจนได้สำเนาหลายใบ */
+  const [duplicating, setDuplicating] = useState<string | null>(null);
+  // ทำสำเนาเปิดเฉพาะใบเสนอราคา ดูเหตุผลที่ duplicateArDocument
+  const canDuplicate = docType === 'QT';
+  const cols = canDuplicate ? 7 : 6;
+
+  async function duplicate(id: string) {
+    setDuplicating(id);
+    try {
+      const newId = await duplicateArDocument(id, userId);
+      toast('ทำสำเนาเป็นร่างใบใหม่แล้ว — ได้เลขที่ใหม่ แก้ไขต่อได้เลย');
+      nav(`/accounting/QT/${newId}`);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'ทำสำเนาไม่สำเร็จ', 'error');
+    } finally { setDuplicating(null); }
+  }
+
   const total = rows.reduce((a, r) => a + (Number(r.grand_total) || 0), 0);
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100
@@ -244,11 +266,12 @@ function DocTable({
               <th className="text-left font-medium px-4 py-3 w-40">ประเภทงาน</th>
               <th className="text-right font-medium px-4 py-3 w-32">ยอดรวมทั้งสิ้น</th>
               <th className="text-left font-medium px-4 py-3 w-32">สถานะ</th>
+              {canDuplicate && <th className="w-12" />}
             </tr>
           </thead>
           <tbody>
-            {loading && <EmptyRow colSpan={6} text="กำลังโหลด…" />}
-            {!loading && rows.length === 0 && <EmptyRow colSpan={6} text="ไม่พบเอกสารตามเงื่อนไขที่เลือก" />}
+            {loading && <EmptyRow colSpan={cols} text="กำลังโหลด…" />}
+            {!loading && rows.length === 0 && <EmptyRow colSpan={cols} text="ไม่พบเอกสารตามเงื่อนไขที่เลือก" />}
             {rows.map((d) => {
               const partyName = ar
                 ? (d.customer?.company_name || d.customer?.display_name)
@@ -299,6 +322,19 @@ function DocTable({
                       <div className={`text-[11px] mt-0.5 ${billing.tone}`}>{billing.text}</div>
                     )}
                   </td>
+                  {canDuplicate && (
+                    <td className="px-2 py-3 text-right">
+                      <button
+                        onClick={() => void duplicate(d.id)}
+                        disabled={duplicating !== null}
+                        title="ทำสำเนาเป็นร่างใบใหม่ (ข้อมูลเหมือนเดิมทั้งหมด ได้เลขที่ใหม่)"
+                        className="p-1.5 rounded-lg text-slate-300 hover:text-slate-900
+                          hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -313,6 +349,7 @@ function DocTable({
                 <td className="px-4 py-3 text-right tabular-nums font-bold
                   text-slate-800 dark:text-slate-100">{money(total)}</td>
                 <td />
+                {canDuplicate && <td />}
               </tr>
             </tfoot>
           )}
