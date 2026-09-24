@@ -25,7 +25,9 @@ import {
   listDocumentTags, saveApDocument, saveArDocument,
 } from '@/accounting-api/documents';
 import { supabase } from '../../lib/supabaseClient.js';
-import { DocumentPrintView, type PrintableDoc } from './DocumentPrintView';
+import {
+  DocumentPrintView, PRINT_MODES, copiesFor, type PrintMode, type PrintableDoc,
+} from './DocumentPrintView';
 import {
   Field, GhostButton, NumberInput, PrimaryButton, Select, StatusPill, TextArea, TextInput, inputCls,
 } from './ui';
@@ -112,6 +114,8 @@ function DocumentEditorInner() {
   const [sourceRemaining, setSourceRemaining] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState(false);
+  // ฉบับที่จะพิมพ์ — ตั้งต้นที่ต้นฉบับเพราะเป็นงานประจำวัน ส่วนสำเนาเลือกเองเมื่อต้องใช้
+  const [printMode, setPrintMode] = useState<PrintMode>('original');
   const [showReceive, setShowReceive] = useState(false);
   const [showCancel, setShowCancel] = useState(false);
   const [paidAmount, setPaidAmount] = useState(0);
@@ -756,9 +760,32 @@ function DocumentEditorInner() {
 
       {preview ? (
         <div className="print-root flex flex-col items-center gap-6">
-          <DocumentPrintView doc={printable} copyLabel="ต้นฉบับ" bankAccounts={banksQ.data ?? []} />
-          <DocumentPrintView doc={printable} copyLabel="สำเนา" bankAccounts={banksQ.data ?? []} />
-          <div className="no-print">
+          {copiesFor(printMode).map((label) => (
+            <DocumentPrintView key={label} doc={printable} copyLabel={label}
+                               bankAccounts={banksQ.data ?? []}
+                               issuedAsSet={printMode === 'both'} />
+          ))}
+          {/* เลือกฉบับก่อนกดพิมพ์ — สิ่งที่เห็นบนจอคือสิ่งที่จะออกมาในไฟล์ทุกประการ */}
+          <div className="no-print flex flex-col items-center gap-3 pb-6">
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800">
+              {PRINT_MODES.map((m) => (
+                <button
+                  key={m.value}
+                  onClick={() => setPrintMode(m.value)}
+                  title={m.hint}
+                  className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                    printMode === m.value
+                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-medium shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            <div className="text-xs text-slate-400">
+              {PRINT_MODES.find((m) => m.value === printMode)?.hint}
+            </div>
             <PrimaryButton onClick={() => window.print()}>
               <Printer className="w-4 h-4" /> พิมพ์ / บันทึกเป็น PDF
             </PrimaryButton>

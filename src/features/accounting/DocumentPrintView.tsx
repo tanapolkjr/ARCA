@@ -45,6 +45,30 @@ export interface PrintableDoc {
   groups?: DocumentItemGroup[];
 }
 
+/**
+ * เลือกได้ว่าสั่งพิมพ์ครั้งนี้จะออกฉบับไหนบ้าง
+ *
+ * เดิมพิมพ์ต้นฉบับและสำเนาต่อกันทุกครั้งโดยเลือกไม่ได้ ใบ 2 หน้าจึงได้ PDF 4 หน้า
+ * ที่หน้า 3-4 เป็นหน้า 1-2 ซ้ำ ต่างกันแค่ป้ายมุมขวาบน ทั้งที่งานส่วนใหญ่ใช้แค่ต้นฉบับ
+ * (ระบบเก็บเอกสารไว้ในฐานข้อมูลและสั่งพิมพ์ซ้ำได้ตลอด)
+ *
+ * แต่สำเนากระดาษยังจำเป็นอยู่บ้าง โดยเฉพาะใบกำกับภาษีที่ฝ่ายบัญชีเก็บเข้าแฟ้ม
+ * จึงทำเป็นตัวเลือกตอนสั่งพิมพ์แทนการตัดทิ้ง
+ */
+export type PrintMode = 'original' | 'copy' | 'both';
+
+export const PRINT_MODES: readonly { value: PrintMode; label: string; hint: string }[] = [
+  { value: 'original', label: 'ต้นฉบับ', hint: 'สำหรับส่งลูกค้า — ใช้บ่อยที่สุด' },
+  { value: 'copy', label: 'สำเนา', hint: 'สำหรับเก็บเข้าแฟ้ม' },
+  { value: 'both', label: 'ต้นฉบับ + สำเนา', hint: 'ออกเป็นชุด พิมพ์ต่อกันในไฟล์เดียว' },
+];
+
+/** ป้ายฉบับที่ต้องพิมพ์ตามโหมดที่เลือก — เรียงตามลำดับที่ออกจริง */
+export function copiesFor(mode: PrintMode): readonly string[] {
+  if (mode === 'both') return ['ต้นฉบับ', 'สำเนา'];
+  return mode === 'copy' ? ['สำเนา'] : ['ต้นฉบับ'];
+}
+
 /** ป้ายลายเซ็นต่างกันตามประเภทเอกสาร ตามธรรมเนียมที่ใช้จริง */
 const SIGN_LABELS: Record<string, [string, string]> = {
   QT: ['ผู้สั่งซื้อสินค้า', 'ผู้อนุมัติ'],
@@ -233,11 +257,13 @@ export function paginate(
 }
 
 export function DocumentPrintView({
-  doc, copyLabel, bankAccounts = [],
+  doc, copyLabel, bankAccounts = [], issuedAsSet = false,
 }: {
   doc: PrintableDoc;
   copyLabel?: string;
   bankAccounts?: BankAccount[];
+  /** true เมื่อสั่งพิมพ์ทั้งต้นฉบับและสำเนาพร้อมกัน — ใบกำกับภาษีต้องระบุว่าออกเป็นชุด */
+  issuedAsSet?: boolean;
 }) {
   const color = DOC_COLOR[doc.doc_type] ?? '#5C6B7A';
   const measureRef = useRef<HTMLDivElement>(null);
@@ -340,7 +366,8 @@ export function DocumentPrintView({
         }}
       >
         <div data-mk="header" onLoad={() => setAssetsReady((n) => n + 1)}>
-          <DocHeader doc={doc} copyLabel={copyLabel} pageNo={1} totalPages={2} />
+          <DocHeader doc={doc} copyLabel={copyLabel} pageNo={1} totalPages={2}
+                     issuedAsSet={issuedAsSet} />
         </div>
         <table className="w-full table-fixed text-[11px] border-collapse">
           <ItemCols />
@@ -380,6 +407,7 @@ export function DocumentPrintView({
           doc={doc}
           blocks={pageBlocks}
           copyLabel={copyLabel}
+          issuedAsSet={issuedAsSet}
           pageNo={i + 1}
           totalPages={rendered.length}
           bankAccounts={bankAccounts}
@@ -390,7 +418,7 @@ export function DocumentPrintView({
 }
 
 function DocPage({
-  doc, blocks, copyLabel, pageNo, totalPages, bankAccounts,
+  doc, blocks, copyLabel, pageNo, totalPages, bankAccounts, issuedAsSet,
 }: {
   doc: PrintableDoc;
   blocks: Block[];
@@ -398,6 +426,7 @@ function DocPage({
   pageNo: number;
   totalPages: number;
   bankAccounts: BankAccount[];
+  issuedAsSet?: boolean;
 }) {
   const color = DOC_COLOR[doc.doc_type] ?? '#5C6B7A';
   const rowBlocks = blocks.filter(isRowLike);
@@ -406,7 +435,8 @@ function DocPage({
   return (
     <div className="doc-page bg-white text-slate-900"
          style={{ width: '210mm', height: '297mm', padding: `${PAGE_PAD_MM}mm`, overflow: 'hidden' }}>
-      <DocHeader doc={doc} copyLabel={copyLabel} pageNo={pageNo} totalPages={totalPages} />
+      <DocHeader doc={doc} copyLabel={copyLabel} pageNo={pageNo} totalPages={totalPages}
+                 issuedAsSet={issuedAsSet} />
 
       {rowBlocks.length > 0 && (
         <table className="w-full table-fixed text-[11px] border-collapse">
@@ -447,8 +477,11 @@ function DocPage({
 // ---------------------------------------------------------------- หัวเอกสาร
 
 function DocHeader({
-  doc, copyLabel, pageNo, totalPages,
-}: { doc: PrintableDoc; copyLabel?: string; pageNo: number; totalPages: number }) {
+  doc, copyLabel, pageNo, totalPages, issuedAsSet,
+}: {
+  doc: PrintableDoc; copyLabel?: string; pageNo: number; totalPages: number;
+  issuedAsSet?: boolean;
+}) {
   const color = DOC_COLOR[doc.doc_type] ?? '#5C6B7A';
   const co = doc.company_snapshot;
   const party = doc.party_snapshot;
@@ -477,7 +510,8 @@ function DocHeader({
             {labelTh(doc.doc_type)}
           </div>
           {copyLabel && <div className="text-[9px] text-slate-500 mt-1.5">{copyLabel}</div>}
-          {isTaxInvoice && copyLabel === 'ต้นฉบับ' && (
+          {/* ระบุ "ออกเป็นชุด" เฉพาะตอนที่ออกเป็นชุดจริง — พิมพ์แค่ต้นฉบับใบเดียวไม่ใช่ชุด */}
+          {isTaxInvoice && copyLabel === 'ต้นฉบับ' && issuedAsSet && (
             <div className="text-[8px] text-slate-500">(เอกสารออกเป็นชุด)</div>
           )}
           <div className="text-[9px] text-slate-500">หน้าที่ {pageNo}/{totalPages}</div>
