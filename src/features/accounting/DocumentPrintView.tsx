@@ -77,20 +77,38 @@ function labelTh(t: string) {
 const PX_PER_MM = 96 / 25.4;
 const PAGE_H_MM = 297;
 const PAGE_PAD_MM = 14;
-/** เผื่อกันคลาดจากการวัดเศษ pixel — ยอมเสียพื้นที่นิดเดียวดีกว่าล้นหน้า */
-const SAFETY_MM = 10;
+/**
+ * เผื่อกันคลาดจากการวัดเศษ pixel
+ * ลดจาก 10mm เหลือ 6mm ได้หลังตรึงความกว้างคอลัมน์ (ดู COL_MM) เพราะชั้นที่ใช้วัด
+ * กับหน้าที่พิมพ์จริงมีความกว้างเท่ากันแล้ว ค่าที่วัดได้จึงตรง ไม่ต้องเผื่อเยอะ
+ */
+const SAFETY_MM = 6;
 const CONTENT_H = (PAGE_H_MM - PAGE_PAD_MM * 2 - SAFETY_MM) * PX_PER_MM;
 const CONTENT_W_MM = 210 - PAGE_PAD_MM * 2;
 
 type Block =
   | { kind: 'row'; key: string; index: number; no: number }
-  | { kind: 'group-header'; key: string; name: string }
+  | { kind: 'group-header'; key: string; name: string; cont?: boolean }
   | { kind: 'group-subtotal'; key: string; name: string; subtotal: number }
   | { kind: 'empty'; key: string }
   | { kind: 'totals'; key: string }
   | { kind: 'text'; key: string; heading?: string; line?: string; keepWithNext?: boolean }
   | { kind: 'payment'; key: string }
   | { kind: 'sign'; key: string };
+
+/**
+ * หน่วยที่ตัวจัดหน้ามองเห็น
+ *
+ * กลุ่มสินค้าถูกมัดเป็นก้อนเดียว (หัวกลุ่ม + รายการ + ยอดรวมย่อย) เพื่อให้พยายาม
+ * วางทั้งกลุ่มไว้หน้าเดียวกันก่อนเสมอ ถ้าเลือกแตกได้ตามใจ เอกสารจะขาดตอนแบบที่
+ * เคยเจอ: รายการของกลุ่มเดียวกันกระจายสามหน้าโดยหน้ากลางไม่มีชื่อกลุ่มกำกับเลย
+ */
+type Unit =
+  | { kind: 'single'; block: Block }
+  | {
+      kind: 'group'; id: string;
+      header: Block; contHeader: Block; rows: Block[]; subtotal: Block;
+    };
 
 /** แตกข้อความหลายบรรทัดเป็นชิ้นย่อย ให้ไหลข้ามหน้าได้โดยไม่ตัดกลางบรรทัด */
 function textBlocks(prefix: string, heading: string, body: string | null | undefined): Block[] {
@@ -105,6 +123,114 @@ function textBlocks(prefix: string, heading: string, body: string | null | undef
 /** แถวที่อยู่ในตารางรายการ (นับรวมหัวกลุ่ม/สรุปย่อยของกลุ่มด้วย) — ใช้ตัดสินว่า thead ต้องซ้ำไหม */
 const isRowLike = (b: Block) =>
   b.kind === 'row' || b.kind === 'empty' || b.kind === 'group-header' || b.kind === 'group-subtotal';
+
+/** อย่างน้อยกี่รายการที่ต้องอยู่กับหัวกลุ่มบนหน้าเดียวกัน — กันหัวกลุ่มโดดท้ายหน้า */
+const MIN_ROWS_UNDER_HEADER = 2;
+
+/**
+ * จัดหน้าเอกสารจากความสูงที่วัดมาจริง
+ *
+ * ลำดับการตัดสินใจของกลุ่มสินค้า:
+ *   1. ทั้งกลุ่มลงที่เหลือของหน้านี้ได้        → วางต่อเลย
+ *   2. ไม่ลง แต่ลงได้ถ้าขึ้นหน้าใหม่            → ขึ้นหน้าใหม่แล้ววางทั้งก้อน
+ *   3. ใหญ่กว่าหนึ่งหน้าจริงๆ                  → ยอมแตก แต่ห้ามหัวกลุ่มโดด
+ *      ห้ามยอดรวมย่อยโดด และหน้าถัดไปต้องมีหัวกลุ่ม "(ต่อ)" กำกับเสมอ
+ *
+ * ข้อ 2 คือหัวใจของความ compact: ยอมปล่อยท้ายหน้าว่างเพื่อให้กลุ่มถัดไปอยู่ครบใน
+ * หน้าเดียว ดีกว่าแตกกลุ่มเพื่ออุดที่ว่างแล้วคนอ่านต้องพลิกหน้าไปมา
+ */
+export function paginate(
+  units: Unit[], H: (b: Block) => number, avail: number, theadH: number
+): Block[][] {
+  const pages: Block[][] = [];
+  let cur: Block[] = [];
+  let used = 0;
+  let hasRows = false;
+
+  const room = () => avail - used;
+  const theadCost = () => (hasRows ? 0 : theadH);
+  const flush = () => {
+    if (cur.length) { pages.push(cur); cur = []; used = 0; hasRows = false; }
+  };
+  const put = (b: Block) => {
+    if (isRowLike(b)) { used += theadCost(); hasRows = true; }
+    used += H(b);
+    cur.push(b);
+  };
+  /** ดึงรายการสุดท้ายกลับออกมา เพื่อพาไปหน้าใหม่พร้อมยอดรวมย่อย —
+   *  ทำได้ต่อเมื่อหน้าเดิมยังเหลือรายการอยู่ ไม่งั้นหน้าเดิมจะเหลือแต่หัวกลุ่มโดดๆ */
+  const pullBackLastRow = (): Block | null => {
+    const last = cur[cur.length - 1];
+    if (!last || last.kind !== 'row') return null;
+    if (cur.filter((b) => b.kind === 'row').length < 2) return null;
+    cur.pop();
+    used -= H(last);
+    return last;
+  };
+
+  const putWholeGroup = (u: Extract<Unit, { kind: 'group' }>) => {
+    put(u.header);
+    u.rows.forEach(put);
+    put(u.subtotal);
+  };
+
+  const splitGroup = (u: Extract<Unit, { kind: 'group' }>) => {
+    let i = 0;
+    let first = true;
+    while (i < u.rows.length) {
+      const hdr = first ? u.header : u.contHeader;
+      // ต้องมีที่พอสำหรับหัวกลุ่ม + รายการขั้นต่ำ ไม่งั้นยกไปเริ่มที่หน้าใหม่
+      const take = Math.min(MIN_ROWS_UNDER_HEADER, u.rows.length - i);
+      let need = theadCost() + H(hdr);
+      for (let k = 0; k < take; k++) need += H(u.rows[i + k]);
+      if (need > room() && cur.length) flush();
+
+      put(hdr);
+      first = false;
+
+      const before = i;
+      while (i < u.rows.length && H(u.rows[i]) <= room()) { put(u.rows[i]); i += 1; }
+      // รายการเดียวสูงเกินหนึ่งหน้า — ยัดลงไปตรงๆ เพื่อให้เดินหน้าต่อได้ ไม่วนไม่รู้จบ
+      if (i === before) { put(u.rows[i]); i += 1; }
+
+      if (i < u.rows.length) flush();
+    }
+
+    if (H(u.subtotal) > room()) {
+      const pulled = pullBackLastRow();
+      flush();
+      put(u.contHeader);
+      if (pulled) put(pulled);
+    }
+    put(u.subtotal);
+  };
+
+  for (let idx = 0; idx < units.length; idx += 1) {
+    const u = units[idx];
+
+    if (u.kind === 'single') {
+      const b = u.block;
+      let need = (isRowLike(b) ? theadCost() : 0) + H(b);
+      // หัวข้อหมายเหตุ/เงื่อนไขต้องไม่ลอยอยู่ท้ายหน้าโดยไม่มีเนื้อหาตามมา
+      if (b.kind === 'text' && b.keepWithNext) {
+        const next = units[idx + 1];
+        if (next?.kind === 'single') need += H(next.block);
+      }
+      if (need > room() && cur.length) flush();
+      put(b);
+      continue;
+    }
+
+    const rowsH = u.rows.reduce((a, r) => a + H(r), 0);
+    const whole = H(u.header) + rowsH + H(u.subtotal);
+    if (theadCost() + whole <= room()) putWholeGroup(u);
+    else if (theadH + whole <= avail) { flush(); putWholeGroup(u); }
+    else splitGroup(u);
+  }
+
+  flush();
+  return pages;
+}
 
 export function DocumentPrintView({
   doc, copyLabel, bankAccounts = [],
@@ -124,27 +250,47 @@ export function DocumentPrintView({
     [doc.items, doc.groups]
   );
 
-  const blocks = useMemo<Block[]>(() => {
-    const out: Block[] = [];
-    if (doc.items.length === 0) out.push({ kind: 'empty', key: 'empty' });
+  const units = useMemo<Unit[]>(() => {
+    const out: Unit[] = [];
+    const single = (block: Block) => out.push({ kind: 'single', block });
+    if (doc.items.length === 0) single({ kind: 'empty', key: 'empty' });
+
     itemLayout.forEach((b) => {
       if (b.kind === 'item') {
-        out.push({ kind: 'row', key: `row-${b.entry.itemIndex}`, index: b.entry.itemIndex, no: b.entry.displayNo });
-      } else {
-        out.push({ kind: 'group-header', key: `grp-h-${b.group.id}`, name: b.group.group_name });
-        b.entries.forEach((entry) => {
-          out.push({ kind: 'row', key: `row-${entry.itemIndex}`, index: entry.itemIndex, no: entry.displayNo });
+        single({
+          kind: 'row', key: `row-${b.entry.itemIndex}`,
+          index: b.entry.itemIndex, no: b.entry.displayNo,
         });
-        out.push({ kind: 'group-subtotal', key: `grp-s-${b.group.id}`, name: b.group.group_name, subtotal: b.subtotal });
+        return;
       }
+      const name = b.group.group_name;
+      out.push({
+        kind: 'group',
+        id: b.group.id,
+        header: { kind: 'group-header', key: `grp-h-${b.group.id}`, name },
+        contHeader: { kind: 'group-header', key: `grp-c-${b.group.id}`, name, cont: true },
+        rows: b.entries.map((entry) => ({
+          kind: 'row' as const, key: `row-${entry.itemIndex}`,
+          index: entry.itemIndex, no: entry.displayNo,
+        })),
+        subtotal: {
+          kind: 'group-subtotal', key: `grp-s-${b.group.id}`, name, subtotal: b.subtotal,
+        },
+      });
     });
-    out.push({ kind: 'totals', key: 'totals' });
-    out.push(...textBlocks('note', 'หมายเหตุ', doc.note_text));
-    out.push(...textBlocks('terms', 'เงื่อนไข', doc.terms_text));
-    if (doc.doc_type === 'INV' || doc.doc_type === 'RC') out.push({ kind: 'payment', key: 'payment' });
-    out.push({ kind: 'sign', key: 'sign' });
+
+    single({ kind: 'totals', key: 'totals' });
+    textBlocks('note', 'หมายเหตุ', doc.note_text).forEach(single);
+    textBlocks('terms', 'เงื่อนไข', doc.terms_text).forEach(single);
+    if (doc.doc_type === 'INV' || doc.doc_type === 'RC') single({ kind: 'payment', key: 'payment' });
+    single({ kind: 'sign', key: 'sign' });
     return out;
   }, [doc, itemLayout]);
+
+  /** ทุกบล็อกเรียงแบน — ใช้เรนเดอร์ชั้นวัดความสูง และใช้เป็นหน้าเดียวตอนยังวัดไม่เสร็จ */
+  const blocks = useMemo<Block[]>(() => units.flatMap((u) => (
+    u.kind === 'single' ? [u.block] : [u.header, ...u.rows, u.subtotal]
+  )), [units]);
 
   const measureKey = useMemo(() => JSON.stringify([
     doc.doc_type, doc.doc_no, copyLabel,
@@ -168,29 +314,7 @@ export function DocumentPrintView({
       const theadH = h['thead'] ?? 0;
       if (!headerH) return;
 
-      const avail = CONTENT_H - headerH;
-      const out: Block[][] = [];
-      let cur: Block[] = [];
-      let used = 0;
-      let curHasRows = false;
-      const heightOf = (b: Block) => h[b.key] ?? 0;
-
-      for (let i = 0; i < blocks.length; i++) {
-        const b = blocks[i];
-        const needThead = isRowLike(b) && !curHasRows ? theadH : 0;
-        let need = needThead + heightOf(b);
-        if (b.kind === 'text' && b.keepWithNext && blocks[i + 1]) need += heightOf(blocks[i + 1]);
-
-        if (used + need > avail && cur.length > 0) {
-          out.push(cur); cur = []; used = 0; curHasRows = false;
-        }
-        const thead2 = isRowLike(b) && !curHasRows ? theadH : 0;
-        cur.push(b);
-        used += thead2 + heightOf(b);
-        if (isRowLike(b)) curHasRows = true;
-      }
-      if (cur.length) out.push(cur);
-      setPages(out);
+      setPages(paginate(units, (b) => h[b.key] ?? 0, CONTENT_H - headerH, theadH));
     };
 
     measure();
@@ -199,7 +323,7 @@ export function DocumentPrintView({
     let cancelled = false;
     void document.fonts?.ready.then(() => { if (!cancelled) measure(); });
     return () => { cancelled = true; };
-  }, [measureKey, blocks, assetsReady]);
+  }, [measureKey, units, assetsReady]);
 
   const rendered = pages ?? [blocks];
 
@@ -218,7 +342,8 @@ export function DocumentPrintView({
         <div data-mk="header" onLoad={() => setAssetsReady((n) => n + 1)}>
           <DocHeader doc={doc} copyLabel={copyLabel} pageNo={1} totalPages={2} />
         </div>
-        <table className="w-full text-[11px] border-collapse">
+        <table className="w-full table-fixed text-[11px] border-collapse">
+          <ItemCols />
           <thead><tr data-mk="thead"><ItemHead color={color} /></tr></thead>
           <tbody>
             {blocks.filter(isRowLike).map((b) => {
@@ -229,6 +354,11 @@ export function DocumentPrintView({
               }
               return <tr key={b.key} data-mk={b.key}><td colSpan={7} className="py-6" /></tr>;
             })}
+            {/* หัวกลุ่ม "(ต่อ)" ต้องวัดแยก เพราะคำต่อท้ายอาจดันให้ตัดบรรทัดเพิ่มเมื่อชื่อกลุ่มยาว */}
+            {units.map((u) => (u.kind === 'group' ? (
+              <GroupHeaderRow key={u.contHeader.key} mk={u.contHeader.key}
+                              name={(u.header as { name: string }).name} cont />
+            ) : null))}
           </tbody>
         </table>
         <div data-mk="totals"><TotalsBlock doc={doc} color={color} bankAccounts={bankAccounts} /></div>
@@ -279,12 +409,15 @@ function DocPage({
       <DocHeader doc={doc} copyLabel={copyLabel} pageNo={pageNo} totalPages={totalPages} />
 
       {rowBlocks.length > 0 && (
-        <table className="w-full text-[11px] border-collapse">
+        <table className="w-full table-fixed text-[11px] border-collapse">
+          <ItemCols />
           <thead><tr><ItemHead color={color} /></tr></thead>
           <tbody>
             {rowBlocks.map((b) => {
               if (b.kind === 'row') return <ItemRow key={b.key} it={doc.items[b.index]} no={b.no} />;
-              if (b.kind === 'group-header') return <GroupHeaderRow key={b.key} name={b.name} />;
+              if (b.kind === 'group-header') {
+                return <GroupHeaderRow key={b.key} name={b.name} cont={b.cont} />;
+              }
               if (b.kind === 'group-subtotal') {
                 return <GroupSubtotalRow key={b.key} name={b.name} subtotal={b.subtotal} />;
               }
@@ -405,17 +538,39 @@ function DocHeader({
 
 const HEAD_CELL = 'py-2 font-semibold';
 
+/**
+ * ความกว้างคอลัมน์ตายตัว (มม.) — รายละเอียดกินที่เหลือ
+ *
+ * ต้องคุมความกว้างเองและใช้คู่กับ table-layout: fixed เสมอ เพราะ CSS ตาราง
+ * แบบ auto คิดความกว้างคอลัมน์จาก "เนื้อหาที่มีอยู่ในตารางนั้น" — ชั้นที่ใช้วัด
+ * มีทุกแถวของเอกสาร ส่วนตารางของแต่ละหน้ามีแค่แถวของหน้านั้น ความกว้างจึงไม่ตรงกัน
+ * ผลคือความสูงที่วัดได้ไม่ใช่ความสูงที่พิมพ์จริง ตัวจัดหน้าเลยคำนวณผิดทั้งใบ
+ * (เคยทำให้หน้าแรกว่างเกือบครึ่งหน้า และคอลัมน์รายละเอียดในหน้าสุดท้ายแคบจนข้อความ
+ * ตัดเป็น 7 บรรทัด) ตรึงความกว้างแล้วทั้งสองชั้นจะวัดได้เท่ากันเป๊ะ
+ */
+const COL_MM = [12, null, 16, 14, 24, 22, 26] as const;
+
+function ItemCols() {
+  return (
+    <colgroup>
+      {COL_MM.map((w, i) => (
+        <col key={i} style={w == null ? undefined : { width: `${w}mm` }} />
+      ))}
+    </colgroup>
+  );
+}
+
 function ItemHead({ color }: { color: string }) {
   const border = { borderTop: `1.5px solid ${color}`, borderBottom: `1.5px solid ${color}`, color };
   return (
     <>
-      <th className={`${HEAD_CELL} w-[12mm] text-left`} style={border}>ลำดับ</th>
+      <th className={`${HEAD_CELL} text-left`} style={border}>ลำดับ</th>
       <th className={`${HEAD_CELL} text-center`} style={border}>รายละเอียด</th>
-      <th className={`${HEAD_CELL} w-[16mm] text-center`} style={border}>จำนวน</th>
-      <th className={`${HEAD_CELL} w-[14mm] text-center`} style={border}>หน่วย</th>
-      <th className={`${HEAD_CELL} w-[24mm] text-center`} style={border}>ราคา/หน่วย</th>
-      <th className={`${HEAD_CELL} w-[22mm] text-center`} style={border}>ส่วนลด</th>
-      <th className={`${HEAD_CELL} w-[26mm] text-right pr-1`} style={border}>มูลค่า</th>
+      <th className={`${HEAD_CELL} text-center`} style={border}>จำนวน</th>
+      <th className={`${HEAD_CELL} text-center`} style={border}>หน่วย</th>
+      <th className={`${HEAD_CELL} text-center`} style={border}>ราคา/หน่วย</th>
+      <th className={`${HEAD_CELL} text-center`} style={border}>ส่วนลด</th>
+      <th className={`${HEAD_CELL} text-right pr-1`} style={border}>มูลค่า</th>
     </>
   );
 }
@@ -441,23 +596,32 @@ function ItemRow({ it, no, mk }: { it: DocumentItem; no: number; mk?: string }) 
   );
 }
 
-/** แถวหัวกลุ่ม (Type A/B/C) — ไม่มีจำนวน/ราคา แค่ชื่อกลุ่มคาดเส้นบาง */
-function GroupHeaderRow({ name, mk }: { name: string; mk?: string }) {
+/**
+ * แถวหัวกลุ่ม (Type A/B/C) — ไม่มีจำนวน/ราคา แค่ชื่อกลุ่มคาดเส้นบาง
+ * `cont` = หัวกลุ่มที่พิมพ์ซ้ำตอนกลุ่มยาวจนต้องขึ้นหน้าใหม่ ต่อท้ายด้วย "(ต่อ)"
+ * ไม่งั้นคนอ่านหน้าถัดไปจะไม่รู้ว่ารายการที่เห็นอยู่เป็นของกลุ่มไหน
+ */
+function GroupHeaderRow({ name, mk, cont }: { name: string; mk?: string; cont?: boolean }) {
   return (
     <tr data-mk={mk}>
       <td colSpan={7} className="pt-3 pb-1 font-semibold border-b border-slate-300">
-        {name}
+        {name}{cont && <span className="font-normal text-slate-500"> (ต่อ)</span>}
       </td>
     </tr>
   );
 }
 
-/** แถวสรุปยอดย่อยท้ายกลุ่ม — ชิดขวาใต้คอลัมน์มูลค่า เหมือนแถวรวมย่อยในตารางบัญชีทั่วไป */
+/**
+ * แถวสรุปยอดย่อยท้ายกลุ่ม — ชิดขวาใต้คอลัมน์มูลค่า เหมือนแถวรวมย่อยในตารางบัญชีทั่วไป
+ *
+ * ป้ายกินตั้งแต่คอลัมน์แรกถึงคอลัมน์ส่วนลด ไม่ใช่ยัดไว้ในคอลัมน์ส่วนลดคอลัมน์เดียว
+ * ชื่อกลุ่มยาวๆ จึงมีที่พอเสมอโดยไม่ต้องใช้ nowrap ซึ่งเคยดันความกว้างคอลัมน์จน
+ * ตารางทั้งหน้าเพี้ยน
+ */
 function GroupSubtotalRow({ name, subtotal, mk }: { name: string; subtotal: number; mk?: string }) {
   return (
     <tr data-mk={mk}>
-      <td colSpan={5} />
-      <td className="py-1 text-right text-slate-500 whitespace-nowrap">รวม{name}</td>
+      <td colSpan={6} className="py-1 pr-3 text-right text-slate-500">รวม{name}</td>
       <td className="py-1 text-right tabular-nums font-semibold pr-1 border-t border-slate-200">
         {money(subtotal)}
       </td>

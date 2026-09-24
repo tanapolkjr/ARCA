@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, Ban, BadgeCheck, Copy, FileOutput, HandCoins, Plus, Printer,
+  ArrowLeft, Ban, BadgeCheck, ChevronDown, ChevronUp, Copy, FileOutput, HandCoins, Plus, Printer,
   RotateCcw, Save, Search, Trash2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast.jsx';
@@ -284,12 +284,48 @@ function DocumentEditorInner() {
     setGroups((g) => g.filter((x) => x.id !== groupId));
   };
 
+  /**
+   * สลับกลุ่มกับบล็อกที่อยู่ติดกันบนจอ (บล็อกข้างๆ จะเป็นกลุ่มอื่นหรือรายการนอกกลุ่มก็ได้)
+   *
+   * ต้องสลับที่ "อาเรย์รายการ" ไม่ใช่แค่ sort_order ของกลุ่ม เพราะทั้งหน้าจอและ
+   * หน้าพิมพ์เรียงทุกอย่างจากลำดับรายการ (buildItemLayout) ส่วน sort_order เป็น
+   * เพียงลำดับที่เก็บลงฐานข้อมูล — ขยับแค่อย่างใดอย่างหนึ่งแล้วสองฝั่งจะไม่ตรงกัน
+   */
+  const moveGroup = (groupId: string, dir: -1 | 1) => {
+    const blocks = buildItemLayout(items, groups);
+    const at = blocks.findIndex((b) => b.kind === 'group' && b.group.id === groupId);
+    const to = at + dir;
+    if (at < 0 || to < 0 || to >= blocks.length) return;
+
+    const next = [...blocks];
+    [next[at], next[to]] = [next[to], next[at]];
+    setItems(next.flatMap((b) => (
+      b.kind === 'item' ? [b.entry.item] : b.entries.map((e) => e.item)
+    )));
+
+    // เรียง groups ตามลำดับใหม่ด้วย เพื่อให้ sort_order ที่บันทึกตรงกับที่เห็นบนจอ
+    const order = next.flatMap((b) => (b.kind === 'group' ? [b.group.id] : []));
+    setGroups((g) => [...g]
+      .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id))
+      .map((x, i) => ({ ...x, sort_order: i })));
+  };
+
   const itemLayout = useMemo(() => buildItemLayout(items, groups), [items, groups]);
 
   async function handleSave(): Promise<string | null> {
     if (!companyId) { toast('เลือกบริษัทผู้ออกเอกสารก่อน', 'error'); return null; }
     if (!partyId) { toast(ar ? 'เลือกลูกค้าก่อน' : 'เลือกผู้ขายก่อน', 'error'); return null; }
     if (!items.some((i) => i.description.trim())) { toast('ใส่รายการอย่างน้อย 1 บรรทัด', 'error'); return null; }
+
+    // กลุ่มต้องมีสินค้าอย่างน้อย 1 รายการที่กรอกรายละเอียดแล้ว — บรรทัดว่างถูกกรองทิ้ง
+    // ตอนบันทึก ถ้าปล่อยผ่านกลุ่มจะหายไปเงียบๆ ทั้งที่ผู้ใช้เพิ่งตั้งชื่อไว้
+    const emptyGroup = groups.find(
+      (g) => !items.some((i) => i.group_id === g.id && i.description.trim())
+    );
+    if (emptyGroup) {
+      toast(`กลุ่ม "${emptyGroup.group_name || 'ไม่มีชื่อ'}" ยังไม่มีสินค้า — ใส่รายการหรือยกเลิกกลุ่มก่อน`, 'error');
+      return null;
+    }
 
     // ช่องที่ต้องมีก่อนออกเอกสารจริง — ขาดแล้วเอกสารใช้ตามงานไม่ได้
     const missing: string[] = [];
@@ -920,7 +956,7 @@ function DocumentEditorInner() {
                 เลขลำดับเริ่มใหม่ทุกกลุ่ม (คำนวณจาก buildItemLayout ตอน render เท่านั้น
                 ไม่กระทบ line_no ที่ใช้จริงตอนบันทึก) */}
             <div className="flex flex-col gap-3">
-              {itemLayout.map((block) =>
+              {itemLayout.map((block, blockIdx) =>
                 block.kind === 'item' ? (
                   <ItemCard
                     key={block.entry.itemIndex}
@@ -949,11 +985,28 @@ function DocumentEditorInner() {
                         </span>
                       )}
                       {!locked && (
-                        <button onClick={() => removeGroup(block.group.id)}
-                                title="ยกเลิกกลุ่ม (ย้ายรายการออกมา ไม่ลบข้อมูล)"
-                                className="text-slate-300 hover:text-rose-500 p-1 shrink-0">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <>
+                          {/* สลับลำดับกลุ่ม — ลำดับที่เห็นตรงนี้คือลำดับที่พิมพ์ออกใบเสนอราคา */}
+                          <button onClick={() => moveGroup(block.group.id, -1)}
+                                  disabled={blockIdx === 0}
+                                  title="เลื่อนกลุ่มนี้ขึ้น"
+                                  className="text-slate-400 hover:text-slate-900 p-1 shrink-0
+                                    disabled:opacity-25 disabled:hover:text-slate-400">
+                            <ChevronUp className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => moveGroup(block.group.id, 1)}
+                                  disabled={blockIdx === itemLayout.length - 1}
+                                  title="เลื่อนกลุ่มนี้ลง"
+                                  className="text-slate-400 hover:text-slate-900 p-1 shrink-0
+                                    disabled:opacity-25 disabled:hover:text-slate-400">
+                            <ChevronDown className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => removeGroup(block.group.id)}
+                                  title="ยกเลิกกลุ่ม (ย้ายรายการออกมา ไม่ลบข้อมูล)"
+                                  className="text-slate-300 hover:text-rose-500 p-1 shrink-0">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
                       )}
                     </div>
                     <div className="flex flex-col gap-2">
@@ -995,10 +1048,14 @@ function DocumentEditorInner() {
                 <GhostButton onClick={() => setItems((p) => [...p, { ...p[p.length - 1] }])}>
                   <Copy className="w-4 h-4" /> ทำซ้ำบรรทัดล่าสุด
                 </GhostButton>
-                {/* Optional — ใบที่ไม่ต้องแบ่งประเภทสินค้าไม่ต้องกดปุ่มนี้เลย */}
-                <GhostButton onClick={addGroup}>
-                  <Plus className="w-4 h-4" /> เพิ่ม Group
-                </GhostButton>
+                {/* Optional — ใบที่ไม่ต้องแบ่งประเภทสินค้าไม่ต้องกดปุ่มนี้เลย
+                    เฉพาะเอกสารขาย: ฝั่งซื้อยังไม่มีตารางกลุ่มในฐานข้อมูล ถ้าปล่อยให้กดได้
+                    ผู้ใช้จะจัดกลุ่มบนใบสั่งซื้อแล้วกลุ่มหายเงียบตอนบันทึก */}
+                {ar && (
+                  <GhostButton onClick={addGroup}>
+                    <Plus className="w-4 h-4" /> เพิ่ม Group
+                  </GhostButton>
+                )}
               </div>
             )}
 

@@ -79,17 +79,21 @@ export function buildItemLayout(
   const groupMap = new Map(groups.map((g) => [g.id, g]));
   const blocks: ItemLayoutBlock[] = [];
   let openGroupId: string | null = null;
-  let counter = 0;
+  let inGroupNo = 0;
+  // รายการนอกกลุ่มเดินเลขของตัวเองต่อเนื่องทั้งใบ ไม่นับรวมรายการที่อยู่ในกลุ่ม
+  // ไม่งั้นเอกสารที่ผสมกันจะเห็นเลขกระโดด เช่น 1, 2, [กลุ่ม 1, 2], 5
+  // เอกสารที่ไม่มีกลุ่มเลยได้ 1..n เท่าเดิมทุกประการ
+  let looseNo = 0;
 
   items.forEach((item, itemIndex) => {
     const gid = item.group_id && groupMap.has(item.group_id) ? item.group_id : null;
     if (gid !== openGroupId) {
-      counter = 0;
+      inGroupNo = 0;
       openGroupId = gid;
       if (gid) blocks.push({ kind: 'group', group: groupMap.get(gid)!, entries: [], subtotal: 0 });
     }
-    counter += 1;
-    const entry: ItemEntry = { item, itemIndex, displayNo: gid ? counter : itemIndex + 1 };
+    if (gid) inGroupNo += 1; else looseNo += 1;
+    const entry: ItemEntry = { item, itemIndex, displayNo: gid ? inGroupNo : looseNo };
     if (gid) {
       const g = blocks[blocks.length - 1] as { kind: 'group'; entries: ItemEntry[]; subtotal: number };
       g.entries.push(entry);

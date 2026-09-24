@@ -251,12 +251,24 @@ export async function saveArDocument(input: SaveArInput, userId: string): Promis
     docId = data.id as string;
   }
 
-  // กลุ่มที่ไม่มี item เหลืออยู่แล้วถูกตัดทิ้งเงียบๆ — ห้ามมีกลุ่มว่างอยู่ในระบบ
-  // (หน้าจอ ungroup อัตโนมัติเมื่อลบ item สุดท้ายของกลุ่มอยู่แล้ว แต่เช็คซ้ำที่นี่กันพลาด)
-  const referencedGroupIds = new Set(items.map((i) => i.group_id).filter(Boolean) as string[]);
-  const groups = (input.groups ?? [])
-    .filter((g) => referencedGroupIds.has(g.id))
-    .map((g, idx) => ({ id: g.id, document_id: docId, sort_order: idx, group_name: g.group_name }));
+  // ลำดับกลุ่มยึดจาก "ลำดับที่รายการปรากฏจริงในเอกสาร" ไม่ใช่ลำดับในอาเรย์ groups ที่ส่งมา
+  // เพราะทั้งหน้าจอและหน้าพิมพ์เรียงกลุ่มตามลำดับรายการ ถ้าเก็บคนละลำดับกัน พอเปิด
+  // เอกสารเดิมขึ้นมาใหม่ลำดับกลุ่มจะสลับจากที่เพิ่งเห็นตอนบันทึก
+  //
+  // ผลพลอยได้: กลุ่มที่ไม่มีรายการเหลืออยู่แล้วหลุดออกไปเองตรงนี้ — ห้ามมีกลุ่มว่าง
+  // อยู่ในระบบ (หน้าจอ ungroup ให้อัตโนมัติอยู่แล้วเมื่อลบรายการสุดท้าย นี่คือชั้นกันพลาด)
+  const groupById = new Map((input.groups ?? []).map((g) => [g.id, g]));
+  const orderedGroupIds: string[] = [];
+  for (const i of items) {
+    if (i.group_id && groupById.has(i.group_id) && !orderedGroupIds.includes(i.group_id)) {
+      orderedGroupIds.push(i.group_id);
+    }
+  }
+  const groups = orderedGroupIds.map((id, idx) => ({
+    id, document_id: docId, sort_order: idx,
+    // ชื่อว่างจะพิมพ์ออกมาเป็นหัวกลุ่มเปล่าๆ กับบรรทัด "รวม" ที่ไม่บอกว่ารวมอะไร
+    group_name: (groupById.get(id)!.group_name ?? '').trim() || 'กลุ่มสินค้า',
+  }));
   // เฉพาะกลุ่มที่ถูกแทรกจริงเท่านั้นที่ item จะชี้ไปได้ — กัน FK พังถ้า item อ้าง
   // group_id ที่ไม่มีกลุ่มมาด้วย (ข้อมูลจากหน้าจอไม่ครบ)
   const insertedGroupIds = new Set(groups.map((g) => g.id));
