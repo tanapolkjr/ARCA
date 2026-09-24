@@ -69,6 +69,37 @@ export function copiesFor(mode: PrintMode): readonly string[] {
   return mode === 'copy' ? ['สำเนา'] : ['ต้นฉบับ'];
 }
 
+/**
+ * ชื่อไฟล์ตั้งต้นตอนกด "บันทึกเป็น PDF" — `เลขที่เอกสาร - ชื่องาน`
+ *
+ * เบราว์เซอร์เอา document.title มาเป็นชื่อไฟล์ของ Save as PDF ซึ่งเดิมเป็นชื่อแอป
+ * เหมือนกันทุกใบ คนจึงต้องพิมพ์ชื่อเองทุกครั้งที่บันทึก
+ *
+ * ต้องล้างอักขระที่ตั้งเป็นชื่อไฟล์ไม่ได้ (\ / : * ? " < > |) เพราะชื่องานจริงมี
+ * เครื่องหมายคำพูดอยู่บ่อย เช่น  Sale Gallery "Love it" Project  — ถ้าไม่ล้าง
+ * Windows จะไม่ยอมบันทึกหรือตัดชื่อทิ้งเอง
+ */
+export function printFileName(
+  docNo: string | null | undefined,
+  jobName: string | null | undefined,
+  mode: PrintMode = 'original'
+): string {
+  const clean = (s: string) => s
+    .replace(/[\\/:*?"<>|]/g, ' ')       // อักขระต้องห้ามของระบบไฟล์
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u001f]/g, ' ')    // อักขระควบคุม เช่น ขึ้นบรรทัดใหม่
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const parts = [clean(docNo ?? ''), clean(jobName ?? '')].filter(Boolean);
+  // ตัดความยาวก่อนต่อวงเล็บ เพื่อให้คำว่า (สำเนา) ไม่ถูกตัดหายไปเอง
+  const base = parts.join(' - ').slice(0, 80) || 'document';
+  const suffix = mode === 'copy' ? ' (สำเนา)'
+    : mode === 'both' ? ' (ต้นฉบับ+สำเนา)'
+    : '';
+  return base + suffix;
+}
+
 /** ป้ายลายเซ็นต่างกันตามประเภทเอกสาร ตามธรรมเนียมที่ใช้จริง */
 const SIGN_LABELS: Record<string, [string, string]> = {
   QT: ['ผู้สั่งซื้อสินค้า', 'ผู้อนุมัติ'],

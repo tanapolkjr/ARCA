@@ -26,7 +26,8 @@ import {
 } from '@/accounting-api/documents';
 import { supabase } from '../../lib/supabaseClient.js';
 import {
-  DocumentPrintView, PRINT_MODES, copiesFor, type PrintMode, type PrintableDoc,
+  DocumentPrintView, PRINT_MODES, copiesFor, printFileName,
+  type PrintMode, type PrintableDoc,
 } from './DocumentPrintView';
 import {
   Field, GhostButton, NumberInput, PrimaryButton, Select, StatusPill, TextArea, TextInput, inputCls,
@@ -524,6 +525,31 @@ function DocumentEditorInner() {
     } finally { setBusy(false); }
   }
 
+  /**
+   * สั่งพิมพ์โดยตั้งชื่อไฟล์ให้อัตโนมัติ
+   *
+   * เบราว์เซอร์อ่าน document.title ตอนเปิดหน้าต่างพิมพ์ เพื่อใช้เป็นชื่อไฟล์ตั้งต้น
+   * จึงต้องตั้งก่อนเรียก print() แล้วคืนค่าเดิมเมื่อปิดหน้าต่าง ไม่งั้นชื่อแท็บ
+   * จะค้างเป็นเลขที่เอกสารไปตลอดจนกว่าจะรีเฟรช
+   */
+  function handlePrint() {
+    const previous = document.title;
+    document.title = printFileName(docNo, jobName, printMode);
+
+    let done = false;
+    const restore = () => {
+      if (done) return;
+      done = true;
+      document.title = previous;
+      window.removeEventListener('afterprint', restore);
+    };
+    window.addEventListener('afterprint', restore);
+    // กันเหนียวเผื่อเบราว์เซอร์ไม่ยิง afterprint (เช่นผู้ใช้กดยกเลิกบางเวอร์ชัน)
+    window.setTimeout(restore, 60000);
+
+    window.print();
+  }
+
   async function handleDelete() {
     if (!savedId) { nav(-1); return; }
     try {
@@ -786,7 +812,7 @@ function DocumentEditorInner() {
             <div className="text-xs text-stone-400">
               {PRINT_MODES.find((m) => m.value === printMode)?.hint}
             </div>
-            <PrimaryButton onClick={() => window.print()}>
+            <PrimaryButton onClick={handlePrint}>
               <Printer className="w-4 h-4" /> พิมพ์ / บันทึกเป็น PDF
             </PrimaryButton>
           </div>
