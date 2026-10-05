@@ -41,6 +41,13 @@ export interface PrintableDoc {
   note_text?: string | null;
   terms_text?: string | null;
   items: DocumentItem[];
+  /** ลายเซ็นฝั่งผู้ขาย — แสดงเฉพาะเอกสารที่อนุมัติ/ออกแล้ว (คนเรียกเป็นคนตัดสิน) */
+  show_signature?: boolean;
+  signature_url?: string | null;
+  /** ชื่อใต้เส้นลงนามฝั่งผู้ขาย = เซลล์ที่ระบุในใบ */
+  signer_name?: string | null;
+  /** วันที่ฝั่งผู้ขาย: ใบเสนอราคา = วันที่อนุมัติ · ใบอื่น = วันที่เอกสาร */
+  signed_date?: string | null;
   /** จัดกลุ่มรายการ (Type A/B/C) — optional, ว่างได้ถ้าเอกสารนี้ไม่ได้ใช้ */
   groups?: DocumentItemGroup[];
 }
@@ -103,7 +110,7 @@ export function printFileName(
 /** ป้ายลายเซ็นต่างกันตามประเภทเอกสาร ตามธรรมเนียมที่ใช้จริง */
 const SIGN_LABELS: Record<string, [string, string]> = {
   QT: ['ผู้สั่งซื้อสินค้า', 'ผู้อนุมัติ'],
-  BL: ['ผู้รับวางบิล', 'ผู้วางบิล'],
+  BL: ['ผู้ซื้อ', 'ผู้อนุมัติ'],
   INV: ['ผู้จ่ายเงิน', 'ผู้รับเงิน'],
   RC: ['ผู้จ่ายเงิน', 'ผู้รับเงิน'],
   CN: ['ผู้รับเอกสาร', 'ผู้มีอำนาจลงนาม'],
@@ -354,6 +361,8 @@ export function DocumentPrintView({
     doc.company_snapshot, doc.party_snapshot, doc.job_name,
     doc.contact_name, doc.contact_phone, doc.sales_name, doc.sales_phone,
     doc.note_text, doc.terms_text, bankAccounts.length,
+    doc.show_signature, doc.signer_name, doc.signed_date, Boolean(doc.signature_url),
+    doc.items.map((i) => [i.description, i.qty, i.unit_price, i.line_total]),
     doc.items.map((i) => [i.description, i.qty, i.unit_price, i.line_total, i.group_id ?? null]),
     (doc.groups ?? []).map((g) => [g.id, g.group_name]),
   ]), [doc, copyLabel, bankAccounts.length]);
@@ -429,7 +438,7 @@ export function DocumentPrintView({
         {(doc.doc_type === 'INV' || doc.doc_type === 'RC') && (
           <div data-mk="payment"><PaymentBlock /></div>
         )}
-        <div data-mk="sign"><SignBlock docType={doc.doc_type} /></div>
+        <div data-mk="sign"><SignBlock doc={doc} /></div>
       </div>
 
       {rendered.map((pageBlocks, i) => (
@@ -498,7 +507,7 @@ function DocPage({
         }
         if (b.kind === 'text') return <TextLine key={b.key} block={b} color={color} />;
         if (b.kind === 'payment') return <PaymentBlock key={b.key} />;
-        if (b.kind === 'sign') return <SignBlock key={b.key} docType={doc.doc_type} />;
+        if (b.kind === 'sign') return <SignBlock key={b.key} doc={doc} />;
         return null;
       })}
     </div>
@@ -523,8 +532,8 @@ function DocHeader({
     <>
       {/* แถวบน: โลโก้ + ข้อมูลบริษัท ซ้าย · ชื่อเอกสาร ขวา */}
       <div className="flex justify-between items-start gap-6">
-        <div className="flex items-start gap-4 min-w-0">
-          <ArcaWordmark className="w-[34mm] mt-1 shrink-0" />
+        <div className="flex items-center gap-4 min-w-0">
+          <ArcaWordmark className="w-[34mm] shrink-0" />
           <div className="text-[10px] leading-[1.55] min-w-0">
             <div className="text-[13px] font-bold leading-tight">{co?.name ?? '—'}</div>
             {co?.name_en && <div className="text-[10px]">{co.name_en}</div>}
@@ -686,7 +695,7 @@ function GroupHeaderRow({ name, mk, cont }: { name: string; mk?: string; cont?: 
 function GroupSubtotalRow({ name, subtotal, mk }: { name: string; subtotal: number; mk?: string }) {
   return (
     <tr data-mk={mk}>
-      <td colSpan={6} className="py-1 pr-3 text-right text-stone-500">รวม{name}</td>
+      <td colSpan={6} className="py-1 pr-3 text-right text-stone-500">รวม {name}</td>
       <td className="py-1 text-right tabular-nums font-semibold pr-1 border-t border-stone-200">
         {money(subtotal)}
       </td>
@@ -711,7 +720,6 @@ function TotalsBlock({
             ? bankAccounts.map((b) => (
                 <div key={b.id}>
                   ธนาคาร{b.bank_name} เลขที่ : {b.account_no}
-                  {b.branch ? ` (${b.branch})` : ''}
                 </div>
               ))
             : <div className="text-stone-400">ธนาคาร — เลขที่ :</div>}
@@ -775,17 +783,74 @@ function PaymentBlock() {
   );
 }
 
-function SignBlock({ docType }: { docType: string }) {
-  const [leftSign, rightSign] = SIGN_LABELS[docType] ?? ['ผู้รับเอกสาร', 'ผู้มีอำนาจลงนาม'];
+/**
+ * ส่วนลงนามท้ายเอกสาร
+ *
+ *   ในนาม {ผู้ซื้อ}                               ในนาม {บริษัทเรา}
+ *                                               [ลายเซ็นเซลล์]   05/10/2026
+ *   ____________  ____/____/____                ____________  ____________
+ *   ผู้สั่งซื้อสินค้า      วันที่                       ผู้อนุมัติ         วันที่
+ *                                                  (Pear)
+ *
+ * ฝั่งซ้ายให้ลูกค้าเซ็นและลงวันที่เอง · ฝั่งขวาขึ้นลายเซ็นเซลล์ในใบ
+ * เมื่อเอกสารอนุมัติ/ออกแล้วเท่านั้น (ร่างและใบยกเลิกจะเว้นว่าง)
+ */
+function SignBlock({ doc }: { doc: PrintableDoc }) {
+  const [leftLabel, rightLabel] = SIGN_LABELS[doc.doc_type] ?? ['ผู้รับเอกสาร', 'ผู้มีอำนาจลงนาม'];
+  const show = Boolean(doc.show_signature);
   return (
-    <div className="flex justify-between gap-16 text-[10px] pt-12 px-6">
-      {[leftSign, rightSign].map((label) => (
-        <div key={label} className="flex-1 text-center">
-          <div className="border-b border-stone-400 h-8" />
+    <div className="flex justify-between gap-12 text-[10px] pt-10">
+      <SignSide
+        inNameOf={doc.party_snapshot?.name}
+        label={leftLabel}
+        align="left"
+        dateText={<span className="text-stone-400 tracking-[0.3em]">/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/</span>}
+      />
+      <SignSide
+        inNameOf={doc.company_snapshot?.name}
+        label={rightLabel}
+        align="right"
+        signatureUrl={show ? doc.signature_url : null}
+        name={doc.signer_name}
+        dateText={show && doc.signed_date ? docDate(doc.signed_date) : null}
+      />
+    </div>
+  );
+}
+
+function SignSide({
+  inNameOf, label, align, signatureUrl, name, dateText,
+}: {
+  inNameOf?: string | null;
+  label: string;
+  align: 'left' | 'right';
+  signatureUrl?: string | null;
+  name?: string | null;
+  dateText?: React.ReactNode;
+}) {
+  return (
+    <div className="flex-1 min-w-0">
+      <div className={`font-semibold truncate ${align === 'right' ? 'text-right' : 'text-left'}`}>
+        ในนาม {inNameOf || '................................................'}
+      </div>
+      {/* แถวเส้นลงนาม: ช่องเซ็น (กว้างกว่า) + ช่องวันที่ */}
+      <div className="flex gap-4 mt-1">
+        <div className="flex-[3] min-w-0 text-center">
+          <div className="h-[17mm] flex items-end justify-center border-b border-stone-400 pb-[1mm]">
+            {signatureUrl && (
+              <img src={signatureUrl} alt="" className="max-h-[16mm] max-w-[45mm] object-contain" />
+            )}
+          </div>
           <div className="mt-1.5">{label}</div>
-          <div className="text-stone-400 text-[9px]">วันที่</div>
+          {name && <div className="text-[9px] text-stone-600">({name})</div>}
         </div>
-      ))}
+        <div className="flex-[2] min-w-0 text-center">
+          <div className="h-[17mm] flex items-end justify-center border-b border-stone-400 pb-[1mm]">
+            {dateText}
+          </div>
+          <div className="mt-1.5">วันที่</div>
+        </div>
+      </div>
     </div>
   );
 }

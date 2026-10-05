@@ -25,6 +25,7 @@ import {
   listDocumentTags, saveApDocument, saveArDocument,
 } from '@/accounting-api/documents';
 import { supabase } from '../../lib/supabaseClient.js';
+import { signatureDataUrl } from '@/lib/signature';
 import {
   DocumentPrintView, PRINT_MODES, copiesFor, printFileName,
   type PrintMode, type PrintableDoc,
@@ -107,6 +108,11 @@ function DocumentEditorInner() {
   const [groups, setGroups] = useState<DocumentItemGroup[]>([]);
   const [docNo, setDocNo] = useState<string | null>(null);
   const [status, setStatus] = useState('draft');
+  // ลายเซ็นที่ล็อกไว้กับเอกสาร — ฐานข้อมูลเป็นคนล็อก หน้าจอแค่อ่านมาแสดง
+  const [signerId, setSignerId] = useState<string | null>(null);
+  const [signaturePath, setSignaturePath] = useState<string | null>(null);
+  const [signedAt, setSignedAt] = useState<string | null>(null);
+  const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
   const [savedId, setSavedId] = useState<string | undefined>(id);
   const [sourceRef, setSourceRef] = useState<
     { id: string; docNo: string | null; jobName?: string | null } | null>(null);
@@ -203,6 +209,9 @@ function DocumentEditorInner() {
           setPartyId(a.customer_id ?? '');
           setValidUntil(a.valid_until ?? '');
           setSalesUserId(a.sales_user_id ?? '');
+          setSignerId(a.signer_user_id ?? null);
+          setSignaturePath(a.signature_path ?? null);
+          setSignedAt(a.signed_at ?? null);
           setFulfilment(a.fulfilment_type ?? 'install');
           setBillingPercent(a.billing_percent != null ? String(a.billing_percent) : '');
         } else {
@@ -422,6 +431,8 @@ function DocumentEditorInner() {
     try {
       await resetQuotationToDraft(savedId);
       setStatus('draft');
+      // ฐานข้อมูลล้างลายเซ็นที่ล็อกไว้แล้ว ล้างฝั่งหน้าจอให้ตรงกัน
+      setSignerId(null); setSignaturePath(null); setSignedAt(null);
       toast('กลับเป็นร่างแล้ว แก้ไขต่อได้');
     } catch (e) {
       toast(e instanceof Error ? e.message : 'รีเซ็ตไม่สำเร็จ', 'error');
@@ -561,6 +572,17 @@ function DocumentEditorInner() {
     }
   }
 
+  useEffect(() => {
+    let alive = true;
+    setSignatureUrl(null);
+    void signatureDataUrl(signaturePath).then((u) => alive && setSignatureUrl(u));
+    return () => { alive = false; };
+  }, [signaturePath]);
+
+  // ลายเซ็นขึ้นเมื่อ: เอกสารฝั่งขาย · ไม่ใช่ร่าง · ไม่ถูกยกเลิก
+  const signed = ar && status !== 'draft' && status !== 'cancelled';
+  const signerUser = usersQ.data?.find((u) => u.id === (signed && signerId ? signerId : salesUserId));
+
   const selectedParty = partiesQ.data?.find((p) => p.id === partyId);
   const selectedCompany = companiesQ.data?.find((c) => c.id === companyId);
 
@@ -609,6 +631,10 @@ function DocumentEditorInner() {
     note_text: note,
     terms_text: terms,
     items: items.filter((i) => i.description.trim()),
+    show_signature: signed,
+    signature_url: signatureUrl,
+    signer_name: ar ? signerUser?.name ?? null : null,
+    signed_date: signed ? (isQt ? (signedAt ?? docDate) : docDate) : null,
     // ตัดกลุ่มที่ไม่เหลือ item อยู่แล้วออกจากตัวอย่าง/พิมพ์ ให้ตรงกับที่ saveArDocument
     // จะเก็บจริงตอนบันทึก (บรรทัดว่างถูกกรองทิ้งเหมือนกันทั้งสองที่)
     groups: groups.filter((g) => items.some((i) => i.description.trim() && i.group_id === g.id)),

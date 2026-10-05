@@ -141,6 +141,11 @@ export interface ArDocument {
   contact_name: string | null;
   contact_phone: string | null;
   sales_user_id: string | null;
+  /** ลายเซ็นที่ล็อกไว้ตอนอนุมัติ/ออกเอกสาร (trigger 0027) */
+  signer_user_id?: string | null;
+  signature_path?: string | null;
+  signed_at?: string | null;
+  approved_at?: string | null;
   fulfilment_type: 'install' | 'delivery';
   tag_id: string | null;
   customer_po_no: string | null;

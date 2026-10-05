@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Users, Boxes, Plus, Pencil, Phone, ShieldAlert, Trash2 } from "lucide-react";
+import { Users, Boxes, Plus, Pencil, Phone, ShieldAlert, Trash2, PenLine } from "lucide-react";
 import { Card, Select, TextInput, Field, Modal, Pill } from "../../components/ui/primitives.jsx";
 import { useQuery } from "../../hooks/useQuery.js";
 import { listUsers, updateUserRole, updateUserProfile } from "../../api/users.js";
@@ -7,6 +7,7 @@ import { listLocations, createStockLocation, updateStockLocation, deleteStockLoc
 import { useAuth } from "../../hooks/useAuth.jsx";
 import { useToast } from "../../hooks/useToast.jsx";
 import { errMsg } from "../../lib/format.js";
+import { SignatureField } from "./SignatureField";
 
 const ROLES = ["Super Admin", "Manager", "Sale", "PM", "Admin", "Store"];
 
@@ -19,7 +20,7 @@ const ROLES = ["Super Admin", "Manager", "Sale", "PM", "Admin", "Store"];
  * แก้ชื่อและเบอร์โทรของผู้ใช้
  * เบอร์นี้ถูกดึงไปพิมพ์ใต้ชื่อผู้ขายบนเอกสาร ลูกค้าจะได้โทรกลับหาเซลล์คนที่ออกใบให้
  */
-function UserProfileModal({ user, onClose, onSaved }) {
+function UserProfileModal({ user, onClose, onSaved, onSignatureChanged }) {
   const [name, setName] = useState(user.name ?? "");
   const [phone, setPhone] = useState(user.phone ?? "");
   const [saving, setSaving] = useState(false);
@@ -36,6 +37,9 @@ function UserProfileModal({ user, onClose, onSaved }) {
         <p className="text-xs text-stone-400 mt-1">
           ขึ้นบนใบเสนอราคา ใบแจ้งหนี้ และใบกำกับภาษี ใต้ชื่อผู้ขาย
         </p>
+      </Field>
+      <Field label="ลายเซ็น">
+        <SignatureField userId={user.id} currentPath={user.signature_path ?? null} onChanged={onSignatureChanged} />
       </Field>
       <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-stone-100 dark:border-stone-700">
         <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700">ยกเลิก</button>
@@ -182,10 +186,16 @@ function UserRoleSection() {
                   ? <span className="text-stone-500">{u.phone}</span>
                   : <span className="text-amber-600">ยังไม่ใส่เบอร์ — เอกสารจะไม่มีเบอร์ให้ลูกค้าโทรกลับ</span>}
               </p>
+              <p className="text-xs mt-0.5 flex items-center gap-1">
+                <PenLine className="w-3 h-3 text-stone-300" />
+                {u.signature_path
+                  ? <span className="text-stone-500">มีลายเซ็นแล้ว</span>
+                  : <span className="text-stone-400">ยังไม่มีลายเซ็น</span>}
+              </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-            {canEdit && (
-              <button onClick={() => setEditUser(u)} title="แก้ชื่อและเบอร์โทร"
+            {(canEdit || u.id === profile?.id) && (
+              <button onClick={() => setEditUser(u)} title="แก้ชื่อ เบอร์โทร และลายเซ็น"
                       className="p-1.5 text-stone-400 hover:text-stone-900">
                 <Pencil className="w-3.5 h-3.5" />
               </button>
@@ -207,7 +217,14 @@ function UserRoleSection() {
       </div>
       {editUser && (
         <UserProfileModal user={editUser} onClose={() => setEditUser(null)}
-                          onSaved={() => { setEditUser(null); refetch(); }} />
+                          onSaved={() => { setEditUser(null); refetch(); }}
+                          onSignatureChanged={async () => {
+                            toast.success("บันทึกลายเซ็นแล้ว");
+                            refetch();
+                            const fresh = await listUsers();
+                            const u = fresh?.find((x) => x.id === editUser.id);
+                            if (u) setEditUser(u);
+                          }} />
       )}
     </Card>
   );

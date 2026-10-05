@@ -1,7 +1,7 @@
 import { supabase } from "../lib/supabaseClient.js";
 
 export async function listUsers({ roles } = {}) {
-  let q = supabase.from("users").select("id, name, email, role, phone").eq("is_active", true).order("name");
+  let q = supabase.from("users").select("id, name, email, role, phone, signature_path").eq("is_active", true).order("name");
   if (roles?.length) q = q.in("role", roles);
   const { data, error } = await q;
   if (error) throw error;
