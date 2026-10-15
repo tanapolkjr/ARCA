@@ -7,7 +7,8 @@ import {
 import { useToast } from '@/hooks/useToast.jsx';
 import { useUserId } from '@/hooks/useAuth.jsx';
 import { useQuery } from '@/hooks/useSourcingQuery';
-import { computeTotals, docDate as docDateTh, lineDiscount, lineTotal, money, buildItemLayout } from '@/accounting-lib/calc';
+import { applyVatMode, patchItemVat, withBasePrices } from '@/accounting-lib/vatMode';
+import { computeTotals, docDate as docDateTh, lineDiscount, money, buildItemLayout } from '@/accounting-lib/calc';
 import {
   AP_DOC_LABEL, AR_DOC_LABEL,
 } from '@/accounting-lib/types';
@@ -92,7 +93,8 @@ function DocumentEditorInner() {
   const [contactPhone, setContactPhone] = useState('');
   const [salesUserId, setSalesUserId] = useState('');
   const [fulfilment, setFulfilment] = useState<'install' | 'delivery'>('install');
-  const [includeVat, setIncludeVat] = useState(true);
+  // ตั้งต้นเป็นราคาไม่รวม VAT เสมอ — ราคาที่กรอกถือเป็นราคาฐาน (ดู accounting-lib/vatMode.ts)
+  const [includeVat, setIncludeVat] = useState(false);
   const [vatRate, setVatRate] = useState(7);
   const [whtRate, setWhtRate] = useState(0);
   const [billingPercent, setBillingPercent] = useState<string>('');
@@ -184,7 +186,9 @@ function DocumentEditorInner() {
         setStatus(d.status);
         setPaidAmount(Number(d.paid_amount) || 0);
         if (ar) { try { setPaidOn(await latestPaymentDate(id)); } catch { /* ไม่สำคัญพอจะขวางการเปิดเอกสาร */ } }
-        setItems(d.items?.length ? d.items : [blankItem()]);
+        setItems(d.items?.length
+          ? withBasePrices(d.items, d.price_include_vat, Number(d.vat_rate))
+          : [blankItem()]);
         // AP (ฝั่งซื้อ) ยังไม่มีฟีเจอร์นี้ในรอบนี้ — groups มีเฉพาะฝั่งขาย
         setGroups(ar ? (d as Awaited<ReturnType<typeof getArDocument>>).groups ?? [] : []);
         setTagId(d.tag_id ?? '');
@@ -252,10 +256,8 @@ function DocumentEditorInner() {
   const patchItem = (idx: number, patch: Partial<DocumentItem>) =>
     setItems((prev) => prev.map((it, i) => {
       if (i !== idx) return it;
-      const next = { ...it, ...patch };
-      // อัปเดตยอดส่วนลดที่หักจริงด้วย ไม่งั้นตอนดูตัวอย่างก่อนบันทึก
-      // คอลัมน์ "ส่วนลด" บนใบจะว่าง เพราะยังเป็นค่าเดิมจากตอนสร้างบรรทัด
-      return { ...next, discount_amount: lineDiscount(next), line_total: lineTotal(next) };
+      // รักษาราคาฐาน (ไม่รวม VAT) + คำนวณส่วนลดและยอดบรรทัดใหม่ในตัว
+      return patchItemVat(it, patch, includeVat, vatRate);
     }));
 
   /**
@@ -478,10 +480,10 @@ function DocumentEditorInner() {
       });
       setGroups(newGroups);
       setItems(src.items?.length
-        ? src.items.map((i) => ({
+        ? withBasePrices(src.items.map((i) => ({
             ...i, id: undefined,
             group_id: i.group_id ? groupIdMap.get(i.group_id) ?? null : null,
-          }))
+          })), src.price_include_vat, Number(src.vat_rate))
         : [blankItem()]);
 
       // ตั้ง % ให้ยอดตรงกับส่วนที่ใบต้นทางยังเหลือพอดี ผู้ใช้ปรับลงได้แต่เกินไม่ได้
@@ -963,16 +965,26 @@ function DocumentEditorInner() {
           <section className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100
             dark:border-stone-800 p-5">
             <div className="flex flex-wrap items-end gap-4 mb-4">
-              <Field label="รูปแบบราคา" className="w-48">
+              <Field label="รูปแบบราคา" className="w-48"
+                     hint={includeVat ? `ราคาสินค้าบวก VAT ${vatRate}% แล้ว` : 'ราคาที่กรอกคือราคาก่อน VAT'}>
                 <Select value={includeVat ? 'inc' : 'exc'} disabled={locked}
-                        onChange={(e) => setIncludeVat(e.target.value === 'inc')}>
-                  <option value="inc">ราคารวม VAT แล้ว</option>
+                        onChange={(e) => {
+                          // สลับโหมด → ราคาทุกบรรทัดคิดใหม่จากราคาฐาน ไม่ต่อจากราคาที่แสดงอยู่
+                          const inc = e.target.value === 'inc';
+                          setIncludeVat(inc);
+                          setItems((p) => applyVatMode(p, inc, vatRate));
+                        }}>
                   <option value="exc">ราคายังไม่รวม VAT</option>
+                  <option value="inc">ราคารวม VAT แล้ว</option>
                 </Select>
               </Field>
               <Field label="VAT %" className="w-24">
                 <NumberInput value={vatRate} disabled={locked} step="0.01"
-                             onChange={(e) => setVatRate(Number(e.target.value))} />
+                             onChange={(e) => {
+                               const r = Number(e.target.value);
+                               setVatRate(r);
+                               setItems((p) => applyVatMode(p, includeVat, r));
+                             }} />
               </Field>
               {/* ตั้งอัตราหัก ณ ที่จ่ายให้ทุกบรรทัดพร้อมกัน — ปรับรายบรรทัดได้ในตาราง */}
               <Field label="ตั้งหัก ณ ที่จ่ายทุกบรรทัด" className="w-52"
@@ -1250,7 +1262,8 @@ function ItemCard({
                 stock_item_id: sel.id,
                 description: `${sel.model_code}${sel.description ? `\n${sel.description}` : ''}`,
                 unit: sel.unit ?? 'ชิ้น',
-                unit_price: sel.sale_price ?? 0,
+                // ราคาขายในคลังตั้งไว้แบบไม่รวม VAT → ใช้เป็นราคาฐาน แล้วบวก VAT ให้เองถ้าใบนี้รวม VAT
+                base_unit_price: sel.sale_price ?? 0,
               })}
             />
           )}

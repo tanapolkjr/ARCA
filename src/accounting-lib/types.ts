@@ -99,6 +99,10 @@ export interface DocumentItem {
   line_total: number;
   /** จัดกลุ่มรายการ (Type A / Type B ฯลฯ) — null = ไม่อยู่กลุ่มไหน แสดงเรียงเดี่ยวเหมือนเดิม */
   group_id?: string | null;
+  /** ราคาต่อหน่วยไม่รวม VAT — ใช้ในหน้าจอเท่านั้น (ไม่บันทึก) ดู accounting-lib/vatMode.ts */
+  base_unit_price?: number;
+  /** ส่วนลดแบบบาทไม่รวม VAT — ใช้ในหน้าจอเท่านั้น */
+  base_discount_input?: number;
 }
 
 /**

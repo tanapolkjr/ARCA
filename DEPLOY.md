@@ -61,6 +61,7 @@
 | 26 | `0026_user_phone.sql` | เบอร์โทรผู้ขาย — ขึ้นบนเอกสารใต้ชื่อผู้ขาย |
 | 27 | `0027_ar_item_groups.sql` | จัดกลุ่มรายการในเอกสารขาย (Group สินค้า Type A/B/C พร้อมยอดรวมย่อย) |
 | 28 | `0028_signatures.sql` | ลายเซ็นเซลล์ — bucket `signatures` (private), ล็อกลายเซ็นกับเอกสารตอนอนุมัติ/ออก, ประวัติการเปลี่ยน |
+| 29 | `0029_view_security_invoker.sql` | ปิดคำเตือน Security Definer View ของ `stock_incoming_qty` (ถ้ารันบรรทัดนี้มือไปแล้ว รันซ้ำได้) |
 
 > **ห้ามรัน `RESET_full_wipe.sql`** — ไฟล์นั้นเป็นเครื่องมือลบข้อมูลทิ้งทั้งหมด ไม่ใช่ migration
 >
