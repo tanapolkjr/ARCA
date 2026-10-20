@@ -23,7 +23,7 @@ import {
   loadSource, resetQuotationToDraft,
   getApDocument, getArDocument, getDocNo, issueApDocument, issueArDocument,
   latestPaymentDate, listChildDocuments,
-  listDocumentTags, saveApDocument, saveArDocument,
+  listDocumentTags, listLeadSources, saveApDocument, saveArDocument,
 } from '@/accounting-api/documents';
 import { supabase } from '../../lib/supabaseClient.js';
 import { signatureDataUrl } from '@/lib/signature';
@@ -99,6 +99,8 @@ function DocumentEditorInner() {
   const [whtRate, setWhtRate] = useState(0);
   const [billingPercent, setBillingPercent] = useState<string>('');
   const [tagId, setTagId] = useState('');
+  // แหล่งที่มาของงาน — ใช้ในรายงานยอดขายตามแหล่งที่มา (0031)
+  const [leadSourceId, setLeadSourceId] = useState('');
   const [customerPoNo, setCustomerPoNo] = useState('');
   const [extraDiscType, setExtraDiscType] = useState<'amount' | 'percent'>('amount');
   const [extraDiscValue, setExtraDiscValue] = useState('');
@@ -135,6 +137,7 @@ function DocumentEditorInner() {
     () => (companyId ? listBankAccounts(companyId) : Promise.resolve([])), [companyId]);
   const templatesQ = useQuery(() => listTemplates(), []);
   const tagsQ = useQuery(() => listDocumentTags(), []);
+  const leadSourcesQ = useQuery(() => (ar ? listLeadSources() : Promise.resolve([])), [ar]);
   const childrenQ = useQuery(
     () => (savedId && ar ? listChildDocuments(savedId) : Promise.resolve([])), [savedId, ar]);
   const usersQ = useQuery(
@@ -192,6 +195,7 @@ function DocumentEditorInner() {
         // AP (ฝั่งซื้อ) ยังไม่มีฟีเจอร์นี้ในรอบนี้ — groups มีเฉพาะฝั่งขาย
         setGroups(ar ? (d as Awaited<ReturnType<typeof getArDocument>>).groups ?? [] : []);
         setTagId(d.tag_id ?? '');
+        setLeadSourceId((d as { lead_source_id?: string | null }).lead_source_id ?? '');
         setCustomerPoNo(d.customer_po_no ?? '');
         setExtraDiscType((d.extra_discount_type as 'amount' | 'percent') ?? 'amount');
         setExtraDiscValue(Number(d.extra_discount_value) ? String(d.extra_discount_value) : '');
@@ -352,6 +356,9 @@ function DocumentEditorInner() {
     if (ar) {
       if (!salesUserId) missing.push('ผู้ขาย (พนักงาน)');
       if (docType === 'QT' && !validUntil) missing.push('วันหมดอายุใบเสนอราคา');
+      if (docType === 'QT' && !leadSourceId) missing.push('แหล่งที่มา');
+      // รายงานยอดค้างรับแยก เกินกำหนด / ใกล้ครบกำหนด จากวันนี้ — ใบแจ้งหนี้ต้องมีวันครบกำหนด
+      if (docType === 'BL' && !dueDate) missing.push('วันครบกำหนดชำระ');
     }
     if (missing.length) {
       toast(`ยังไม่ได้กรอก: ${missing.join(' · ')}`, 'error');
@@ -375,6 +382,7 @@ function DocumentEditorInner() {
         due_date: dueDate || null, price_include_vat: includeVat,
         vat_rate: vatRate, wht_rate: whtRate, job_name: jobName || null,
         tag_id: tagId || null, customer_po_no: customerPoNo || null,
+        ...(ar ? { lead_source_id: leadSourceId || null } : {}),
         extra_discount_type: extraDiscType,
         extra_discount_value: Number(extraDiscValue) || 0,
         contact_name: contactName || null, contact_phone: contactPhone || null,
@@ -461,6 +469,7 @@ function DocumentEditorInner() {
       setContactPhone(src.contact_phone ?? '');
       setSalesUserId(src.sales_user_id ?? '');
       setTagId(src.tag_id ?? '');
+      setLeadSourceId(src.lead_source_id ?? '');
       setCustomerPoNo(src.customer_po_no ?? '');
 
       setFulfilment(src.fulfilment_type ?? 'install');
@@ -890,7 +899,7 @@ function DocumentEditorInner() {
                            onChange={(e) => setValidUntil(e.target.value)} />
               </Field>
             ) : (
-              <Field label="ครบกำหนด">
+              <Field label="ครบกำหนด" required={docType === 'BL'}>
                 <TextInput type="date" value={dueDate} disabled={locked}
                            onChange={(e) => setDueDate(e.target.value)} />
               </Field>
@@ -951,6 +960,16 @@ function DocumentEditorInner() {
                 {tagsQ.data?.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
               </Select>
             </Field>
+
+            {ar && (
+              <Field label="แหล่งที่มา" required={docType === 'QT'}
+                     hint="ลูกค้ามาจากช่องทางไหน — เพิ่ม/แก้รายการได้ที่หน้าตั้งค่าบริษัท">
+                <Select value={leadSourceId} disabled={locked} onChange={(e) => setLeadSourceId(e.target.value)}>
+                  <option value="">— ไม่ระบุ —</option>
+                  {leadSourcesQ.data?.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                </Select>
+              </Field>
+            )}
 
             <Field label={ar ? 'เลขที่ PO ของลูกค้า' : 'เลขที่ PO อ้างอิง'}
                    hint="พิมพ์บนเอกสาร และไหลตามไปใบแจ้งหนี้/ใบกำกับ">

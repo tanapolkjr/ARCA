@@ -152,6 +152,8 @@ export interface ArDocument {
   approved_at?: string | null;
   fulfilment_type: 'install' | 'delivery';
   tag_id: string | null;
+  /** แหล่งที่มาของงาน (0031) */
+  lead_source_id?: string | null;
   customer_po_no: string | null;
   extra_discount_type: 'amount' | 'percent';
   extra_discount_value: number;

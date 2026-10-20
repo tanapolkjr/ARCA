@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Building2, Check, Plus, Tag as TagIcon, Trash2, X } from 'lucide-react';
+import { Building2, Check, Compass, Pencil, Plus, Tag as TagIcon, Trash2, X } from 'lucide-react';
 import { useToast } from '@/hooks/useToast.jsx';
 import { useQuery } from '@/hooks/useSourcingQuery';
 import type { BankAccount, Company } from '@/accounting-lib/types';
@@ -7,7 +7,10 @@ import {
   deleteBankAccount, listBankAccounts, listCompanies,
   saveBankAccount, saveCompany, seedDocumentSequence, setDefaultCompany,
 } from '@/accounting-api/setup';
-import { deleteDocumentTag, listDocumentTags, saveDocumentTag } from '@/accounting-api/documents';
+import {
+  addLeadSource, deleteDocumentTag, deleteLeadSource, listDocumentTags, listLeadSources, renameLeadSource,
+  saveDocumentTag,
+} from '@/accounting-api/documents';
 import { Field, GhostButton, Modal, NumberInput, PrimaryButton, TextArea, TextInput } from './ui';
 
 const DOC_TYPES = ['QT', 'BL', 'INV', 'RC', 'PO'] as const;
@@ -94,6 +97,7 @@ export function CompanySettingsPage() {
       </div>
 
       <TagSettings />
+      <LeadSourceSettings />
 
       {editing && (
         <CompanyModal
@@ -185,6 +189,95 @@ function TagSettings() {
       const msg = e instanceof Error ? e.message : '';
       toast(/duplicate|unique/i.test(msg) ? 'มีประเภทงานชื่อนี้อยู่แล้ว' : 'เพิ่มไม่สำเร็จ', 'error');
     } finally { setBusy(false); }
+  }
+}
+
+/**
+ * แหล่งที่มาของงาน — เลือกที่ใบเสนอราคา ใช้ในรายงานยอดขายตามแหล่งที่มา
+ * แก้ชื่อได้ตลอด (เอกสารเก่าเปลี่ยนชื่อตาม) · ลบได้เฉพาะแหล่งที่ยังไม่มีเอกสารใช้
+ */
+function LeadSourceSettings() {
+  const { toast } = useToast();
+  const q = useQuery(() => listLeadSources(), []);
+  const [name, setName] = useState('');
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function run(fn: () => Promise<void>, ok: string) {
+    setBusy(true);
+    try { await fn(); toast(ok); void q.refetch(); }
+    catch (e) {
+      const msg = e instanceof Error ? e.message : '';
+      toast(/duplicate|unique/i.test(msg) ? 'มีแหล่งที่มาชื่อนี้อยู่แล้ว' : (msg || 'ทำรายการไม่สำเร็จ'), 'error');
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100
+      dark:border-stone-800 p-5">
+      <div className="flex items-center gap-2 mb-1">
+        <Compass className="w-4 h-4 text-stone-400" />
+        <h2 className="font-semibold text-stone-800 dark:text-stone-100">แหล่งที่มาของงาน</h2>
+      </div>
+      <p className="text-xs text-stone-500 mb-3">
+        เลือกที่ใบเสนอราคา ใช้ในรายงานยอดขายตามแหล่งที่มา · แก้ชื่อได้ตลอด ·
+        ลบได้เฉพาะแหล่งที่ยังไม่มีเอกสารใช้
+      </p>
+      <div className="flex flex-wrap gap-2 mb-4">
+        {q.data?.map((l) => (
+          editId === l.id ? (
+            <span key={l.id} className="inline-flex items-center gap-1">
+              <TextInput value={editName} autoFocus className="!py-1 !text-xs !w-40"
+                         onChange={(e) => setEditName(e.target.value)}
+                         onKeyDown={(e) => {
+                           if (e.key === 'Enter' && editName.trim()) {
+                             void run(() => renameLeadSource(l.id, editName.trim()), 'แก้ชื่อแล้ว');
+                             setEditId(null);
+                           }
+                           if (e.key === 'Escape') setEditId(null);
+                         }} />
+              <button title="บันทึก" className="p-1 text-stone-500 hover:text-stone-900" disabled={busy}
+                      onClick={() => {
+                        if (!editName.trim()) return;
+                        void run(() => renameLeadSource(l.id, editName.trim()), 'แก้ชื่อแล้ว');
+                        setEditId(null);
+                      }}>
+                <Check className="w-3.5 h-3.5" />
+              </button>
+            </span>
+          ) : (
+            <span key={l.id} className="pl-3 pr-1.5 py-1 rounded-full text-xs font-medium
+              bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 inline-flex items-center gap-1.5">
+              {l.name}
+              <button title="แก้ชื่อ" className="text-stone-300 hover:text-stone-700"
+                      onClick={() => { setEditId(l.id); setEditName(l.name); }}>
+                <Pencil className="w-3 h-3" />
+              </button>
+              <button title="ลบแหล่งที่มานี้" className="text-stone-300 hover:text-rose-500" disabled={busy}
+                      onClick={() => void run(() => deleteLeadSource(l.id), `ลบ "${l.name}" แล้ว`)}>
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          )
+        ))}
+        {(q.data?.length ?? 0) === 0 && <span className="text-sm text-stone-400">ยังไม่มีแหล่งที่มา</span>}
+      </div>
+      <div className="flex gap-2 max-w-md">
+        <TextInput value={name} placeholder="เช่น Developer, Designer"
+                   onChange={(e) => setName(e.target.value)}
+                   onKeyDown={(e) => { if (e.key === 'Enter') void add(); }} />
+        <PrimaryButton disabled={busy} onClick={() => void add()}>
+          <Plus className="w-4 h-4" /> เพิ่ม
+        </PrimaryButton>
+      </div>
+    </div>
+  );
+
+  function add() {
+    const value = name.trim();
+    if (!value) { toast('ใส่ชื่อแหล่งที่มาก่อน', 'error'); return; }
+    void run(async () => { await addLeadSource(value); setName(''); }, `เพิ่ม "${value}" แล้ว`);
   }
 }
 

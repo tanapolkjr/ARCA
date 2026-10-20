@@ -119,6 +119,7 @@ export interface SaveArInput {
   sales_user_id?: string | null;
   fulfilment_type?: 'install' | 'delivery';
   tag_id?: string | null;
+  lead_source_id?: string | null;
   customer_po_no?: string | null;
   extra_discount_type?: 'amount' | 'percent';
   extra_discount_value?: number;
@@ -173,6 +174,7 @@ export async function saveArDocument(input: SaveArInput, userId: string): Promis
     sales_user_id: input.sales_user_id || null,
     fulfilment_type: input.fulfilment_type ?? 'install',
     tag_id: input.tag_id || null,
+    lead_source_id: input.lead_source_id || null,
     customer_po_no: input.customer_po_no || null,
     extra_discount_type: input.extra_discount_type ?? 'amount',
     extra_discount_value: input.extra_discount_value ?? 0,
@@ -433,6 +435,7 @@ export async function convertArDocument(
     sales_user_id: src.sales_user_id,
     fulfilment_type: src.fulfilment_type,
     tag_id: src.tag_id,
+    lead_source_id: src.lead_source_id ?? null,
     customer_po_no: src.customer_po_no,
     extra_discount_type: src.extra_discount_type,
     extra_discount_value: childExtraDiscount(src, pct),
@@ -510,6 +513,7 @@ export async function duplicateArDocument(sourceId: string, userId: string): Pro
     sales_user_id: src.sales_user_id,
     fulfilment_type: src.fulfilment_type,
     tag_id: src.tag_id,
+    lead_source_id: src.lead_source_id ?? null,
     customer_po_no: src.customer_po_no,
     extra_discount_type: src.extra_discount_type,
     extra_discount_value: src.extra_discount_value,
@@ -1107,6 +1111,44 @@ export async function loadSource(sourceId: string, excludeDocId?: string): Promi
  * ลบประเภทงาน — ทำได้เฉพาะเมื่อยังไม่มีเอกสารไหนใช้ Tag นี้
  * ถ้ามีเอกสารใช้อยู่แล้วต้องแก้ที่เอกสารก่อน ไม่งั้นเอกสารเก่าจะไร้ประเภทกะทันหัน
  */
+// ---------------------------------------------------------------------------
+// แหล่งที่มาของงาน (0031) — ตั้งที่ Company Settings, เลือกที่ใบเสนอราคา
+// ---------------------------------------------------------------------------
+export interface LeadSource { id: string; name: string; sort_order: number }
+
+export async function listLeadSources(): Promise<LeadSource[]> {
+  const { data, error } = await supabase
+    .from('lead_sources').select('id, name, sort_order')
+    .eq('is_active', true).order('sort_order').order('name');
+  if (error) throw error;
+  return (data ?? []) as LeadSource[];
+}
+
+export async function addLeadSource(name: string) {
+  const { data: last } = await supabase
+    .from('lead_sources').select('sort_order').order('sort_order', { ascending: false }).limit(1);
+  const next = ((last?.[0]?.sort_order as number | undefined) ?? 0) + 1;
+  const { error } = await supabase.from('lead_sources').insert({ name, sort_order: next });
+  if (error) throw error;
+}
+
+export async function renameLeadSource(id: string, name: string) {
+  const { error } = await supabase.from('lead_sources').update({ name }).eq('id', id);
+  if (error) throw error;
+}
+
+/** ลบได้เฉพาะแหล่งที่ยังไม่มีเอกสารใช้ — ไม่งั้นรายงานย้อนหลังจะเสียไป */
+export async function deleteLeadSource(id: string) {
+  const { count, error: cErr } = await supabase
+    .from('ar_documents').select('id', { count: 'exact', head: true }).eq('lead_source_id', id);
+  if (cErr) throw cErr;
+  if ((count ?? 0) > 0) {
+    throw new Error(`ลบไม่ได้ — มีเอกสาร ${count} ใบใช้แหล่งที่มานี้อยู่ แก้ชื่อแทนได้`);
+  }
+  const { error } = await supabase.from('lead_sources').delete().eq('id', id);
+  if (error) throw error;
+}
+
 export async function deleteDocumentTag(id: string) {
   const [{ count: arCount, error: arErr }, { count: apCount, error: apErr }] = await Promise.all([
     supabase.from('ar_documents').select('id', { count: 'exact', head: true }).eq('tag_id', id),

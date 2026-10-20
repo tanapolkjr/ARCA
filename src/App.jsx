@@ -38,6 +38,9 @@ import { DocumentEditorPage } from "./features/accounting/DocumentEditorPage";
 import { CompanySettingsPage } from "./features/accounting/CompanySettingsPage";
 import { VendorsPage } from "./features/accounting/VendorsPage";
 import { ExportPage } from "./features/accounting/ExportPage";
+import ReportPage from "./features/report/ReportPage";
+import { ACCOUNTING_ROLES } from "./hooks/useAuth.jsx";
+import RequireRole from "./hooks/RequireRole.jsx";
 import { CashBookPage } from "./features/cashbook/CashBookPage";
 import { IncomingPage } from "./features/incoming/IncomingPage";
 
@@ -94,7 +97,7 @@ export default function App() {
           <Route path="/cashbook" element={<CashBookPage />} />
         </Route>
 
-        <Route path="/report" element={<Placeholder title="Report" note="ต้องคุยว่ามีรายงานอะไรบ้าง, Export เป็น Excel/PDF ไหม — อยู่ใน Open Items ของ Spec" />} />
+        <Route path="/report" element={<RequireRole roles={ACCOUNTING_ROLES}><ReportPage /></RequireRole>} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/chat" element={<ChatPage />} />
 
