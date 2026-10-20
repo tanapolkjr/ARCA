@@ -139,7 +139,7 @@ function DocumentEditorInner() {
     () => (savedId && ar ? listChildDocuments(savedId) : Promise.resolve([])), [savedId, ar]);
   const usersQ = useQuery(
     async () => (await supabase.from('users')
-      .select('id, name, phone').eq('is_active', true).order('name')).data ?? [],
+      .select('id, name, phone, signature_path').eq('is_active', true).order('name')).data ?? [],
     []);
   const stockQ = useQuery<StockOption[]>(
     async () => ((await supabase.from('stock_items')
@@ -574,16 +574,22 @@ function DocumentEditorInner() {
     }
   }
 
-  useEffect(() => {
-    let alive = true;
-    setSignatureUrl(null);
-    void signatureDataUrl(signaturePath).then((u) => alive && setSignatureUrl(u));
-    return () => { alive = false; };
-  }, [signaturePath]);
 
   // ลายเซ็นขึ้นเมื่อ: เอกสารฝั่งขาย · ไม่ใช่ร่าง · ไม่ถูกยกเลิก
   const signed = ar && status !== 'draft' && status !== 'cancelled';
   const signerUser = usersQ.data?.find((u) => u.id === (signed && signerId ? signerId : salesUserId));
+  // ลายเซ็นที่ล็อกกับเอกสารมาก่อน — ถ้าใบนี้ออกไปตอนเซลล์ยังไม่มีลายเซ็น (ยังว่าง)
+  // ใช้ลายเซ็นปัจจุบันของเซลล์ในใบแทน ใช้ได้กับทุกประเภท: ใบเสนอราคา ใบวางบิล ใบกำกับ ใบเสร็จ
+  const effectiveSignature = signed
+    ? (signaturePath ?? (signerUser as { signature_path?: string | null } | undefined)?.signature_path ?? null)
+    : null;
+
+  useEffect(() => {
+    let alive = true;
+    setSignatureUrl(null);
+    void signatureDataUrl(effectiveSignature).then((u) => alive && setSignatureUrl(u));
+    return () => { alive = false; };
+  }, [effectiveSignature]);
 
   const selectedParty = partiesQ.data?.find((p) => p.id === partyId);
   const selectedCompany = companiesQ.data?.find((c) => c.id === companyId);
