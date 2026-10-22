@@ -314,6 +314,13 @@ export async function saveArDocument(input: SaveArInput, userId: string): Promis
 export async function issueArDocument(id: string): Promise<string> {
   const doc = await getArDocument(id);
   if (doc.doc_no) return doc.doc_no;
+  // ใบกำกับ/ใบเสร็จต้องอ้างอิงใบแจ้งหนี้เสมอ — กันออกใบรับเงินที่ไม่มีหนี้รองรับ
+  if (doc.doc_type === 'INV' || doc.doc_type === 'RC') {
+    const srcType = doc.source_document_id
+      ? (await supabase.from('ar_documents').select('doc_type').eq('id', doc.source_document_id).maybeSingle()).data?.doc_type
+      : null;
+    if (srcType !== 'BL') throw new Error('ใบกำกับ/ใบเสร็จต้องอ้างอิงใบแจ้งหนี้ก่อนออกเอกสาร');
+  }
 
   const { data: company, error: cErr } = await supabase
     .from('companies').select('*').eq('id', doc.company_id).single();
@@ -853,11 +860,18 @@ export async function receivePayment(input: ReceivePaymentInput, userId: string)
   // ตรวจยอดค้างสดจากฐานข้อมูล ไม่เชื่อตัวเลขที่หน้าจอส่งมา
   // (สองคนกดรับชำระบิลเดียวกันพร้อมกันได้ ยอดที่หน้าจอเห็นอาจเก่าไปแล้ว)
   const { data: doc, error: docErr } = await supabase
-    .from('ar_documents').select('doc_no, grand_total, paid_amount, status')
+    .from('ar_documents')
+    .select('doc_no, doc_type, grand_total, paid_amount, status, source_document_id')
     .eq('id', input.documentId).single();
   if (docErr) throw docErr;
   if (doc.status === 'cancelled') {
     throw new Error('เอกสารนี้ถูกยกเลิกแล้ว รับชำระไม่ได้');
+  }
+  const src = doc.source_document_id && (doc.doc_type === 'INV' || doc.doc_type === 'RC')
+    ? (await supabase.from('ar_documents').select('doc_type, doc_no').eq('id', doc.source_document_id).maybeSingle()).data
+    : null;
+  if ((doc.doc_type === 'INV' || doc.doc_type === 'RC') && src?.doc_type === 'BL') {
+    throw new Error(`ใบนี้ออกจากใบแจ้งหนี้ ${src.doc_no ?? ''} — รับชำระที่ใบแจ้งหนี้นั้นแทน`);
   }
   const outstanding = round2((Number(doc.grand_total) || 0) - (Number(doc.paid_amount) || 0));
   if (input.allocate > outstanding + 0.01) {

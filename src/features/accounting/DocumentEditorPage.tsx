@@ -188,7 +188,13 @@ function DocumentEditorInner() {
         setDocNo(d.doc_no);
         setStatus(d.status);
         setPaidAmount(Number(d.paid_amount) || 0);
-        if (ar) { try { setPaidOn(await latestPaymentDate(id)); } catch { /* ไม่สำคัญพอจะขวางการเปิดเอกสาร */ } }
+        if (ar) {
+          try {
+            // ใบกำกับ/ใบเสร็จที่ออกจากใบแจ้งหนี้ เงินบันทึกไว้ที่ใบแจ้งหนี้ → ใช้วันรับเงินของใบนั้น
+            setPaidOn((await latestPaymentDate(id))
+              ?? (d.source_document_id ? await latestPaymentDate(d.source_document_id) : null));
+          } catch { /* ไม่สำคัญพอจะขวางการเปิดเอกสาร */ }
+        }
         setItems(d.items?.length
           ? withBasePrices(d.items, d.price_include_vat, Number(d.vat_rate))
           : [blankItem()]);
@@ -359,6 +365,8 @@ function DocumentEditorInner() {
       if (docType === 'QT' && !leadSourceId) missing.push('แหล่งที่มา');
       // รายงานยอดค้างรับแยก เกินกำหนด / ใกล้ครบกำหนด จากวันนี้ — ใบแจ้งหนี้ต้องมีวันครบกำหนด
       if (docType === 'BL' && !dueDate) missing.push('วันครบกำหนดชำระ');
+      // ใบกำกับ/ใบเสร็จออกได้จากใบแจ้งหนี้เท่านั้น — กันออกใบรับเงินลอย ๆ ที่ไม่มีหนี้รองรับ
+      if ((docType === 'INV' || docType === 'RC') && !sourceRef) missing.push('อ้างอิงใบแจ้งหนี้');
     }
     if (missing.length) {
       toast(`ยังไม่ได้กรอก: ${missing.join(' · ')}`, 'error');
@@ -379,7 +387,9 @@ function DocumentEditorInner() {
     try {
       const common = {
         id: savedId, company_id: companyId, doc_date: docDate,
-        due_date: dueDate || null, price_include_vat: includeVat,
+        // ใบกำกับ/ใบเสร็จไม่มีวันครบกำหนด (รับเงินแล้ว) — ล้างค่าเก่าที่อาจติดมาจากใบแจ้งหนี้
+        due_date: (ar && (docType === 'INV' || docType === 'RC')) ? null : (dueDate || null),
+        price_include_vat: includeVat,
         vat_rate: vatRate, wht_rate: whtRate, job_name: jobName || null,
         tag_id: tagId || null, customer_po_no: customerPoNo || null,
         ...(ar ? { lead_source_id: leadSourceId || null } : {}),
@@ -603,6 +613,19 @@ function DocumentEditorInner() {
   const selectedParty = partiesQ.data?.find((p) => p.id === partyId);
   const selectedCompany = companiesQ.data?.find((c) => c.id === companyId);
 
+  // ---- รับชำระ / ออกใบเสร็จ
+  const isReceipt = ar && (docType === 'INV' || docType === 'RC');
+  const outstanding = Math.max(0, totals.grandTotal - paidAmount);
+  // ใบกำกับ/ใบเสร็จที่ออกจากใบแจ้งหนี้ — เงินรับไว้ที่ใบแจ้งหนี้แล้ว รับซ้ำที่ใบนี้ไม่ได้
+  const receiptOfBill = isReceipt && Boolean(sourceRef);
+  const canReceive = locked && status !== 'cancelled' && ar && docType !== 'QT'
+    && outstanding > 0.005 && !receiptOfBill;
+  const receiptChild = docType === 'BL'
+    ? (childrenQ.data ?? []).find((c) => c.doc_type === 'INV' || c.doc_type === 'RC') ?? null
+    : null;
+  const canIssueReceipt = docType === 'BL' && locked && status !== 'cancelled'
+    && outstanding <= 0.005 && paidAmount > 0 && !receiptChild;
+
   const printable: PrintableDoc = {
     doc_type: docType,
     doc_no: docNo,
@@ -681,7 +704,7 @@ function DocumentEditorInner() {
           <GhostButton onClick={() => setPreview((v) => !v)}>
             <Printer className="w-4 h-4" /> {preview ? 'กลับไปแก้ไข' : 'ดูตัวอย่าง / พิมพ์'}
           </GhostButton>
-          {locked && status !== 'cancelled' && ar && docType !== 'QT' && (
+          {canReceive && (
             <GhostButton onClick={() => setShowReceive(true)} disabled={busy}>
               <HandCoins className="w-4 h-4" /> รับชำระเงิน
             </GhostButton>
@@ -697,6 +720,17 @@ function DocumentEditorInner() {
           {isQt && savedId && (
             <GhostButton onClick={() => void handleDuplicate()} disabled={busy}>
               <Copy className="w-4 h-4" /> ทำสำเนา
+            </GhostButton>
+          )}
+          {/* ใบแจ้งหนี้ที่รับชำระครบแล้ว → ออกใบกำกับ/ใบเสร็จต่อได้เลย (ใบละครั้ง) */}
+          {canIssueReceipt && (
+            <PrimaryButton onClick={() => void handleConvert('INV')} disabled={busy}>
+              <FileOutput className="w-4 h-4" /> ออกใบกำกับ/ใบเสร็จ
+            </PrimaryButton>
+          )}
+          {receiptChild && (
+            <GhostButton onClick={() => nav(`/accounting/${receiptChild.doc_type}/${receiptChild.id}`)}>
+              <FileOutput className="w-4 h-4" /> เปิด{AR_DOC_LABEL[receiptChild.doc_type as ArDocType]} {receiptChild.doc_no ?? '(ร่าง)'}
             </GhostButton>
           )}
           {isQt && status === 'approved' && (
@@ -898,7 +932,7 @@ function DocumentEditorInner() {
                 <TextInput type="date" value={validUntil} disabled={locked}
                            onChange={(e) => setValidUntil(e.target.value)} />
               </Field>
-            ) : (
+            ) : (ar && (docType === 'INV' || docType === 'RC')) ? null : (
               <Field label="ครบกำหนด" required={docType === 'BL'}>
                 <TextInput type="date" value={dueDate} disabled={locked}
                            onChange={(e) => setDueDate(e.target.value)} />
