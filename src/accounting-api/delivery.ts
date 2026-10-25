@@ -15,6 +15,7 @@ export interface DeliveryNote {
   coordinator_name: string | null; coordinator_phone: string | null;
   ship_method: string | null; vehicle_no: string | null; tracking_no: string | null;
   package_count: string | null; note_text: string | null;
+  sender_user_id?: string | null; sender_name?: string | null;
   cancelled_at: string | null; created_at: string;
   quotation?: { id: string; doc_no: string | null } | null;
   company?: { email: string | null } | null;
@@ -82,7 +83,7 @@ export interface CreateDeliveryInput {
   qtId: string; docDate: string;
   shipToName: string; shipToAddress: string; receiverName: string; receiverPhone: string;
   coordinatorName: string | null; coordinatorPhone: string | null;
-  shipMethod: string; vehicleNo: string; trackingNo: string; packageCount: string; note: string;
+  senderUserId: string; senderName: string; note: string;
   lines: { plan: DnPlanLine; qty: number }[];
 }
 
@@ -114,8 +115,7 @@ export async function createDelivery(input: CreateDeliveryInput, userId: string)
     ship_to_name: input.shipToName || null, ship_to_address: input.shipToAddress || null,
     receiver_name: input.receiverName || null, receiver_phone: input.receiverPhone || null,
     coordinator_name: input.coordinatorName, coordinator_phone: input.coordinatorPhone,
-    ship_method: input.shipMethod || null, vehicle_no: input.vehicleNo || null,
-    tracking_no: input.trackingNo || null, package_count: input.packageCount || null,
+    sender_user_id: input.senderUserId || null, sender_name: input.senderName || null,
     note_text: input.note || null, created_by: userId,
   }).select('id').single();
   if (hErr) throw hErr;

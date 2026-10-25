@@ -12,16 +12,17 @@ import { validateDelivery } from '@/accounting-lib/delivery';
 import { createDelivery, listDeliveries, loadDeliveryDraft } from '@/accounting-api/delivery';
 import { Field, Modal, NumberInput, PrimaryButton, Select, TextArea, TextInput } from './ui';
 
-const METHODS = ['รถบริษัท', 'ขนส่งเอกชน', 'ไปรษณีย์ / พัสดุ', 'ลูกค้ารับเอง'];
 const today = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
 export function DeliveryPanel({
-  qtId, userId, coordinator, onClose,
+  qtId, userId, coordinator, users, onClose,
 }: {
   qtId: string; userId: string;
+  /** รายชื่อผู้ใช้ชุดเดียวกับช่องผู้ขายในใบเสนอราคา — ใช้เลือกผู้ส่งสินค้า */
+  users: { id: string; name: string | null }[];
   coordinator: { name: string | null; phone: string | null };
   onClose: () => void;
 }) {
@@ -34,7 +35,9 @@ export function DeliveryPanel({
   const [qty, setQty] = useState<Map<string, number>>(new Map());
   const [f, setF] = useState({
     docDate: today(), shipToName: '', shipToAddress: '', receiverName: '', receiverPhone: '',
-    shipMethod: METHODS[0], vehicleNo: '', trackingNo: '', packageCount: '', note: '',
+    // ตั้งต้นเป็นคนที่กำลังออกใบ ถ้าอยู่ในรายชื่อ — เปลี่ยนได้
+    senderUserId: users.some((u) => u.id === userId) ? userId : '',
+    note: '',
   });
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
 
@@ -60,10 +63,12 @@ export function DeliveryPanel({
     if (err) { toast(err, 'error'); return; }
     if (!f.shipToAddress.trim()) { toast('ใส่ที่อยู่จัดส่งก่อน', 'error'); return; }
     if (!f.receiverName.trim()) { toast('ใส่ชื่อผู้รับหน้างานก่อน', 'error'); return; }
+    if (!f.senderUserId) { toast('เลือกผู้ส่งสินค้าก่อน', 'error'); return; }
     setBusy(true);
     try {
       const id = await createDelivery({
         qtId, ...f, coordinatorName: coordinator.name, coordinatorPhone: coordinator.phone,
+        senderName: users.find((u) => u.id === f.senderUserId)?.name ?? '',
         lines: plan.map((p) => ({ plan: p, qty: qty.get(p.id) ?? 0 })).filter((l) => l.qty > 0),
       }, userId);
       toast('ออกใบส่งของแล้ว');
@@ -151,19 +156,11 @@ export function DeliveryPanel({
             <Field label="เบอร์ผู้รับหน้างาน">
               <TextInput value={f.receiverPhone} onChange={(e) => set('receiverPhone', e.target.value)} />
             </Field>
-            <Field label="วิธีจัดส่ง">
-              <Select value={f.shipMethod} onChange={(e) => set('shipMethod', e.target.value)}>
-                {METHODS.map((m) => <option key={m}>{m}</option>)}
+            <Field label="ผู้ส่งสินค้า" required hint="ชื่อพิมพ์ใต้ช่องลงนามผู้ส่งสินค้า">
+              <Select value={f.senderUserId} onChange={(e) => set('senderUserId', e.target.value)}>
+                <option value="">— เลือก —</option>
+                {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
               </Select>
-            </Field>
-            <Field label="ทะเบียนรถ / บริษัทขนส่ง">
-              <TextInput value={f.vehicleNo} onChange={(e) => set('vehicleNo', e.target.value)} />
-            </Field>
-            <Field label="เลขพัสดุ">
-              <TextInput value={f.trackingNo} onChange={(e) => set('trackingNo', e.target.value)} />
-            </Field>
-            <Field label="จำนวนหีบห่อ" hint="เช่น 6 กล่อง">
-              <TextInput value={f.packageCount} onChange={(e) => set('packageCount', e.target.value)} />
             </Field>
             <Field label="หมายเหตุเพิ่มเติม" className="md:col-span-2">
               <TextArea rows={2} value={f.note} onChange={(e) => set('note', e.target.value)} />

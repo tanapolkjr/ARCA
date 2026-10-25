@@ -933,6 +933,7 @@ function DocumentEditorInner() {
 
       {showDelivery && savedId && (
         <DeliveryPanel qtId={savedId} userId={userId} onClose={() => setShowDelivery(false)}
+          users={usersQ.data ?? []}
           coordinator={{
             name: usersQ.data?.find((u) => u.id === salesUserId)?.name ?? null,
             phone: usersQ.data?.find((u) => u.id === salesUserId)?.phone ?? null,

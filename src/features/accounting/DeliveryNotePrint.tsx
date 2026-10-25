@@ -1,7 +1,7 @@
 /**
  * ใบส่งของ (Delivery Note) — หน้า A4 สำหรับดูตัวอย่างและพิมพ์
  *
- * ตามหลักสากล: ไม่มีราคา · มีที่อยู่จัดส่งแยกจากที่อยู่ลูกค้า · จำนวน สั่ง/ส่งครั้งนี้/ค้างส่ง ·
+ * ตามหลักสากล: ไม่มีราคา · มีที่อยู่จัดส่งแยกจากที่อยู่ลูกค้า (ไม่มีข้อมูลขนส่ง — ตัดตามที่ตกลง) · จำนวน สั่ง/ส่งครั้งนี้/ค้างส่ง ·
  * ช่องสภาพสินค้าเมื่อรับ · ลงนามผู้ส่งและผู้รับ (เซ็นมือจริง) · ตราประทับลูกค้า
  *
  * การตัดหน้าใช้หลักเดียวกับเอกสารอื่น: วัดความสูงจริงก่อน หัวเอกสารซ้ำทุกหน้า
@@ -108,7 +108,7 @@ export function DeliveryNotePrint({
           <tbody>{items.map((_, i) => row(i, `r${i}`))}</tbody>
         </table>
         <div data-mk="notes"><Notes dn={dn} total={totalNow} count={items.length} /></div>
-        <div data-mk="foot"><Foot /></div>
+        <div data-mk="foot"><Foot senderName={dn.sender_name ?? null} /></div>
       </div>
 
       {rendered.map((pb, p) => {
@@ -125,7 +125,7 @@ export function DeliveryNotePrint({
               </table>
             )}
             {pb.some((b) => b.kind === 'notes') && <Notes dn={dn} total={totalNow} count={items.length} />}
-            {pb.some((b) => b.kind === 'foot') && <Foot />}
+            {pb.some((b) => b.kind === 'foot') && <Foot senderName={dn.sender_name ?? null} />}
           </div>
         );
       })}
@@ -215,12 +215,6 @@ function Header({ dn, copyLabel, pageNo, total }: { dn: DeliveryNote; copyLabel:
       {dn.job_name && (
         <div className="flex gap-2 mt-3"><span className="w-[25mm] shrink-0 text-stone-500">ชื่องาน</span><span>{dn.job_name}</span></div>
       )}
-      <div className="flex flex-wrap justify-between gap-x-6 gap-y-1 rounded-md border border-stone-200 px-3 py-1.5 mt-2">
-        <span><span className="text-stone-500">วิธีจัดส่ง</span>&nbsp; {dn.ship_method || '—'}</span>
-        <span><span className="text-stone-500">ทะเบียนรถ / ขนส่ง</span>&nbsp; {dn.vehicle_no || '—'}</span>
-        <span><span className="text-stone-500">เลขพัสดุ</span>&nbsp; {dn.tracking_no || '—'}</span>
-        <span><span className="text-stone-500">จำนวนหีบห่อ</span>&nbsp; {dn.package_count || '—'}</span>
-      </div>
     </div>
   );
 }
@@ -244,7 +238,7 @@ function Notes({ dn, total, count }: { dn: DeliveryNote; total: number; count: n
   );
 }
 
-function Foot() {
+function Foot({ senderName }: { senderName: string | null }) {
   const box = <span className="inline-block w-[9px] h-[9px] border border-stone-600 mr-1 align-[-1px]" />;
   return (
     <div className="pt-4">
@@ -259,6 +253,8 @@ function Foot() {
           <div key={th as string} className="flex-1 text-center">
             <div className="border-b border-stone-400 h-[15mm]" />
             <div className="mt-1 font-semibold">{th}</div>
+            {/* ผู้ส่งเลือกจากระบบ → พิมพ์ชื่อให้ · ผู้รับเขียนชื่อตัวบรรจงเอง */}
+            {!name && senderName && <div>({senderName})</div>}
             <div className="text-[9px] text-stone-500">{en}{name ? ' · ชื่อตัวบรรจง ______________________' : ''}</div>
             <div className="mt-2">วันที่ ____/____/______ เวลา ______</div>
           </div>
