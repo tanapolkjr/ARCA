@@ -238,6 +238,11 @@ function DocumentEditorInner() {
         } else {
           const a = d as Awaited<ReturnType<typeof getApDocument>>;
           setPartyId(a.vendor_id ?? '');
+          // ฝั่งซื้อใช้ช่องเดียวกับ "ผู้ขาย" ของฝั่งขายเป็น "ผู้อนุมัติ" — รายชื่อ/ลายเซ็นชุดเดียวกัน
+          setSalesUserId(a.approver_user_id ?? '');
+          setSignerId(a.signer_user_id ?? null);
+          setSignaturePath(a.signature_path ?? null);
+          setSignedAt(a.signed_at ?? null);
           if (a.doc_type === 'PO' && a.sales_document_id) {
             setSalesRef({ id: a.sales_document_id, docNo: await getDocNo(a.sales_document_id) });
             try { await refreshQtLineInfo(a.sales_document_id, id); } catch { /* ใบเสนอราคาอาจถูกยกเลิก */ }
@@ -382,6 +387,8 @@ function DocumentEditorInner() {
       if (docType === 'BL' && !dueDate) missing.push('วันครบกำหนดชำระ');
       // ใบกำกับ/ใบเสร็จออกได้จากใบแจ้งหนี้เท่านั้น — กันออกใบรับเงินลอย ๆ ที่ไม่มีหนี้รองรับ
       if ((docType === 'INV' || docType === 'RC') && !sourceRef) missing.push('อ้างอิงใบแจ้งหนี้');
+    } else if (docType === 'PO' && !salesUserId) {
+      missing.push('ผู้อนุมัติ');
     }
     if (missing.length) {
       toast(`ยังไม่ได้กรอก: ${missing.join(' · ')}`, 'error');
@@ -424,6 +431,7 @@ function DocumentEditorInner() {
         : await saveApDocument({
             ...common, doc_type: docType as ApDocType, vendor_id: partyId,
             sales_document_id: isPo ? salesRef?.id ?? null : null,
+            approver_user_id: salesUserId || null,
           }, userId);
       setSavedId(newId);
       toast('บันทึกร่างแล้ว');
@@ -670,7 +678,8 @@ function DocumentEditorInner() {
 
 
   // ลายเซ็นขึ้นเมื่อ: เอกสารฝั่งขาย · ไม่ใช่ร่าง · ไม่ถูกยกเลิก
-  const signed = ar && status !== 'draft' && status !== 'cancelled';
+  // ลายเซ็นขึ้นเมื่อเอกสารออกแล้ว ทั้งฝั่งขาย (ผู้ขาย) และฝั่งซื้อ (ผู้อนุมัติ)
+  const signed = status !== 'draft' && status !== 'cancelled';
   const signerUser = usersQ.data?.find((u) => u.id === (signed && signerId ? signerId : salesUserId));
   // ลายเซ็นที่ล็อกกับเอกสารมาก่อน — ถ้าใบนี้ออกไปตอนเซลล์ยังไม่มีลายเซ็น (ยังว่าง)
   // ใช้ลายเซ็นปัจจุบันของเซลล์ในใบแทน ใช้ได้กับทุกประเภท: ใบเสนอราคา ใบวางบิล ใบกำกับ ใบเสร็จ
@@ -724,8 +733,9 @@ function DocumentEditorInner() {
     job_name: jobName,
     contact_name: contactName,
     contact_phone: contactPhone,
-    sales_name: usersQ.data?.find((u) => u.id === salesUserId)?.name ?? null,
-    sales_phone: usersQ.data?.find((u) => u.id === salesUserId)?.phone ?? null,
+    // ฝั่งซื้อ: ช่องนี้คือผู้อนุมัติ ไม่ใช่ผู้ขาย — ไม่พิมพ์ในหัวเอกสาร (ผู้ขายคือซัพพลายเออร์)
+    sales_name: ar ? usersQ.data?.find((u) => u.id === salesUserId)?.name ?? null : null,
+    sales_phone: ar ? usersQ.data?.find((u) => u.id === salesUserId)?.phone ?? null : null,
     reference_no: sourceRef?.docNo ?? null,
     customer_po_no: customerPoNo || null,
     paid_on: paidOn,
@@ -748,7 +758,7 @@ function DocumentEditorInner() {
     items: items.filter((i) => i.description.trim()),
     show_signature: signed,
     signature_url: signatureUrl,
-    signer_name: ar ? signerUser?.name ?? null : null,
+    signer_name: signerUser?.name ?? null,
     signed_date: signed ? (isQt ? (signedAt ?? docDate) : docDate) : null,
     // ตัดกลุ่มที่ไม่เหลือ item อยู่แล้วออกจากตัวอย่าง/พิมพ์ ให้ตรงกับที่ saveArDocument
     // จะเก็บจริงตอนบันทึก (บรรทัดว่างถูกกรองทิ้งเหมือนกันทั้งสองที่)
@@ -1022,8 +1032,9 @@ function DocumentEditorInner() {
               </Field>
             )}
 
-            {ar && (
-              <Field label="ผู้ขาย (พนักงาน)" required>
+            {(
+              <Field label={ar ? 'ผู้ขาย (พนักงาน)' : 'ผู้อนุมัติ'} required={ar || docType === 'PO'}
+                     hint={ar ? undefined : 'ลายเซ็นของผู้อนุมัติขึ้นในช่องผู้อนุมัติเมื่อออกเอกสารแล้ว'}>
                 <Select value={salesUserId} disabled={locked}
                         onChange={(e) => setSalesUserId(e.target.value)}>
                   <option value="">— ไม่ระบุ —</option>

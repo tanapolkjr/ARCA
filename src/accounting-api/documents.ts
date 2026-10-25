@@ -560,6 +560,11 @@ export interface ApDocumentFull {
   purchase_request_id: string | null; created_at: string;
   /** ใบเสนอราคาที่ PO นี้สั่งซื้อให้ (0032) */
   sales_document_id?: string | null;
+  /** ผู้อนุมัติ + ลายเซ็นที่ล็อกตอนออกเอกสาร (0033) */
+  approver_user_id?: string | null;
+  signer_user_id?: string | null;
+  signature_path?: string | null;
+  signed_at?: string | null;
   vendor?: Vendor | null;
   project?: { id: string; project_number: string; product_category: string | null } | null;
   tag?: DocTag | null;
@@ -615,6 +620,8 @@ export interface SaveApInput {
   terms_text?: string | null;
   /** PO: ใบเสนอราคาที่อ้างอิง (0032) */
   sales_document_id?: string | null;
+  /** ผู้อนุมัติ — ใช้รายชื่อและลายเซ็นเดียวกับผู้ขายฝั่งขาย (0033) */
+  approver_user_id?: string | null;
   items: DocumentItem[];
 }
 
@@ -645,6 +652,7 @@ export async function saveApDocument(input: SaveApInput, userId: string): Promis
     project_id: input.project_id || null,
     purchase_request_id: input.purchase_request_id || null,
     sales_document_id: input.doc_type === 'PO' ? (input.sales_document_id || null) : null,
+    approver_user_id: input.approver_user_id || null,
     job_name: input.job_name || null,
     ship_to: input.ship_to || null,
     tag_id: input.tag_id || null,
