@@ -10,6 +10,7 @@ import { useQuery } from '@/hooks/useSourcingQuery';
 import { docDate } from '@/accounting-lib/calc';
 import { validateDelivery } from '@/accounting-lib/delivery';
 import { createDelivery, listDeliveries, loadDeliveryDraft } from '@/accounting-api/delivery';
+import { customerSnapshotFrom } from '@/accounting-api/documents';
 import { Field, Modal, NumberInput, PrimaryButton, Select, TextArea, TextInput } from './ui';
 
 const today = () => {
@@ -33,6 +34,8 @@ export function DeliveryPanel({
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
   const [qty, setQty] = useState<Map<string, number>>(new Map());
+  // ส่งไปที่อยู่เดียวกับลูกค้า — ล็อกช่องที่อยู่ไว้ตามที่อยู่ลูกค้า ไม่ต้องพิมพ์ซ้ำ
+  const [sameAsCustomer, setSameAsCustomer] = useState(false);
   const [f, setF] = useState({
     docDate: today(), shipToName: '', shipToAddress: '', receiverName: '', receiverPhone: '',
     // ตั้งต้นเป็นคนที่กำลังออกใบ ถ้าอยู่ในรายชื่อ — เปลี่ยนได้
@@ -42,6 +45,14 @@ export function DeliveryPanel({
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
 
   const plan = draftQ.data?.plan ?? [];
+  const customer = draftQ.data?.qt.customer;
+  const customerAddress = customer ? (customerSnapshotFrom(customer).address ?? '') : (draftQ.data?.qt.customer_snapshot?.address ?? '');
+  const customerName = customer ? customerSnapshotFrom(customer).name : (draftQ.data?.qt.customer_snapshot?.name ?? '');
+
+  function toggleSame(on: boolean) {
+    setSameAsCustomer(on);
+    if (on) setF((p) => ({ ...p, shipToAddress: customerAddress, shipToName: p.shipToName || customerName }));
+  }
   const anyRemaining = plan.some((p) => p.remaining > 0);
 
   function startCreate() {
@@ -147,9 +158,19 @@ export function DeliveryPanel({
             <Field label="ชื่อสถานที่จัดส่ง" hint="เช่น โครงการ / อาคาร / หน้างาน">
               <TextInput value={f.shipToName} onChange={(e) => set('shipToName', e.target.value)} />
             </Field>
-            <Field label="ที่อยู่จัดส่ง" required className="md:col-span-2">
-              <TextArea rows={2} value={f.shipToAddress} onChange={(e) => set('shipToAddress', e.target.value)} />
-            </Field>
+            {/* checkbox อยู่นอก Field เพราะ Field เป็น <label> — label ซ้อน label กดแล้วติ๊กมั่ว */}
+            <div className="md:col-span-2 flex flex-col gap-1.5">
+              <label className="flex items-center gap-2 text-sm text-stone-700 dark:text-stone-200 cursor-pointer select-none w-fit">
+                <input type="checkbox" className="w-4 h-4 accent-stone-900" checked={sameAsCustomer}
+                       disabled={!customerAddress} onChange={(e) => toggleSame(e.target.checked)} />
+                ใช้ที่อยู่เดียวกับที่อยู่ลูกค้า
+                {!customerAddress && <span className="text-xs text-stone-400">(ลูกค้ายังไม่มีที่อยู่ใน Contact)</span>}
+              </label>
+              <Field label="ที่อยู่จัดส่ง" required>
+                <TextArea rows={2} value={f.shipToAddress} disabled={sameAsCustomer}
+                          onChange={(e) => set('shipToAddress', e.target.value)} />
+              </Field>
+            </div>
             <Field label="ผู้รับหน้างาน" required>
               <TextInput value={f.receiverName} onChange={(e) => set('receiverName', e.target.value)} />
             </Field>

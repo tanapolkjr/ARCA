@@ -447,15 +447,9 @@ function DocumentEditorInner() {
   }
 
   async function handleIssue() {
-    // PO ที่อ้างอิงใบเสนอราคา: ราคาซื้อคือต้นทุนของงาน — ปล่อย 0 รายงานจะโชว์กำไร 100%
+    // PO ที่อ้างอิงใบเสนอราคา: ราคาซื้อ 0 ได้ (ของแถม / รวมในรายการอื่น) — ไม่บังคับกรอก
+    // แค่เตือนเรื่องสั่งเกินจำนวนที่ขาย
     if (isPo && salesRef) {
-      const zero = items
-        .map((it, i) => ({ it, no: i + 1 }))
-        .filter(({ it }) => it.description.trim() && !(Number(it.unit_price) > 0));
-      if (zero.length) {
-        toast(`ยังไม่ได้กรอกราคาซื้อ บรรทัดที่ ${zero.map((z) => z.no).join(', ')}`, 'error');
-        return;
-      }
       const over = items.filter((it) => {
         const info = it.source_ar_item_id ? qtLineInfo.get(it.source_ar_item_id) : undefined;
         return info && info.other + (Number(it.qty) || 0) > info.sold + 1e-9;
@@ -1586,7 +1580,7 @@ function PoMargin({ it, po }: {
           กำไร <b className="tabular-nums">{money(profit)}</b>/หน่วย · {pctv.toFixed(1)}%
           {' '}· รวม <span className="tabular-nums">{money(profit * qty)}</span>
         </span>
-      ) : <span className="text-amber-700">ยังไม่ได้กรอกราคาซื้อ</span>}
+      ) : <span className="text-stone-500">ราคาซื้อ 0 — ต้นทุนบรรทัดนี้นับเป็น 0</span>}
       {info && (
         <span className={over ? 'text-rose-600 font-medium' : 'text-stone-500'}>
           ขาย {info.sold} · สั่งใบอื่นแล้ว {info.other} · ใบนี้ {qty}{over ? ' — เกินที่ขาย' : ''}
