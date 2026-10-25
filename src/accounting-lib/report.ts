@@ -16,6 +16,8 @@
  * ยอดก่อน VAT ของเงินที่รับ = เงินที่ตัดหนี้ × (ยอดก่อน VAT ÷ ยอดรวม VAT ของใบนั้น)
  */
 
+import { allocateExVat } from './poFromQt';
+
 export interface RDoc {
   id: string;
   doc_type: string;
@@ -32,8 +34,21 @@ export interface RDoc {
   paid_amount: number;
   approved_at: string | null;
   lead_source_id: string | null;
+  /** ใบเสนอราคาแบบราคารวม VAT — ต้องถอด VAT ก่อนกระจายยอดลงบรรทัด */
+  price_include_vat?: boolean;
+  vat_rate?: number;
 }
-export interface RItem { document_id: string; line_total: number; category: string | null; model: string }
+export interface RItem {
+  id?: string; document_id: string; line_total: number; category: string | null; model: string;
+  qty?: number; vat_type?: string;
+}
+/** ใบสั่งซื้อ (0032) — ต้นทุนของงานที่อ้างอิง */
+export interface RPo {
+  id: string; doc_no: string | null; doc_date: string; status: string;
+  sales_document_id: string | null; vendor_name: string;
+  grand_total: number; vat_amount: number; exchange_rate: number;
+}
+export interface RPoItem { document_id: string; source_ar_item_id: string | null; qty: number }
 export interface RAlloc { document_id: string; amount: number; payment_date: string }
 export interface RSource { id: string; name: string }
 
@@ -72,6 +87,23 @@ export interface ArRow {
 }
 export interface Slice { key: string; name: string; amount: number; pct: number; qts: { id: string; doc_no: string | null; customer: string; job: string | null; amount: number }[]; subs: { name: string; amount: number; pct: number }[] }
 
+export type OrderStatus = 'none' | 'partial' | 'full';
+export interface ProfitRow {
+  id: string; doc_no: string | null; customer: string; job: string | null; approved: string;
+  sell: number; cost: number; profit: number; margin: number; status: OrderStatus;
+  pos: { id: string; doc_no: string | null; vendor: string; doc_date: string; cost: number }[];
+}
+export interface Profit {
+  /** รายได้ (เงินที่รับในช่วง) แบ่งเป็น ต้นทุน + กำไร + ยังไม่มีต้นทุน — รวมกัน = revenue */
+  revCost: number; revProfit: number; revNoCost: number;
+  /** กำไรต่องาน (ใบที่ขายได้ในช่วง และมี PO แล้ว) */
+  rows: ProfitRow[];
+  sellWithCost: number; cost: number; grossProfit: number; margin: number;
+  jobsNoPo: number; sellNoPo: number; jobsPartial: number;
+  /** PO ที่ออกในช่วงแต่ไม่ได้ผูกกับงานที่ขายได้ */
+  unlinkedCost: number; unlinkedCount: number;
+}
+
 export interface Report {
   revenue: number;                 // เก็บได้ (ก่อน VAT) ในช่วง
   revenueAllTime: number;
@@ -86,10 +118,12 @@ export interface Report {
   qtRows: QtRow[];
   ar: { rows: ArRow[]; total: number; byBucket: Record<Bucket, { count: number; amount: number }> };
   byProduct: Slice[]; byCustomer: Slice[]; bySource: Slice[];
+  profit: Profit;
 }
 
 export function buildReport(
   docs: RDoc[], items: RItem[], allocs: RAlloc[], sources: RSource[], period: Period, today: string,
+  pos: RPo[] = [], poItems: RPoItem[] = [],
 ): Report {
   const byId = new Map(docs.map((d) => [d.id, d]));
   const isBilling = (d: RDoc) => {
@@ -218,7 +252,10 @@ export function buildReport(
   for (const q of soldQts) {
     const total = exVat(q);
     const lines = itemsByDoc.get(q.id) ?? [];
-    const sumLines = lines.reduce((s, l) => s + (Number(l.line_total) || 0), 0);
+    const shares = allocateExVat(
+      lines.map((l) => ({ vat_type: (l.vat_type ?? 'vat') as 'vat', line_total: l.line_total })),
+      Boolean(q.price_include_vat), Number(q.vat_rate ?? 7), total);
+    const sumLines = shares.reduce((s, v) => s + v, 0);
     const customerKey = q.customer_id ?? 'none:' + q.customer_name;
     const sourceKey = q.lead_source_id ?? 'none';
     const sourceName = q.lead_source_id ? (srcName.get(q.lead_source_id) ?? 'ไม่ระบุ') : 'ไม่ระบุ';
@@ -228,8 +265,8 @@ export function buildReport(
       add(C, customerKey, q.customer_name, q.id, 'ไม่ระบุหมวด', total);
       continue;
     }
-    for (const l of lines) {
-      const v = total * (Number(l.line_total) || 0) / sumLines;
+    for (const [li, l] of lines.entries()) {
+      const v = shares[li];
       if (v === 0) continue;
       const cat = (l.category ?? '').trim() || 'ไม่ระบุหมวด';
       add(P, cat, cat, q.id, l.model, v);
@@ -248,7 +285,78 @@ export function buildReport(
     }))
     .sort((x, y) => y.amount - x.amount);
 
+  // ---------------- ต้นทุน / กำไร (0032)
+  const qtLive = new Map(docs.filter((d) => d.doc_type === 'QT' && live(d)).map((d) => [d.id, d]));
+  const poLive = pos.filter((p) => p.status !== 'draft' && p.status !== 'cancelled');
+  const poCost = (p: RPo) => ((Number(p.grand_total) || 0) - (Number(p.vat_amount) || 0)) * (Number(p.exchange_rate) || 1);
+  const costByQt = new Map<string, number>();
+  const posByQt = new Map<string, RPo[]>();
+  const livePoIds = new Set<string>();
+  for (const p of poLive) {
+    if (!p.sales_document_id || !qtLive.has(p.sales_document_id)) continue;
+    livePoIds.add(p.id);
+    costByQt.set(p.sales_document_id, (costByQt.get(p.sales_document_id) ?? 0) + poCost(p));
+    const l = posByQt.get(p.sales_document_id) ?? []; l.push(p); posByQt.set(p.sales_document_id, l);
+  }
+  // สั่งไปแล้วกี่ชิ้นต่อบรรทัดใบเสนอราคา (เฉพาะ PO ที่ออกแล้ว)
+  const orderedByLine = new Map<string, number>();
+  for (const pi of poItems) {
+    if (!pi.source_ar_item_id || !livePoIds.has(pi.document_id)) continue;
+    orderedByLine.set(pi.source_ar_item_id, (orderedByLine.get(pi.source_ar_item_id) ?? 0) + (Number(pi.qty) || 0));
+  }
+  const orderStatus = (qtId: string): OrderStatus => {
+    if (!posByQt.has(qtId)) return 'none';
+    const lines = (itemsByDoc.get(qtId) ?? []).filter((l) => l.id && (Number(l.qty) || 0) > 0);
+    if (lines.length === 0) return 'full';
+    return lines.every((l) => (orderedByLine.get(l.id!) ?? 0) >= (Number(l.qty) || 0) - 1e-9) ? 'full' : 'partial';
+  };
+
+  // รายได้ในช่วง แบ่งตามสัดส่วนต้นทุนของงานนั้น
+  let revCost = 0, revProfit = 0, revNoCost = 0;
+  for (const a of allocs) {
+    if (!billingIds.has(a.document_id) || !inP(a.payment_date, period)) continue;
+    const v = exAlloc(a);
+    const d = byId.get(a.document_id)!;
+    const q = qtOf(d);
+    const sell = q ? exVat(q) : 0;
+    if (q && costByQt.has(q.id) && sell > 0) {
+      const c = v * (costByQt.get(q.id)! / sell);
+      revCost += c; revProfit += v - c;
+    } else revNoCost += v;
+  }
+
+  const profitRows: ProfitRow[] = [];
+  let jobsNoPo = 0, sellNoPo = 0, jobsPartial = 0;
+  for (const q of soldQts) {
+    const sell = exVat(q);
+    if (!costByQt.has(q.id)) { jobsNoPo++; sellNoPo += sell; continue; }
+    const cost = costByQt.get(q.id)!;
+    const status = orderStatus(q.id);
+    if (status === 'partial') jobsPartial++;
+    profitRows.push({
+      id: q.id, doc_no: q.doc_no, customer: q.customer_name, job: q.job_name, approved: approvedDate(q),
+      sell, cost: r2(cost), profit: r2(sell - cost), margin: pct(sell - cost, sell), status,
+      pos: (posByQt.get(q.id) ?? []).sort((x, y) => x.doc_date.localeCompare(y.doc_date))
+        .map((p) => ({ id: p.id, doc_no: p.doc_no, vendor: p.vendor_name, doc_date: p.doc_date, cost: r2(poCost(p)) })),
+    });
+  }
+  profitRows.sort((a, b) => b.profit - a.profit);
+  const soldIds = new Set(soldQts.map((q) => q.id));
+  const unlinked = poLive.filter((p) => inP(p.doc_date, period)
+    && !(p.sales_document_id && qtLive.has(p.sales_document_id) && soldIds.has(p.sales_document_id)));
+  const sellWithCost = profitRows.reduce((s, r) => s + r.sell, 0);
+  const totalCost = profitRows.reduce((s, r) => s + r.cost, 0);
+  const profit: Profit = {
+    // ปัดแต่ละส่วนแล้วยังต้องรวมได้เท่ารายได้พอดี — ส่วนสุดท้ายรับเศษสตางค์
+    revCost: r2(revCost), revProfit: r2(revProfit), revNoCost: r2(r2(revenue) - r2(revCost) - r2(revProfit)),
+    rows: profitRows, sellWithCost: r2(sellWithCost), cost: r2(totalCost),
+    grossProfit: r2(sellWithCost - totalCost), margin: pct(sellWithCost - totalCost, sellWithCost),
+    jobsNoPo, sellNoPo: r2(sellNoPo), jobsPartial,
+    unlinkedCost: r2(unlinked.reduce((s, p) => s + poCost(p), 0)), unlinkedCount: unlinked.length,
+  };
+
   return {
+    profit,
     revenue: r2(revenue), revenueAllTime: r2(revenueAllTime), revenueCount: docsWithMoney.size, monthly,
     sold, soldCount: soldQts.length, billed, billedCount: billedInP.length,
     collected: r2(revenue), unbilledOfSold,

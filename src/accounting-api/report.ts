@@ -5,9 +5,12 @@
  * เปลี่ยนช่วงเวลาได้ทันทีโดยไม่ต้องยิงฐานข้อมูลใหม่
  */
 import { supabase } from '../lib/supabaseClient.js';
-import type { RAlloc, RDoc, RItem, RSource } from '@/accounting-lib/report';
+import type { RAlloc, RDoc, RItem, RPo, RPoItem, RSource } from '@/accounting-lib/report';
 
-export interface ReportData { docs: RDoc[]; items: RItem[]; allocs: RAlloc[]; sources: RSource[] }
+export interface ReportData {
+  docs: RDoc[]; items: RItem[]; allocs: RAlloc[]; sources: RSource[];
+  pos: RPo[]; poItems: RPoItem[];
+}
 
 /** ดึงเป็นหน้า ๆ — Supabase ส่งกลับสูงสุด 1,000 แถวต่อครั้ง */
 async function all<T>(build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>) {
@@ -29,6 +32,7 @@ export async function loadReportData(): Promise<ReportData> {
   const docRows = await all<DocRow>((f, t) => supabase.from('ar_documents')
     .select(`id, doc_type, doc_no, doc_date, due_date, status, source_document_id, customer_id,
              job_name, grand_total, vat_amount, paid_amount, approved_at, lead_source_id,
+             price_include_vat, vat_rate,
              customer_snapshot, customer:customers(display_name)`)
     .not('status', 'in', '(draft,cancelled)')
     .order('doc_date').range(f, t) as unknown as PromiseLike<{ data: DocRow[] | null; error: unknown }>);
@@ -38,20 +42,25 @@ export async function loadReportData(): Promise<ReportData> {
     grand_total: Number(d.grand_total) || 0,
     vat_amount: Number(d.vat_amount) || 0,
     paid_amount: Number(d.paid_amount) || 0,
+    vat_rate: Number(d.vat_rate) || 0,
     customer_name: d.customer?.display_name || d.customer_snapshot?.name || 'ไม่ระบุลูกค้า',
   }));
 
   const qtIds = docs.filter((d) => d.doc_type === 'QT').map((d) => d.id);
-  type ItemRow = { document_id: string; line_total: number; description: string;
+  type ItemRow = { id: string; document_id: string; line_total: number; description: string;
+                   qty: number; vat_type: string;
                    stock: { model_code: string | null; category: string | null } | null };
   const items: RItem[] = [];
   for (let i = 0; i < qtIds.length; i += 200) {
     const chunk = qtIds.slice(i, i + 200);
     const rows = await all<ItemRow>((f, t) => supabase.from('ar_document_items')
-      .select('document_id, line_total, description, stock:stock_items(model_code, category)')
+      .select('id, document_id, line_total, description, qty, vat_type, stock:stock_items(model_code, category)')
       .in('document_id', chunk).range(f, t) as unknown as PromiseLike<{ data: ItemRow[] | null; error: unknown }>);
     for (const r of rows) {
       items.push({
+        id: r.id,
+        qty: Number(r.qty) || 0,
+        vat_type: r.vat_type,
         document_id: r.document_id,
         line_total: Number(r.line_total) || 0,
         category: r.stock?.category ?? null,
@@ -71,5 +80,30 @@ export async function loadReportData(): Promise<ReportData> {
   const { data: src, error: sErr } = await supabase.from('lead_sources').select('id, name');
   if (sErr) throw sErr;
 
-  return { docs, items, allocs, sources: (src ?? []) as RSource[] };
+  // ใบสั่งซื้อ — ต้นทุนของงาน (0032) · ยกเลิก/ร่างกรองทิ้งในสูตร
+  type PoRow = Omit<RPo, 'vendor_name'> & { vendor: { display_name?: string | null } | null;
+                                           vendor_snapshot: { name?: string } | null };
+  const poRows = await all<PoRow>((f, t) => supabase.from('ap_documents')
+    .select(`id, doc_no, doc_date, status, sales_document_id, grand_total, vat_amount, exchange_rate,
+             vendor_snapshot, vendor:vendors(display_name)`)
+    .eq('doc_type', 'PO').not('status', 'in', '(draft,cancelled)')
+    .order('doc_date').range(f, t) as unknown as PromiseLike<{ data: PoRow[] | null; error: unknown }>);
+  const pos: RPo[] = poRows.map((p) => ({
+    id: p.id, doc_no: p.doc_no, doc_date: p.doc_date, status: p.status, sales_document_id: p.sales_document_id,
+    vendor_name: p.vendor?.display_name || p.vendor_snapshot?.name || 'ไม่ระบุผู้ขาย',
+    grand_total: Number(p.grand_total) || 0, vat_amount: Number(p.vat_amount) || 0,
+    exchange_rate: Number(p.exchange_rate) || 1,
+  }));
+  const poItems: RPoItem[] = [];
+  const poIds = pos.filter((p) => p.sales_document_id).map((p) => p.id);
+  for (let i = 0; i < poIds.length; i += 200) {
+    const chunk = poIds.slice(i, i + 200);
+    type PiRow = { document_id: string; source_ar_item_id: string | null; qty: number };
+    const rows = await all<PiRow>((f, t) => supabase.from('ap_document_items')
+      .select('document_id, source_ar_item_id, qty').in('document_id', chunk)
+      .range(f, t) as unknown as PromiseLike<{ data: PiRow[] | null; error: unknown }>);
+    rows.forEach((r) => poItems.push({ ...r, qty: Number(r.qty) || 0 }));
+  }
+
+  return { docs, items, allocs, sources: (src ?? []) as RSource[], pos, poItems };
 }

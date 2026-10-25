@@ -64,6 +64,7 @@
 | 29 | `0029_view_security_invoker.sql` | ปิดคำเตือน Security Definer View ของ `stock_incoming_qty` (ถ้ารันบรรทัดนี้มือไปแล้ว รันซ้ำได้) |
 | 30 | `0030_signature_all_documents.sql` | ลายเซ็นผู้อนุมัติ/ผู้รับเงินขึ้นครบทุกเอกสาร — ซ่อมใบที่ออกแล้วแต่ยังไม่มีลายเซ็น + เติมให้ทุกครั้งที่อัปโหลด |
 | 31 | `0031_lead_sources.sql` | แหล่งที่มาของงาน (Developer / Designer / End-User / Construction / Hotel) สำหรับรายงานยอดขายตามแหล่งที่มา |
+| 32 | `0032_po_from_quotation.sql` | PO อ้างอิงใบเสนอราคา · ราคาขายอ้างอิงต่อบรรทัด · ต้นทุน/กำไรต่องานในหน้า Report |
 
 > **ห้ามรัน `RESET_full_wipe.sql`** — ไฟล์นั้นเป็นเครื่องมือลบข้อมูลทิ้งทั้งหมด ไม่ใช่ migration
 >

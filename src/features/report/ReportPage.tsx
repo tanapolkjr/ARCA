@@ -62,7 +62,7 @@ function arStatus(r: ArRow) {
 
 // ------------------------------------------------------------------ page
 
-type View = 'overview' | 'collection' | 'ar' | 'sales';
+type View = 'overview' | 'collection' | 'ar' | 'sales' | 'profit';
 type Mode = 'all' | 'year' | 'month';
 
 export default function ReportPage() {
@@ -89,7 +89,8 @@ export default function ReportPage() {
   const today = todayStr();
   const report = useMemo(
     () => (dataQ.data ? buildReport(dataQ.data.docs, dataQ.data.items, dataQ.data.allocs,
-                                    dataQ.data.sources, period, today) : null),
+                                    dataQ.data.sources, period, today,
+                                    dataQ.data.pos, dataQ.data.poItems) : null),
     [dataQ.data, period, today]);
 
   const years = useMemo(() => {
@@ -114,6 +115,7 @@ export default function ReportPage() {
             {view === 'collection' && 'สรุปยอดเก็บเงิน'}
             {view === 'ar' && 'ยอดค้างรับ'}
             {view === 'sales' && 'ยอดขายแยกตามมิติ'}
+            {view === 'profit' && 'กำไรต่องาน'}
             {view !== 'ar' && <span className="font-normal text-stone-500"> · {periodText}</span>}
           </h1>
           <p className="text-sm text-stone-500 dark:text-stone-400">
@@ -159,6 +161,7 @@ export default function ReportPage() {
 
       {report && view === 'overview' && <Overview r={report} go={go} periodText={periodText} mode={mode} />}
       {report && view === 'collection' && <CollectionView r={report} />}
+      {report && view === 'profit' && <ProfitView r={report} />}
       {report && view === 'ar' && <ArView r={report} />}
       {report && view === 'sales' && (
         <SalesView r={report} dim={(params.get('dim') as 'p' | 'c' | 's') || 'p'}
@@ -184,15 +187,16 @@ function Overview({ r, go, periodText, mode }: {
         <section className={`${card} flex flex-col gap-5`}>
           <div className="flex justify-between items-center gap-3">
             <h2 className={eyebrow}>รายได้รวม · {periodText}</h2>
-            <span className="text-xs text-stone-500">เงินที่ลูกค้าชำระแล้ว</span>
+            <button className={more} onClick={() => go('profit')}>กำไรต่องาน <ArrowUpRight className="w-4 h-4" /></button>
           </div>
           <div>
             <div className="text-4xl md:text-5xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">฿{fmt(r.revenue)}</div>
             <div className="text-sm text-stone-500 mt-1">
-              จาก {r.revenueCount} ใบวางบิล
+              เงินที่ลูกค้าชำระแล้ว จาก {r.revenueCount} ใบวางบิล
               {mode !== 'all' && <> · ตั้งแต่เปิดบริษัท ฿{fmt(r.revenueAllTime)}</>}
             </div>
           </div>
+          <RevenueSplit r={r} onOpen={() => go('profit')} />
           <div>
             <div className="flex items-end gap-1.5 h-36 border-b border-stone-200 dark:border-stone-700">
               {r.monthly.map((m) => (
@@ -724,6 +728,129 @@ function SalesView({ r, dim, setDim }: { r: Report; dim: 'p' | 'c' | 's'; setDim
           )}
         </div>
       )}
+    </>
+  );
+}
+
+// ------------------------------------------------------------------ กำไร / ต้นทุน (0032)
+
+const SPLIT = [
+  { key: 'revCost', label: 'ต้นทุน', bar: 'bg-stone-400', dot: 'bg-stone-400' },
+  { key: 'revProfit', label: 'กำไร', bar: 'bg-stone-900 dark:bg-stone-100', dot: 'bg-stone-900 dark:bg-stone-100' },
+  { key: 'revNoCost', label: 'ยังไม่มีต้นทุน', bar: 'bg-amber-300', dot: 'bg-amber-300' },
+] as const;
+
+/** รายได้แบ่ง 3 ส่วน: ต้นทุน + กำไร + ยังไม่มีต้นทุน (งานที่ยังไม่ออก PO) — รวมกัน = รายได้ */
+function RevenueSplit({ r, onOpen }: { r: Report; onOpen: () => void }) {
+  const total = r.revenue;
+  if (total <= 0) return null;
+  const p = r.profit;
+  const withCost = p.revCost + p.revProfit;
+  return (
+    <button onClick={onOpen} className="text-left flex flex-col gap-2 rounded-xl hover:bg-stone-50 dark:hover:bg-stone-800/40 -mx-2 px-2 py-1">
+      <span className="flex h-3 w-full rounded-full overflow-hidden bg-stone-100 dark:bg-stone-800">
+        {SPLIT.map((x) => (
+          <span key={x.key} className={x.bar} style={{ width: `${Math.max(0, p[x.key]) / total * 100}%` }} />
+        ))}
+      </span>
+      <span className="grid grid-cols-3 gap-2 text-sm">
+        {SPLIT.map((x) => (
+          <span key={x.key} className="flex flex-col">
+            <span className="inline-flex items-center gap-1.5 text-xs text-stone-500">
+              <span className={`w-2 h-2 rounded-full ${x.dot}`} />{x.label}
+            </span>
+            <span className={`font-semibold tabular-nums ${x.key === 'revProfit' && p.revProfit < 0 ? 'text-rose-600' : ''}`}>
+              ฿{fmt(p[x.key])}
+            </span>
+            <span className="text-xs text-stone-500 tabular-nums">
+              {x.key === 'revProfit' && withCost > 0 ? `อัตรากำไร ${pct(p.revProfit, withCost)}%` : `${pct(p[x.key], total)}%`}
+            </span>
+          </span>
+        ))}
+      </span>
+    </button>
+  );
+}
+
+const ORDER_LABEL: Record<string, { text: string; cls: string }> = {
+  full:    { text: 'สั่งครบ', cls: 'bg-stone-100 text-stone-700 border-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:border-stone-700' },
+  partial: { text: 'สั่งบางส่วน — ต้นทุนยังไม่ครบ', cls: 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900' },
+  none:    { text: 'ยังไม่สั่งซื้อ', cls: 'bg-white text-stone-600 border-dashed border-stone-300' },
+};
+
+function ProfitView({ r }: { r: Report }) {
+  const p = r.profit;
+  const [open, setOpen] = useState<string | null>(null);
+  return (
+    <>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Kpi label="ยอดขาย (งานที่มี PO)" value={p.sellWithCost} sub={`${p.rows.length} งาน`} />
+        <Kpi label="ต้นทุน (PO)" value={p.cost} sub="ยอดก่อน VAT ของใบสั่งซื้อที่ออกแล้ว" />
+        <Kpi label="กำไรขั้นต้น" value={p.grossProfit} sub={`อัตรากำไร ${p.margin}%`} />
+        <Kpi label="งานที่ยังไม่มี PO" value={p.sellNoPo} sub={`${p.jobsNoPo} งาน · ยังไม่นับกำไร`} warn={p.jobsNoPo > 0} />
+      </div>
+      {(p.jobsPartial > 0 || p.unlinkedCount > 0) && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900 px-4 py-3 text-sm text-amber-900 dark:text-amber-200 flex flex-col gap-1">
+          {p.jobsPartial > 0 && <span>มี {p.jobsPartial} งานที่สั่งซื้อยังไม่ครบทุกรายการ — กำไรของงานเหล่านี้จะลดลงเมื่อออก PO ที่เหลือ</span>}
+          {p.unlinkedCount > 0 && <span>มีใบสั่งซื้อ {p.unlinkedCount} ใบ (฿{fmt(p.unlinkedCost)}) ในช่วงนี้ที่ไม่ได้ผูกกับงานที่ขายได้ — ไม่ได้หักออกจากกำไรของงานใด</span>}
+        </div>
+      )}
+      <section className={`${card} flex flex-col gap-3`}>
+        <div className="overflow-x-auto">
+          <div className="min-w-[980px]">
+            <div className="grid grid-cols-[28px_130px_minmax(0,2fr)_120px_120px_120px_70px_minmax(0,1.2fr)] gap-3 px-2 pb-2 text-xs text-stone-500">
+              <span /><span>ใบเสนอราคา</span><span>ลูกค้า · ชื่องาน</span>
+              <span className="text-right">ราคาขาย</span><span className="text-right">ต้นทุน PO</span>
+              <span className="text-right">กำไร</span><span className="text-right">%</span><span>การสั่งซื้อ</span>
+            </div>
+            {p.rows.length === 0 && <p className="text-sm text-stone-400 px-2 py-6">ยังไม่มีงานที่ออกใบสั่งซื้อในช่วงนี้</p>}
+            {p.rows.map((row) => {
+              const isOpen = open === row.id;
+              return (
+                <div key={row.id} className="border-t border-stone-100 dark:border-stone-800">
+                  <button onClick={() => setOpen(isOpen ? null : row.id)} aria-expanded={isOpen}
+                          className="w-full text-left grid grid-cols-[28px_130px_minmax(0,2fr)_120px_120px_120px_70px_minmax(0,1.2fr)] gap-3 items-center px-2 py-3 rounded-lg hover:bg-stone-50 dark:hover:bg-stone-800/50 text-sm">
+                    {isOpen ? <ChevronDown className="w-4 h-4 text-stone-400" /> : <ChevronRight className="w-4 h-4 text-stone-400" />}
+                    <span className="font-semibold tabular-nums">{row.doc_no}</span>
+                    <span className="min-w-0">
+                      <span className="block font-medium truncate">{row.customer}</span>
+                      <span className="block text-xs text-stone-500 truncate">{row.job ?? '—'}</span>
+                    </span>
+                    <span className="text-right tabular-nums">{fmt(row.sell)}</span>
+                    <span className="text-right tabular-nums">{fmt(row.cost)}</span>
+                    <span className={`text-right tabular-nums font-semibold ${row.profit < 0 ? 'text-rose-600' : ''}`}>{fmt(row.profit)}</span>
+                    <span className={`text-right tabular-nums ${row.profit < 0 ? 'text-rose-600' : 'text-stone-500'}`}>{row.margin}%</span>
+                    <span><span className={`inline-flex text-xs font-medium px-2.5 py-0.5 rounded-full border ${ORDER_LABEL[row.status].cls}`}>{ORDER_LABEL[row.status].text}</span></span>
+                  </button>
+                  {isOpen && (
+                    <div className="ml-10 mr-2 mb-3 rounded-xl bg-stone-50 dark:bg-stone-800/40 border border-stone-100 dark:border-stone-800 p-2">
+                      <Link to={docHref('QT', row.id)} className="grid grid-cols-[130px_minmax(0,1fr)_120px_20px] gap-3 items-center px-3 py-2 text-sm rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800">
+                        <span className="font-semibold tabular-nums">{row.doc_no}</span>
+                        <span className="text-stone-600">ใบเสนอราคา (ราคาขาย)</span>
+                        <span className="text-right tabular-nums">฿{fmt(row.sell)}</span>
+                        <ArrowUpRight className="w-3.5 h-3.5 text-stone-400" />
+                      </Link>
+                      {row.pos.map((po) => (
+                        <Link key={po.id} to={`/accounting/PO/${po.id}`}
+                              className="grid grid-cols-[130px_minmax(0,1fr)_120px_20px] gap-3 items-center px-3 py-2 text-sm rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800">
+                          <span className="font-semibold tabular-nums">{po.doc_no}</span>
+                          <span className="text-stone-600 truncate">ใบสั่งซื้อ · {po.vendor} · {thDate(po.doc_date)}</span>
+                          <span className="text-right tabular-nums">−฿{fmt(po.cost)}</span>
+                          <ArrowUpRight className="w-3.5 h-3.5 text-stone-400" />
+                        </Link>
+                      ))}
+                      <div className="grid grid-cols-[130px_minmax(0,1fr)_120px_20px] gap-3 px-3 py-2 text-sm border-t border-stone-200 dark:border-stone-700 mt-1">
+                        <span /><span className="font-medium">กำไรขั้นต้น</span>
+                        <span className={`text-right tabular-nums font-semibold ${row.profit < 0 ? 'text-rose-600' : ''}`}>฿{fmt(row.profit)}</span><span />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
     </>
   );
 }

@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/useToast.jsx';
 import { useUserId } from '@/hooks/useAuth.jsx';
 import { useQuery } from '@/hooks/useSourcingQuery';
 import { applyVatMode, patchItemVat, withBasePrices } from '@/accounting-lib/vatMode';
+import { buildPoLines } from '@/accounting-lib/poFromQt';
 import { computeTotals, docDate as docDateTh, lineDiscount, money, buildItemLayout } from '@/accounting-lib/calc';
 import {
   AP_DOC_LABEL, AR_DOC_LABEL,
@@ -23,7 +24,7 @@ import {
   loadSource, resetQuotationToDraft,
   getApDocument, getArDocument, getDocNo, issueApDocument, issueArDocument,
   latestPaymentDate, listChildDocuments,
-  listDocumentTags, listLeadSources, saveApDocument, saveArDocument,
+  listDocumentTags, listLeadSources, loadQtForPo, saveApDocument, saveArDocument,
 } from '@/accounting-api/documents';
 import { supabase } from '../../lib/supabaseClient.js';
 import { signatureDataUrl } from '@/lib/signature';
@@ -123,6 +124,12 @@ function DocumentEditorInner() {
   // ยอดของใบต้นทางและยอดที่ยังออกได้ — ใช้กันไม่ให้วางบิลเกิน
   const [sourceTotal, setSourceTotal] = useState<number | null>(null);
   const [sourceRemaining, setSourceRemaining] = useState<number | null>(null);
+  // PO อ้างอิงใบเสนอราคา (0032) — แยกจาก sourceRef เพราะคนละฝั่ง (ขาย ↔ ซื้อ)
+  const isPo = !ar && docType === 'PO';
+  const [salesRef, setSalesRef] = useState<
+    { id: string; docNo: string | null; jobName?: string | null } | null>(null);
+  // จำนวนที่ขายในใบเสนอราคา และที่สั่งไปแล้วใน PO อื่น ต่อบรรทัดต้นทาง — ใช้เตือนสั่งเกิน
+  const [qtLineInfo, setQtLineInfo] = useState<Map<string, { sold: number; other: number }>>(new Map());
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState(false);
   // ฉบับที่จะพิมพ์ — ตั้งต้นที่ต้นฉบับเพราะเป็นงานประจำวัน ส่วนสำเนาเลือกเองเมื่อต้องใช้
@@ -229,7 +236,15 @@ function DocumentEditorInner() {
           setFulfilment(a.fulfilment_type ?? 'install');
           setBillingPercent(a.billing_percent != null ? String(a.billing_percent) : '');
         } else {
-          setPartyId((d as Awaited<ReturnType<typeof getApDocument>>).vendor_id ?? '');
+          const a = d as Awaited<ReturnType<typeof getApDocument>>;
+          setPartyId(a.vendor_id ?? '');
+          if (a.doc_type === 'PO' && a.sales_document_id) {
+            setSalesRef({ id: a.sales_document_id, docNo: await getDocNo(a.sales_document_id) });
+            try { await refreshQtLineInfo(a.sales_document_id, id); } catch { /* ใบเสนอราคาอาจถูกยกเลิก */ }
+          } else {
+            setSalesRef(null);
+            setQtLineInfo(new Map());
+          }
         }
       } catch (e) {
         toast(e instanceof Error ? e.message : 'โหลดเอกสารไม่สำเร็จ', 'error');
@@ -408,6 +423,7 @@ function DocumentEditorInner() {
           }, userId)
         : await saveApDocument({
             ...common, doc_type: docType as ApDocType, vendor_id: partyId,
+            sales_document_id: isPo ? salesRef?.id ?? null : null,
           }, userId);
       setSavedId(newId);
       toast('บันทึกร่างแล้ว');
@@ -421,6 +437,22 @@ function DocumentEditorInner() {
   }
 
   async function handleIssue() {
+    // PO ที่อ้างอิงใบเสนอราคา: ราคาซื้อคือต้นทุนของงาน — ปล่อย 0 รายงานจะโชว์กำไร 100%
+    if (isPo && salesRef) {
+      const zero = items
+        .map((it, i) => ({ it, no: i + 1 }))
+        .filter(({ it }) => it.description.trim() && !(Number(it.unit_price) > 0));
+      if (zero.length) {
+        toast(`ยังไม่ได้กรอกราคาซื้อ บรรทัดที่ ${zero.map((z) => z.no).join(', ')}`, 'error');
+        return;
+      }
+      const over = items.filter((it) => {
+        const info = it.source_ar_item_id ? qtLineInfo.get(it.source_ar_item_id) : undefined;
+        return info && info.other + (Number(it.qty) || 0) > info.sold + 1e-9;
+      });
+      if (over.length && !window.confirm(
+        `มี ${over.length} บรรทัดที่สั่งซื้อเกินจำนวนที่ขายในใบเสนอราคา — ยืนยันออกใบสั่งซื้อ?`)) return;
+    }
     const savedDocId = await handleSave();
     if (!savedDocId) return;
     setBusy(true);
@@ -518,6 +550,49 @@ function DocumentEditorInner() {
       toast(`ดึงข้อมูลจาก ${src.doc_no ?? 'ใบต้นทาง'} แล้ว`);
     } catch (e) {
       toast(e instanceof Error ? e.message : 'ดึงข้อมูลใบต้นทางไม่สำเร็จ', 'error');
+    } finally { setBusy(false); }
+  }
+
+  async function refreshQtLineInfo(qtId: string, poId?: string | null) {
+    const info = await loadQtForPo(qtId, poId ?? savedId ?? null);
+    const m = new Map<string, { sold: number; other: number }>();
+    for (const l of info.qt.items ?? []) {
+      if (!l.id) continue;
+      m.set(l.id, { sold: Number(l.qty) || 0, other: info.ordered.get(l.id) ?? 0 });
+    }
+    setQtLineInfo(m);
+    return info;
+  }
+
+  /**
+   * PO: เลือกใบเสนอราคาแล้วดึงรายการมาให้ — จำนวน = ที่ขาย − ที่สั่งไปแล้ว
+   * ราคาซื้อเว้นว่างให้กรอก · ราคาขายต่อหน่วย (ก่อน VAT หลังส่วนลด) แสดงข้าง ๆ ไว้ดูกำไร
+   */
+  async function applyQtToPo(qtId: string) {
+    setBusy(true);
+    try {
+      const info = await refreshQtLineInfo(qtId);
+      const lines = buildPoLines(
+        { price_include_vat: info.qt.price_include_vat, vat_rate: Number(info.qt.vat_rate), ex_vat_total: info.exVatTotal },
+        (info.qt.items ?? []).map((l) => ({
+          id: l.id, stock_item_id: l.stock_item_id, description: l.description, item_type: l.item_type,
+          vat_type: l.vat_type, qty: Number(l.qty) || 0, unit: l.unit, line_total: Number(l.line_total) || 0,
+        })),
+        info.ordered,
+      );
+      if (lines.length === 0) {
+        toast('ทุกรายการของใบเสนอราคานี้สั่งซื้อครบแล้ว', 'error');
+        return;
+      }
+      const hasTyped = items.some((i) => i.description.trim());
+      if (hasTyped && !window.confirm('แทนที่รายการที่มีอยู่ด้วยรายการจากใบเสนอราคา?')) return;
+      setItems(withBasePrices(lines, includeVat, vatRate));
+      setSalesRef({ id: info.qt.id, docNo: info.qt.doc_no, jobName: info.qt.job_name });
+      if (!jobName.trim() && info.qt.job_name) setJobName(info.qt.job_name);
+      if (!tagId && info.qt.tag_id) setTagId(info.qt.tag_id);
+      toast(`ดึง ${lines.length} รายการจาก ${info.qt.doc_no ?? 'ใบเสนอราคา'} แล้ว — กรอกราคาซื้อต่อได้เลย`);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'ดึงใบเสนอราคาไม่สำเร็จ', 'error');
     } finally { setBusy(false); }
   }
 
@@ -690,6 +765,14 @@ function DocumentEditorInner() {
           <h1 className="text-xl font-bold text-stone-800 dark:text-stone-100">{label}</h1>
           <p className="text-xs text-stone-500">
             {docNo ? `เลขที่ ${docNo}` : 'ร่าง — ยังไม่ออกเลขที่'}
+            {isPo && salesRef && (
+              <>
+                {' · อ้างอิง '}
+                <Link to={`/accounting/QT/${salesRef.id}`} className="text-stone-900 hover:underline">
+                  {salesRef.docNo ?? 'ใบเสนอราคา'}
+                </Link>
+              </>
+            )}
             {sourceRef && (
               <>
                 {' · อ้างอิง '}
@@ -987,6 +1070,24 @@ function DocumentEditorInner() {
               </Field>
             )}
 
+            {isPo && (
+              <Field label="อ้างอิงใบเสนอราคา" className="md:col-span-2"
+                     hint="ดึงรายการจากใบเสนอราคาที่อนุมัติแล้ว แล้วกรอกราคาซื้อ — ต้นทุนผูกกับงานนี้ในหน้า Report">
+                <SourceRefPicker
+                  sourceType="QT"
+                  approvedOnly
+                  value={salesRef}
+                  disabled={locked}
+                  onPick={(opt) => void applyQtToPo(opt.id)}
+                  onClear={() => {
+                    setSalesRef(null); setQtLineInfo(new Map());
+                    // บรรทัดที่ดึงมาไม่ผูกงานแล้ว — ล้างราคาขายอ้างอิงออก
+                    setItems((p) => p.map((it) => ({ ...it, ref_sell_price: null, source_ar_item_id: null })));
+                  }}
+                />
+              </Field>
+            )}
+
             <Field label="ประเภทงาน (Tag)" required
                    hint="เพิ่มชนิดใหม่ได้ที่หน้าตั้งค่าบริษัท">
               <Select value={tagId} disabled={locked} onChange={(e) => setTagId(e.target.value)}>
@@ -1114,6 +1215,7 @@ function DocumentEditorInner() {
                     no={block.entry.displayNo}
                     locked={locked}
                     stockOptions={stockQ.data ?? []}
+                    po={isPo ? { includeVat, vatRate, info: qtLineInfo } : null}
                     onPatch={(patch) => patchItem(block.entry.itemIndex, patch)}
                     onRemove={items.length > 1 ? () => removeItem(block.entry.itemIndex) : null}
                   />
@@ -1167,6 +1269,7 @@ function DocumentEditorInner() {
                           no={entry.displayNo}
                           locked={locked}
                           stockOptions={stockQ.data ?? []}
+                          po={isPo ? { includeVat, vatRate, info: qtLineInfo } : null}
                           onPatch={(patch) => patchItem(entry.itemIndex, patch)}
                           onRemove={items.length > 1 ? () => removeItem(entry.itemIndex) : null}
                         />
@@ -1299,12 +1402,14 @@ interface StockOption {
  * Group เลย รู้แค่เลขลำดับที่จะแสดง (no) กับฟังก์ชันแก้ไข/ลบที่ถูกส่งมาให้
  */
 function ItemCard({
-  it, no, locked, stockOptions, onPatch, onRemove,
+  it, no, locked, stockOptions, onPatch, onRemove, po = null,
 }: {
   it: DocumentItem;
   no: number;
   locked: boolean;
   stockOptions: StockOption[];
+  /** ใบสั่งซื้อ: แสดงราคาขายจากใบเสนอราคา + กำไรต่อหน่วย (ไม่พิมพ์ลงใบ) */
+  po?: { includeVat: boolean; vatRate: number; info: Map<string, { sold: number; other: number }> } | null;
   onPatch: (patch: Partial<DocumentItem>) => void;
   onRemove: (() => void) | null;
 }) {
@@ -1375,7 +1480,7 @@ function ItemCard({
           <TextInput value={it.unit ?? ''} disabled={locked}
                      onChange={(e) => onPatch({ unit: e.target.value })} />
         </Field>
-        <Field label="ราคา/หน่วย" className="w-32">
+        <Field label={po && it.ref_sell_price != null ? 'ราคาซื้อ/หน่วย' : 'ราคา/หน่วย'} className="w-32">
           <NumberInput value={it.unit_price} disabled={locked} step="0.01"
                        onChange={(e) => onPatch({ unit_price: Number(e.target.value) })} />
         </Field>
@@ -1425,6 +1530,43 @@ function ItemCard({
           </Select>
         </Field>
       </div>
+      {po && it.ref_sell_price != null && <PoMargin it={it} po={po} />}
+    </div>
+  );
+}
+
+/**
+ * แถบกำไรใต้บรรทัด PO — เทียบแบบก่อน VAT ทั้งสองฝั่ง
+ * ราคาซื้อสุทธิ = มูลค่าบรรทัด ÷ จำนวน (ถอด VAT ออกถ้า PO เป็นราคารวม VAT)
+ */
+function PoMargin({ it, po }: {
+  it: DocumentItem;
+  po: { includeVat: boolean; vatRate: number; info: Map<string, { sold: number; other: number }> };
+}) {
+  const qty = Number(it.qty) || 0;
+  const sell = Number(it.ref_sell_price) || 0;
+  const f = po.includeVat && it.vat_type === 'vat' ? 1 + po.vatRate / 100 : 1;
+  const buy = qty > 0 ? (Number(it.line_total) || 0) / qty / f : 0;
+  const profit = sell - buy;
+  const pctv = sell > 0 ? (profit / sell) * 100 : 0;
+  const info = it.source_ar_item_id ? po.info.get(it.source_ar_item_id) : undefined;
+  const over = info ? info.other + qty > info.sold + 1e-9 : false;
+  return (
+    <div className="mt-2 ml-7 flex flex-wrap items-center gap-x-5 gap-y-1 rounded-lg bg-stone-50 dark:bg-stone-800/50
+      px-3 py-2 text-xs text-stone-600 dark:text-stone-300">
+      <span>ราคาขาย (จาก QT) <b className="tabular-nums text-stone-800 dark:text-stone-100">{money(sell)}</b>/หน่วย</span>
+      {buy > 0 ? (
+        <span className={profit < 0 ? 'text-rose-600 font-medium' : ''}>
+          กำไร <b className="tabular-nums">{money(profit)}</b>/หน่วย · {pctv.toFixed(1)}%
+          {' '}· รวม <span className="tabular-nums">{money(profit * qty)}</span>
+        </span>
+      ) : <span className="text-amber-700">ยังไม่ได้กรอกราคาซื้อ</span>}
+      {info && (
+        <span className={over ? 'text-rose-600 font-medium' : 'text-stone-500'}>
+          ขาย {info.sold} · สั่งใบอื่นแล้ว {info.other} · ใบนี้ {qty}{over ? ' — เกินที่ขาย' : ''}
+        </span>
+      )}
+      <span className="text-stone-400 ml-auto">ราคาขายไม่พิมพ์ลงใบสั่งซื้อ</span>
     </div>
   );
 }

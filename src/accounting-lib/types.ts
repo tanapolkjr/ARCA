@@ -103,6 +103,10 @@ export interface DocumentItem {
   base_unit_price?: number;
   /** ส่วนลดแบบบาทไม่รวม VAT — ใช้ในหน้าจอเท่านั้น */
   base_discount_input?: number;
+  /** PO เท่านั้น: ราคาขายต่อหน่วยจากใบเสนอราคา (ก่อน VAT หลังส่วนลด) — ไม่พิมพ์ลงใบ (0032) */
+  ref_sell_price?: number | null;
+  /** PO เท่านั้น: บรรทัดต้นทางในใบเสนอราคา */
+  source_ar_item_id?: string | null;
 }
 
 /**

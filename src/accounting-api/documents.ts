@@ -558,6 +558,8 @@ export interface ApDocumentFull {
   tax_invoice_received: boolean; receipt_received: boolean; vendor_doc_no: string | null;
   note_text: string | null; terms_text: string | null;
   purchase_request_id: string | null; created_at: string;
+  /** ใบเสนอราคาที่ PO นี้สั่งซื้อให้ (0032) */
+  sales_document_id?: string | null;
   vendor?: Vendor | null;
   project?: { id: string; project_number: string; product_category: string | null } | null;
   tag?: DocTag | null;
@@ -611,6 +613,8 @@ export interface SaveApInput {
   wht_rate: number;
   note_text?: string | null;
   terms_text?: string | null;
+  /** PO: ใบเสนอราคาที่อ้างอิง (0032) */
+  sales_document_id?: string | null;
   items: DocumentItem[];
 }
 
@@ -640,6 +644,7 @@ export async function saveApDocument(input: SaveApInput, userId: string): Promis
     vendor_id: input.vendor_id,
     project_id: input.project_id || null,
     purchase_request_id: input.purchase_request_id || null,
+    sales_document_id: input.doc_type === 'PO' ? (input.sales_document_id || null) : null,
     job_name: input.job_name || null,
     ship_to: input.ship_to || null,
     tag_id: input.tag_id || null,
@@ -695,6 +700,9 @@ export async function saveApDocument(input: SaveApInput, userId: string): Promis
       discount_amount: i.discount_amount, discount_percent: i.discount_percent ?? null,
       discount_mode: i.discount_mode ?? 'line', discount_input: i.discount_input ?? 0,
       wht_rate: i.wht_rate ?? 0, line_total: i.line_total,
+      // ราคาขายอ้างอิง/บรรทัดต้นทาง มีเฉพาะ PO ที่อ้างอิงใบเสนอราคา
+      ref_sell_price: input.sales_document_id ? (i.ref_sell_price ?? null) : null,
+      source_ar_item_id: input.sales_document_id ? (i.source_ar_item_id ?? null) : null,
     }));
     const { error } = await supabase.from('ap_document_items').insert(rows);
     if (error) throw error;
@@ -1016,6 +1024,7 @@ export async function resetQuotationToDraft(id: string) {
   const { data: children, error: cErr } = await supabase
     .from('ar_documents').select('doc_no').eq('source_document_id', id).neq('status', 'cancelled');
   if (cErr) throw cErr;
+  await assertNoPurchaseOrders(id);
   if (children?.length) {
     throw new Error(
       `ใบนี้ออกใบแจ้งหนี้ไปแล้ว (${children.map((c) => c.doc_no ?? 'ร่าง').join(', ')}) ` +
@@ -1045,6 +1054,7 @@ export async function deleteArDocument(id: string) {
     if (children?.length) {
       throw new Error('ใบนี้มีเอกสารลูกอยู่ ต้องลบหรือยกเลิกใบลูกก่อน');
     }
+    await assertNoPurchaseOrders(id);
   } else if (doc.status !== 'cancelled') {
     throw new Error('ลบได้เฉพาะเอกสารที่ยกเลิกแล้วเท่านั้น — กดยกเลิกเอกสารก่อน');
   }
@@ -1068,7 +1078,7 @@ export interface SourceOption {
 
 /** ค้นหาเอกสารที่ใช้อ้างอิงได้ (อนุมัติ/ออกแล้ว และยังไม่ถูกเรียกเก็บครบ) */
 export async function searchSourceDocuments(
-  docType: ArDocType, term: string
+  docType: ArDocType, term: string, opts: { approvedOnly?: boolean } = {}
 ): Promise<SourceOption[]> {
   let q = supabase
     .from('ar_documents')
@@ -1078,6 +1088,8 @@ export async function searchSourceDocuments(
     .neq('status', 'cancelled')
     .order('doc_date', { ascending: false })
     .limit(20);
+  // ใบเสนอราคามีเลขตั้งแต่ร่าง — สั่งซื้อของให้ได้เฉพาะใบที่อนุมัติแล้ว
+  if (opts.approvedOnly) q = q.neq('status', 'draft');
   if (term.trim()) q = q.or(`doc_no.ilike.%${term.trim()}%,job_name.ilike.%${term.trim()}%`);
   const { data, error } = await q;
   if (error) throw error;
@@ -1191,4 +1203,61 @@ export async function latestPaymentDate(documentId: string): Promise<string | nu
   const dates = ((data ?? []) as unknown as { payment: { payment_date: string } | null }[])
     .map((r) => r.payment?.payment_date).filter(Boolean) as string[];
   return dates.length ? dates.sort().at(-1)! : null;
+}
+
+
+// ===========================================================================
+// PO อ้างอิงใบเสนอราคา (0032)
+// ===========================================================================
+
+/**
+ * ใบเสนอราคาที่มี PO อ้างอิงอยู่ ห้ามรีเซ็ตเป็นร่างหรือลบ
+ * เพราะการบันทึกใบเสนอราคาเขียนรายการใหม่ทั้งชุด — บรรทัด PO จะหลุดจากบรรทัดต้นทาง
+ * และต้นทุนในรายงานจะผูกกับใบที่เนื้อหาเปลี่ยนไปแล้ว
+ */
+async function assertNoPurchaseOrders(qtId: string) {
+  const { data, error } = await supabase
+    .from('ap_documents').select('doc_no').eq('sales_document_id', qtId).neq('status', 'cancelled');
+  if (error) throw error;
+  if (data?.length) {
+    throw new Error(
+      `ใบนี้มีใบสั่งซื้ออ้างอิงอยู่ (${data.map((d) => d.doc_no ?? 'ร่าง').join(', ')}) ` +
+      'ต้องยกเลิกหรือลบใบสั่งซื้อก่อน'
+    );
+  }
+}
+
+export interface QtForPo {
+  qt: ArDocumentFull;
+  exVatTotal: number;
+  /** จำนวนที่สั่งไปแล้วต่อบรรทัดใบเสนอราคา (PO ที่ไม่ยกเลิก ไม่นับ PO ที่กำลังแก้) */
+  ordered: Map<string, number>;
+}
+
+export async function loadQtForPo(qtId: string, excludePoId?: string | null): Promise<QtForPo> {
+  const qt = await getArDocument(qtId);
+  if (qt.doc_type !== 'QT') throw new Error('อ้างอิงได้เฉพาะใบเสนอราคา');
+  if (qt.status === 'draft' || qt.status === 'cancelled') {
+    throw new Error('ใบเสนอราคานี้ยังไม่อนุมัติหรือถูกยกเลิก — สั่งซื้อให้ไม่ได้');
+  }
+  let q = supabase.from('ap_documents').select('id').eq('sales_document_id', qtId).neq('status', 'cancelled');
+  if (excludePoId) q = q.neq('id', excludePoId);
+  const { data: pos, error } = await q;
+  if (error) throw error;
+  const ordered = new Map<string, number>();
+  const ids = (pos ?? []).map((p) => p.id as string);
+  if (ids.length) {
+    const { data: lines, error: lErr } = await supabase
+      .from('ap_document_items').select('source_ar_item_id, qty').in('document_id', ids);
+    if (lErr) throw lErr;
+    for (const l of lines ?? []) {
+      if (!l.source_ar_item_id) continue;
+      ordered.set(l.source_ar_item_id, (ordered.get(l.source_ar_item_id) ?? 0) + (Number(l.qty) || 0));
+    }
+  }
+  return {
+    qt,
+    exVatTotal: round2((Number(qt.grand_total) || 0) - (Number(qt.vat_amount) || 0)),
+    ordered,
+  };
 }

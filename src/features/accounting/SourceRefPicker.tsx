@@ -14,8 +14,10 @@ import { inputCls } from './ui';
  * พร้อมบอกว่ายอดต้นทางเหลือให้ออกได้อีกเท่าไร
  */
 export function SourceRefPicker({
-  sourceType, value, remaining, sourceTotal, disabled, onPick, onClear,
+  sourceType, value, remaining, sourceTotal, disabled, onPick, onClear, approvedOnly,
 }: {
+  /** แสดงเฉพาะใบที่อนุมัติ/ออกแล้ว (ใช้กับ PO อ้างอิงใบเสนอราคา) */
+  approvedOnly?: boolean;
   sourceType: ArDocType;
   value: { id: string; docNo: string | null; jobName?: string | null } | null;
   /** ยอดที่ยังออกได้จากใบต้นทาง */
@@ -38,14 +40,14 @@ export function SourceRefPicker({
     setLoading(true);
     const t = window.setTimeout(async () => {
       try {
-        const r = await searchSourceDocuments(sourceType, term);
+        const r = await searchSourceDocuments(sourceType, term, { approvedOnly });
         if (!cancelled) setResults(r);
       } finally {
         if (!cancelled) setLoading(false);
       }
     }, 200);
     return () => { cancelled = true; window.clearTimeout(t); };
-  }, [term, open, sourceType]);
+  }, [term, open, sourceType, approvedOnly]);
 
   if (value) {
     return (
