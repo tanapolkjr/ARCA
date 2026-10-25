@@ -38,6 +38,7 @@ import { DocumentEditorPage } from "./features/accounting/DocumentEditorPage";
 import { CompanySettingsPage } from "./features/accounting/CompanySettingsPage";
 import { VendorsPage } from "./features/accounting/VendorsPage";
 import { ExportPage } from "./features/accounting/ExportPage";
+import { DeliveryNotePage } from "./features/accounting/DeliveryNotePage";
 import ReportPage from "./features/report/ReportPage";
 import { ACCOUNTING_ROLES } from "./hooks/useAuth.jsx";
 import RequireRole from "./hooks/RequireRole.jsx";
@@ -91,6 +92,7 @@ export default function App() {
           <Route path="/accounting/settings" element={<CompanySettingsPage />} />
           <Route path="/accounting/vendors" element={<VendorsPage />} />
           <Route path="/accounting/export" element={<ExportPage />} />
+          <Route path="/accounting/delivery/:id" element={<DeliveryNotePage />} />
           <Route path="/accounting/:docType" element={<DocumentListPage />} />
           <Route path="/accounting/:docType/new" element={<DocumentEditorPage />} />
           <Route path="/accounting/:docType/:id" element={<DocumentEditorPage />} />

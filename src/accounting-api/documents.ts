@@ -1232,6 +1232,14 @@ async function assertNoPurchaseOrders(qtId: string) {
       `ใบนี้มีใบสั่งซื้ออ้างอิงอยู่ (${data.map((d) => d.doc_no ?? 'ร่าง').join(', ')}) ` +
       'ต้องยกเลิกหรือลบใบสั่งซื้อก่อน'
     );
+  }  // ใบส่งของผูกกับบรรทัดใบเสนอราคาเหมือนกัน
+  const { data: dns, error: dErr } = await supabase
+    .from('delivery_notes').select('doc_no').eq('quotation_id', qtId).eq('status', 'issued');
+  if (dErr) throw dErr;
+  if (dns?.length) {
+    throw new Error(
+      `ใบนี้ออกใบส่งของไปแล้ว (${dns.map((d) => d.doc_no).join(', ')}) ต้องยกเลิกใบส่งของก่อน`
+    );
   }
 }
 

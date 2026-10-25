@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Ban, BadgeCheck, ChevronDown, ChevronUp, Copy, FileOutput, HandCoins, Plus, Printer,
-  RotateCcw, Save, Search, Trash2,
+  RotateCcw, Save, Search, Trash2, Truck,
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast.jsx';
 import { useUserId } from '@/hooks/useAuth.jsx';
@@ -37,6 +37,7 @@ import {
 } from './ui';
 import { CancelDialog, PaymentHistory, ReceivePaymentModal } from './PaymentPanel';
 import { SourceRefPicker } from './SourceRefPicker';
+import { DeliveryPanel } from './DeliveryPanel';
 
 const AR_TYPES: ArDocType[] = ['QT', 'BL', 'INV', 'RC', 'CN', 'DN'];
 
@@ -135,6 +136,7 @@ function DocumentEditorInner() {
   // ฉบับที่จะพิมพ์ — ตั้งต้นที่ต้นฉบับเพราะเป็นงานประจำวัน ส่วนสำเนาเลือกเองเมื่อต้องใช้
   const [printMode, setPrintMode] = useState<PrintMode>('original');
   const [showReceive, setShowReceive] = useState(false);
+  const [showDelivery, setShowDelivery] = useState(false);
   const [showCancel, setShowCancel] = useState(false);
   const [paidAmount, setPaidAmount] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
@@ -826,6 +828,11 @@ function DocumentEditorInner() {
               <FileOutput className="w-4 h-4" /> เปิด{AR_DOC_LABEL[receiptChild.doc_type as ArDocType]} {receiptChild.doc_no ?? '(ร่าง)'}
             </GhostButton>
           )}
+          {isQt && status === 'approved' && savedId && (
+            <GhostButton onClick={() => setShowDelivery(true)} disabled={busy}>
+              <Truck className="w-4 h-4" /> ใบส่งของ
+            </GhostButton>
+          )}
           {isQt && status === 'approved' && (
             <GhostButton onClick={() => void handleConvert('BL')} disabled={busy}>
               <FileOutput className="w-4 h-4" /> สร้างใบแจ้งหนี้
@@ -924,6 +931,13 @@ function DocumentEditorInner() {
         );
       })()}
 
+      {showDelivery && savedId && (
+        <DeliveryPanel qtId={savedId} userId={userId} onClose={() => setShowDelivery(false)}
+          coordinator={{
+            name: usersQ.data?.find((u) => u.id === salesUserId)?.name ?? null,
+            phone: usersQ.data?.find((u) => u.id === salesUserId)?.phone ?? null,
+          }} />
+      )}
       {showReceive && savedId && (
         <ReceivePaymentModal
           documentId={savedId}
