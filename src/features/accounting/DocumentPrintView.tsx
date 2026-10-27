@@ -121,6 +121,9 @@ const SIGN_LABELS: Record<string, [string, string]> = {
   IM: ['ผู้รับเอกสาร', 'ผู้มีอำนาจลงนาม'],
 };
 
+/** เอกสารฝั่งซื้อ — เราเป็นผู้จ่าย ไม่พิมพ์บัญชีรับเงินของเรา */
+const isPurchaseDoc = (t: string) => t === 'PO' || t === 'PI' || t === 'PV' || t === 'IM';
+
 function labelTh(t: string) {
   return (AR_DOC_LABEL as Record<string, string>)[t] ?? (AP_DOC_LABEL as Record<string, string>)[t] ?? t;
 }
@@ -589,8 +592,10 @@ function DocHeader({
               </>
             } />
           )}
-          {doc.reference_no && <Row k="อ้างอิง" v={doc.reference_no} />}
-          {doc.customer_po_no && <Row k="เลขที่ PO" v={doc.customer_po_no} />}
+          {doc.reference_no && <Row k={isPurchaseDoc(doc.doc_type) ? 'อ้างอิงงาน' : 'อ้างอิง'} v={doc.reference_no} />}
+          {doc.customer_po_no && (
+            <Row k={isPurchaseDoc(doc.doc_type) ? 'ใบเสนอราคาผู้ขาย' : 'เลขที่ PO'} v={doc.customer_po_no} />
+          )}
           {doc.paid_on && (doc.doc_type === 'INV' || doc.doc_type === 'RC') && (
             <Row k="วันที่รับชำระ" v={docDate(doc.paid_on)} />
           )}
@@ -711,7 +716,9 @@ function TotalsBlock({
   const hasDiscount = doc.discount_total > 0 || (doc.extra_discount ?? 0) > 0;
   return (
     <div className="flex justify-between items-start gap-8 pt-6">
-      {/* บัญชีรับเงินอยู่ระดับเดียวกับยอด ลูกค้าเห็นเลขบัญชีกับยอดที่ต้องโอนพร้อมกัน */}
+      {/* บัญชีรับเงินอยู่ระดับเดียวกับยอด ลูกค้าเห็นเลขบัญชีกับยอดที่ต้องโอนพร้อมกัน
+          เอกสารฝั่งซื้อ (เราเป็นคนจ่าย) ไม่มีกล่องนี้ — เหลือที่ว่างให้ยอดชิดขวาเหมือนเดิม */}
+      {isPurchaseDoc(doc.doc_type) ? <div className="flex-1" /> : (
       <div className="flex-1 text-[10px] leading-[1.7] pt-1">
         <div className="font-semibold" style={{ color }}>กรุณาชำระ</div>
         <div className="pl-3">
@@ -725,6 +732,7 @@ function TotalsBlock({
             : <div className="text-stone-400">ธนาคาร — เลขที่ :</div>}
         </div>
       </div>
+      )}
 
       <div className="w-[86mm] text-[10px] shrink-0">
         <Total k="รวมเป็นเงิน" v={doc.subtotal} />

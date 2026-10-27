@@ -732,7 +732,8 @@ function DocumentEditorInner() {
     // ฝั่งซื้อ: ช่องนี้คือผู้อนุมัติ ไม่ใช่ผู้ขาย — ไม่พิมพ์ในหัวเอกสาร (ผู้ขายคือซัพพลายเออร์)
     sales_name: ar ? usersQ.data?.find((u) => u.id === salesUserId)?.name ?? null : null,
     sales_phone: ar ? usersQ.data?.find((u) => u.id === salesUserId)?.phone ?? null : null,
-    reference_no: sourceRef?.docNo ?? null,
+    // PO: อ้างอิงงาน = ใบเสนอราคาที่สั่งซื้อให้ (คนในบริษัทรู้ว่าของชุดนี้ไปงานไหน)
+    reference_no: isPo ? (salesRef?.docNo ?? null) : (sourceRef?.docNo ?? null),
     customer_po_no: customerPoNo || null,
     paid_on: paidOn,
     extra_discount: totals.extraDiscount,
@@ -1126,8 +1127,8 @@ function DocumentEditorInner() {
               </Field>
             )}
 
-            <Field label={ar ? 'เลขที่ PO ของลูกค้า' : 'เลขที่ PO อ้างอิง'}
-                   hint="พิมพ์บนเอกสาร และไหลตามไปใบแจ้งหนี้/ใบกำกับ">
+            <Field label={ar ? 'เลขที่ PO ของลูกค้า' : 'อ้างอิงใบเสนอราคาผู้ขาย'}
+                   hint={ar ? 'พิมพ์บนเอกสาร และไหลตามไปใบแจ้งหนี้/ใบกำกับ' : 'เลขที่ใบเสนอราคาที่ซัพพลายเออร์ส่งมา (ถ้ามี) — พิมพ์บนใบสั่งซื้อ'}>
               <TextInput value={customerPoNo} disabled={locked}
                          onChange={(e) => setCustomerPoNo(e.target.value)} />
             </Field>

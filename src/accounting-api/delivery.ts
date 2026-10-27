@@ -17,7 +17,7 @@ export interface DeliveryNote {
   package_count: string | null; note_text: string | null;
   sender_user_id?: string | null; sender_name?: string | null;
   cancelled_at: string | null; created_at: string;
-  quotation?: { id: string; doc_no: string | null } | null;
+  quotation?: { id: string; doc_no: string | null; customer_po_no?: string | null } | null;
   company?: { email: string | null } | null;
   items?: DeliveryNoteItem[];
 }
@@ -63,9 +63,13 @@ export async function loadDeliveryDraft(qtId: string): Promise<DeliveryDraft> {
   }
   const stockIds = (qt.items ?? []).map((i) => i.stock_item_id).filter(Boolean) as string[];
   const codes = new Map<string, string>();
+  const cats = new Map<string, string | null>();
   if (stockIds.length) {
-    const { data } = await supabase.from('stock_items').select('id, model_code').in('id', stockIds);
-    (data ?? []).forEach((s) => codes.set(s.id as string, s.model_code as string));
+    const { data } = await supabase.from('stock_items').select('id, model_code, category').in('id', stockIds);
+    (data ?? []).forEach((s) => {
+      codes.set(s.id as string, s.model_code as string);
+      cats.set(s.id as string, (s.category as string | null) ?? null);
+    });
   }
   const { map, count } = await deliveredByLine(qtId);
   const { count: allCount } = await supabase.from('delivery_notes')
@@ -74,6 +78,8 @@ export async function loadDeliveryDraft(qtId: string): Promise<DeliveryDraft> {
     id: i.id!, stock_item_id: i.stock_item_id,
     model_code: i.stock_item_id ? codes.get(i.stock_item_id) ?? null : null,
     description: i.description, unit: i.unit, qty: Number(i.qty) || 0,
+    category: i.stock_item_id ? cats.get(i.stock_item_id) ?? null : null,
+    item_type: i.item_type,
   })), map);
   void count;
   return { qt, plan, nextSeq: (allCount ?? 0) + 1 };
@@ -136,7 +142,7 @@ export async function createDelivery(input: CreateDeliveryInput, userId: string)
 
 export async function getDelivery(id: string): Promise<DeliveryNote> {
   const { data, error } = await supabase.from('delivery_notes')
-    .select('*, quotation:ar_documents(id, doc_no), company:companies(email)').eq('id', id).single();
+    .select('*, quotation:ar_documents(id, doc_no, customer_po_no), company:companies(email)').eq('id', id).single();
   if (error) throw error;
   const { data: items, error: iErr } = await supabase.from('delivery_note_items')
     .select('*').eq('delivery_id', id).order('line_no');

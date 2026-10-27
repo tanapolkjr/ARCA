@@ -8,7 +8,7 @@ import { ArrowUpRight, Truck } from 'lucide-react';
 import { useToast } from '@/hooks/useToast.jsx';
 import { useQuery } from '@/hooks/useSourcingQuery';
 import { docDate } from '@/accounting-lib/calc';
-import { validateDelivery } from '@/accounting-lib/delivery';
+import { defaultInclude, totalsByUnit, validateDelivery } from '@/accounting-lib/delivery';
 import { createDelivery, listDeliveries, loadDeliveryDraft } from '@/accounting-api/delivery';
 import { customerSnapshotFrom } from '@/accounting-api/documents';
 import { Field, Modal, NumberInput, PrimaryButton, Select, TextArea, TextInput } from './ui';
@@ -34,6 +34,8 @@ export function DeliveryPanel({
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
   const [qty, setQty] = useState<Map<string, number>>(new Map());
+  // ติ๊กเลือกบรรทัดที่จะออกใบส่งของ — บริการ/งานติดตั้งไม่ติ๊กตั้งแต่ต้น
+  const [include, setInclude] = useState<Set<string>>(new Set());
   // ส่งไปที่อยู่เดียวกับลูกค้า — ล็อกช่องที่อยู่ไว้ตามที่อยู่ลูกค้า ไม่ต้องพิมพ์ซ้ำ
   const [sameAsCustomer, setSameAsCustomer] = useState(false);
   const [f, setF] = useState({
@@ -59,6 +61,7 @@ export function DeliveryPanel({
     const d = draftQ.data;
     if (!d) return;
     setQty(new Map(d.plan.map((p) => [p.id, p.remaining])));
+    setInclude(new Set(d.plan.filter((p) => p.remaining > 0 && defaultInclude(p)).map((p) => p.id)));
     setF((p) => ({
       ...p,
       shipToName: d.qt.job_name ?? '',
@@ -67,10 +70,15 @@ export function DeliveryPanel({
     setCreating(true);
   }
 
-  const totalNow = useMemo(() => [...qty.values()].reduce((s, v) => s + (v || 0), 0), [qty]);
+  // จำนวนที่ส่งจริง = เฉพาะบรรทัดที่ติ๊ก
+  const qtyNow = useMemo(() => new Map(plan.map((p) => [p.id, include.has(p.id) ? (qty.get(p.id) ?? 0) : 0])), [plan, qty, include]);
+  const totalText = useMemo(() => totalsByUnit(plan.map((p) => ({ unit: p.unit, qty: qtyNow.get(p.id) ?? 0 })))
+    .map((t) => `${t.qty.toLocaleString('en-US')} ${t.unit}`).join(' · ') || '—', [plan, qtyNow]);
+  const allChecked = plan.filter((p) => p.remaining > 0).every((p) => include.has(p.id));
+  const toggleAll = () => setInclude(allChecked ? new Set() : new Set(plan.filter((p) => p.remaining > 0).map((p) => p.id)));
 
   async function save() {
-    const err = validateDelivery(plan, qty);
+    const err = validateDelivery(plan, qtyNow);
     if (err) { toast(err, 'error'); return; }
     if (!f.shipToAddress.trim()) { toast('ใส่ที่อยู่จัดส่งก่อน', 'error'); return; }
     if (!f.receiverName.trim()) { toast('ใส่ชื่อผู้รับหน้างานก่อน', 'error'); return; }
@@ -80,7 +88,7 @@ export function DeliveryPanel({
       const id = await createDelivery({
         qtId, ...f, coordinatorName: coordinator.name, coordinatorPhone: coordinator.phone,
         senderName: users.find((u) => u.id === f.senderUserId)?.name ?? '',
-        lines: plan.map((p) => ({ plan: p, qty: qty.get(p.id) ?? 0 })).filter((l) => l.qty > 0),
+        lines: plan.map((p) => ({ plan: p, qty: qtyNow.get(p.id) ?? 0 })).filter((l) => l.qty > 0),
       }, userId);
       toast('ออกใบส่งของแล้ว');
       nav(`/accounting/delivery/${id}`);
@@ -122,6 +130,10 @@ export function DeliveryPanel({
             <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="text-xs text-stone-500 text-left">
+                  <th className="font-normal pb-2 w-8">
+                    <input type="checkbox" className="w-4 h-4 accent-stone-900" checked={allChecked}
+                           onChange={toggleAll} aria-label="เลือกทุกรายการ" />
+                  </th>
                   <th className="font-normal pb-2">รายการ</th>
                   <th className="font-normal pb-2 text-right w-20">สั่งซื้อ</th>
                   <th className="font-normal pb-2 text-right w-20">ส่งแล้ว</th>
@@ -131,24 +143,32 @@ export function DeliveryPanel({
               </thead>
               <tbody>
                 {plan.map((p) => (
-                  <tr key={p.id} className="border-t border-stone-100 dark:border-stone-800">
+                  <tr key={p.id} className={`border-t border-stone-100 dark:border-stone-800 ${include.has(p.id) ? '' : 'opacity-50'}`}>
+                    <td className="py-2">
+                      <input type="checkbox" className="w-4 h-4 accent-stone-900" checked={include.has(p.id)}
+                             disabled={p.remaining <= 0} aria-label="ออกในใบส่งของ"
+                             onChange={(e) => setInclude((s) => {
+                               const n = new Set(s); if (e.target.checked) n.add(p.id); else n.delete(p.id); return n;
+                             })} />
+                    </td>
                     <td className="py-2 pr-3">
                       <div className="font-medium truncate max-w-[340px]">{p.model_code ?? p.description.split('\n')[0]}</div>
                       {p.model_code && <div className="text-xs text-stone-500 truncate max-w-[340px]">{p.description.split('\n')[0]}</div>}
+                      {!defaultInclude(p) && <div className="text-[11px] text-stone-400">{p.category || 'บริการ'} — ปกติไม่ออกในใบส่งของ</div>}
                     </td>
                     <td className="py-2 text-right tabular-nums">{p.qty} {p.unit}</td>
                     <td className="py-2 text-right tabular-nums text-stone-500">{p.delivered}</td>
                     <td className="py-2 text-right tabular-nums">{p.remaining}</td>
                     <td className="py-2 pl-2">
                       <NumberInput value={qty.get(p.id) ?? 0} min={0} max={p.remaining} step="0.001"
-                                   disabled={p.remaining <= 0} className="!text-right"
+                                   disabled={p.remaining <= 0 || !include.has(p.id)} className="!text-right"
                                    onChange={(e) => setQty((m) => new Map(m).set(p.id, Math.max(0, Number(e.target.value) || 0)))} />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div className="text-right text-xs text-stone-500 mt-1">รวมส่งครั้งนี้ {totalNow}</div>
+            <div className="text-right text-xs text-stone-500 mt-1">ติ๊ก {include.size} รายการ · รวมส่งครั้งนี้ {totalText}</div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

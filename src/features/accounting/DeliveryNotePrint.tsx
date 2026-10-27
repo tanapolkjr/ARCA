@@ -11,6 +11,7 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ArcaWordmark } from '@/components/brand/ArcaWordmark';
 import { docDate } from '@/accounting-lib/calc';
 import type { DeliveryNote } from '@/accounting-api/delivery';
+import { totalsByUnit } from '@/accounting-lib/delivery';
 
 export const DO_COLOR = '#0E7490';
 
@@ -70,7 +71,11 @@ export function DeliveryNotePrint({
   }, [blocks, assets, dn, copyLabel]);
 
   const rendered = pages ?? [blocks];
-  const totalNow = items.reduce((s, i) => s + (Number(i.qty_delivered) || 0), 0);
+  // ยอดรวมแยกตามหน่วย ("344 ชิ้น · 4 ชุด") — รวมต่างหน่วยเป็นตัวเลขเดียวไม่มีความหมาย
+  const totalText = totalsByUnit(items.map((i) => ({ unit: i.unit, qty: Number(i.qty_delivered) || 0 })))
+    .map((t) => `${num(t.qty)} ${t.unit}`).join(' · ');
+  // ทั้งใบไม่มีรหัสสินค้าเลย (พิมพ์รายการเอง ไม่ผูกคลัง) → ซ่อนคอลัมน์ ให้รายละเอียดกว้างขึ้น
+  const showCode = items.some((i) => (i.model_code ?? '').trim());
 
   const row = (i: number, mk?: string) => {
     const it = items[i];
@@ -81,7 +86,7 @@ export function DeliveryNotePrint({
     return (
       <tr key={i} data-mk={mk} className="align-top border-b border-stone-100">
         <td className="py-2 text-center">{i + 1}</td>
-        <td className="py-2 pr-2 break-words">{it.model_code ?? '—'}</td>
+        {showCode && <td className="py-2 pr-2 break-words">{it.model_code ?? '—'}</td>}
         <td className="py-2 pr-3">
           <div>{first}</div>
           {rest.length > 0 && <div className="text-stone-500 whitespace-pre-line">{rest.join('\n')}</div>}
@@ -103,11 +108,11 @@ export function DeliveryNotePrint({
           <Header dn={dn} copyLabel={copyLabel} pageNo={1} total={2} />
         </div>
         <table className="w-full table-fixed text-[10.5px] border-collapse">
-          <Cols />
-          <thead><tr data-mk="thead"><Head /></tr></thead>
+          <Cols showCode={showCode} />
+          <thead><tr data-mk="thead"><Head showCode={showCode} /></tr></thead>
           <tbody>{items.map((_, i) => row(i, `r${i}`))}</tbody>
         </table>
-        <div data-mk="notes"><Notes dn={dn} total={totalNow} count={items.length} /></div>
+        <div data-mk="notes"><Notes dn={dn} total={totalText} count={items.length} /></div>
         <div data-mk="foot"><Foot senderName={dn.sender_name ?? null} /></div>
       </div>
 
@@ -119,12 +124,12 @@ export function DeliveryNotePrint({
             <Header dn={dn} copyLabel={copyLabel} pageNo={p + 1} total={rendered.length} />
             {rows.length > 0 && (
               <table className="w-full table-fixed text-[10.5px] border-collapse">
-                <Cols />
-                <thead><tr><Head /></tr></thead>
+                <Cols showCode={showCode} />
+                <thead><tr><Head showCode={showCode} /></tr></thead>
                 <tbody>{rows.map((b) => row(b.index))}</tbody>
               </table>
             )}
-            {pb.some((b) => b.kind === 'notes') && <Notes dn={dn} total={totalNow} count={items.length} />}
+            {pb.some((b) => b.kind === 'notes') && <Notes dn={dn} total={totalText} count={items.length} />}
             {pb.some((b) => b.kind === 'foot') && <Foot senderName={dn.sender_name ?? null} />}
           </div>
         );
@@ -133,24 +138,24 @@ export function DeliveryNotePrint({
   );
 }
 
-function Cols() {
+function Cols({ showCode }: { showCode: boolean }) {
   return (
     <colgroup>
-      <col style={{ width: '10mm' }} /><col style={{ width: '28mm' }} /><col />
+      <col style={{ width: '10mm' }} />{showCode && <col style={{ width: '28mm' }} />}<col />
       <col style={{ width: '16mm' }} /><col style={{ width: '18mm' }} /><col style={{ width: '16mm' }} />
       <col style={{ width: '14mm' }} />
     </colgroup>
   );
 }
 
-function Head() {
+function Head({ showCode }: { showCode: boolean }) {
   const st = { color: DO_COLOR, borderTop: `1.5px solid ${DO_COLOR}`, borderBottom: `1.5px solid ${DO_COLOR}` };
   const c = 'py-2 font-semibold';
   return (
     <>
       <th className={`${c} text-center`} style={st}>ลำดับ</th>
-      <th className={`${c} text-left`} style={st}>รหัสสินค้า</th>
-      <th className={`${c} text-left`} style={st}>รายละเอียด</th>
+      {showCode && <th className={`${c} text-center`} style={st}>รหัสสินค้า</th>}
+      <th className={`${c} text-center`} style={st}>รายละเอียด</th>
       <th className={`${c} text-right`} style={st}>สั่งซื้อ</th>
       <th className={`${c} text-right`} style={st}>ส่งครั้งนี้</th>
       <th className={`${c} text-right`} style={st}>ค้างส่ง</th>
@@ -207,6 +212,7 @@ function Header({ dn, copyLabel, pageNo, total }: { dn: DeliveryNote; copyLabel:
           {kv('เลขที่', dn.doc_no, true)}
           {kv('วันที่ส่ง', docDate(dn.doc_date))}
           {kv('อ้างอิงใบเสนอราคา', dn.quotation?.doc_no ?? '—')}
+          {dn.quotation?.customer_po_no && kv('เลขที่ PO ลูกค้า', dn.quotation.customer_po_no)}
           {kv('การส่ง', `ครั้งที่ ${dn.delivery_seq}`)}
           {dn.coordinator_name && kv('ผู้ประสานงาน', <>{dn.coordinator_name}{dn.coordinator_phone && <span className="ml-2">{dn.coordinator_phone}</span>}</>)}
         </div>
@@ -219,19 +225,19 @@ function Header({ dn, copyLabel, pageNo, total }: { dn: DeliveryNote; copyLabel:
   );
 }
 
-function Notes({ dn, total, count }: { dn: DeliveryNote; total: number; count: number }) {
+function Notes({ dn, total, count }: { dn: DeliveryNote; total: string; count: number }) {
   return (
     <div className="pt-2">
       <div className="flex justify-end gap-8 py-2 border-b border-stone-200">
         <span className="font-semibold">รวมส่งครั้งนี้</span>
-        <span className="tabular-nums font-bold w-[18mm] text-right">{num(total)}</span>
+        <span className="tabular-nums font-bold text-right">{total || '—'}</span>
         <span className="w-[30mm] text-right">{count} รายการ</span>
       </div>
       <div className="pt-3">
         <div className="font-semibold" style={{ color: DO_COLOR }}>หมายเหตุ</div>
         {dn.note_text && dn.note_text.split('\n').filter((l) => l.trim()).map((l, i) => <div key={i} className="pl-1">· {l}</div>)}
-        <div className="pl-1">· กรุณาตรวจนับจำนวนและสภาพสินค้าขณะรับ หากพบสินค้าไม่ครบหรือเสียหาย ให้ระบุในช่องด้านล่างก่อนลงนาม</div>
-        <div className="pl-1">· การแจ้งสินค้าเสียหายหลังลงนามรับ ต้องแจ้งภายใน 7 วัน พร้อมรูปถ่าย</div>
+        <div className="pl-1">· กรุณาตรวจนับจำนวนและสภาพสินค้าก่อนลงนามรับ หากพบสินค้าไม่ครบหรือเสียหาย ให้ระบุในช่องด้านล่างก่อนลงนาม</div>
+        <div className="pl-1">· การแจ้งสินค้าเสียหายหลังลงนามรับ ต้องแจ้งภายใน 3 วัน พร้อมรูปถ่าย</div>
         <div className="pl-1">· เอกสารนี้ไม่ใช่ใบกำกับภาษี / ใบเสร็จรับเงิน</div>
       </div>
     </div>
