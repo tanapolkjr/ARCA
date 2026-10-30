@@ -158,6 +158,10 @@ export interface ArDocument {
   signer_user_id?: string | null;
   signature_path?: string | null;
   signed_at?: string | null;
+  /** ผู้อนุมัติเอกสาร (ไม่ใช่ใบเสนอราคา) + ชื่อ/ตำแหน่งที่ล็อกตอนออก (0037) */
+  doc_approver_id?: string | null;
+  approver_name?: string | null;
+  approver_position?: string | null;
   approved_at?: string | null;
   fulfilment_type: 'install' | 'delivery';
   tag_id: string | null;

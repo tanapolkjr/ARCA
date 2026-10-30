@@ -38,6 +38,7 @@ import {
 import { CancelDialog, PaymentHistory, ReceivePaymentModal } from './PaymentPanel';
 import { SourceRefPicker } from './SourceRefPicker';
 import { DeliveryPanel } from './DeliveryPanel';
+import { listApprovers } from '@/accounting-api/approvers';
 
 const AR_TYPES: ArDocType[] = ['QT', 'BL', 'INV', 'RC', 'CN', 'DN'];
 
@@ -124,6 +125,10 @@ function DocumentEditorInner() {
   const [signaturePath, setSignaturePath] = useState<string | null>(null);
   const [signedAt, setSignedAt] = useState<string | null>(null);
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
+  // ผู้อนุมัติเอกสาร (ทุกประเภทยกเว้นใบเสนอราคา) + ชื่อ/ตำแหน่งที่ฐานข้อมูลล็อกไว้ตอนออก (0037)
+  const [approverId, setApproverId] = useState('');
+  const [lockedApprover, setLockedApprover] =
+    useState<{ name: string | null; position: string | null }>({ name: null, position: null });
   const [savedId, setSavedId] = useState<string | undefined>(id);
   const [sourceRef, setSourceRef] = useState<
     { id: string; docNo: string | null; jobName?: string | null } | null>(null);
@@ -152,6 +157,7 @@ function DocumentEditorInner() {
     () => (companyId ? listBankAccounts(companyId) : Promise.resolve([])), [companyId]);
   const templatesQ = useQuery(() => listTemplates(), []);
   const tagsQ = useQuery(() => listDocumentTags(), []);
+  const approversQ = useQuery(() => listApprovers(), []);
   const leadSourcesQ = useQuery(() => (ar ? listLeadSources() : Promise.resolve([])), [ar]);
   const childrenQ = useQuery(
     () => (savedId && ar ? listChildDocuments(savedId) : Promise.resolve([])), [savedId, ar]);
@@ -238,6 +244,8 @@ function DocumentEditorInner() {
           setPartyId(a.customer_id ?? '');
           setValidUntil(a.valid_until ?? '');
           setSalesUserId(a.sales_user_id ?? '');
+          setApproverId(a.doc_approver_id ?? '');
+          setLockedApprover({ name: a.approver_name ?? null, position: a.approver_position ?? null });
           setSignerId(a.signer_user_id ?? null);
           setSignaturePath(a.signature_path ?? null);
           setSignedAt(a.signed_at ?? null);
@@ -253,6 +261,8 @@ function DocumentEditorInner() {
           setPartyId(a.vendor_id ?? '');
           // ฝั่งซื้อใช้ช่องเดียวกับ "ผู้ขาย" ของฝั่งขายเป็น "ผู้อนุมัติ" — รายชื่อ/ลายเซ็นชุดเดียวกัน
           setSalesUserId(a.approver_user_id ?? '');
+          setApproverId(a.doc_approver_id ?? '');
+          setLockedApprover({ name: a.approver_name ?? null, position: a.approver_position ?? null });
           setSignerId(a.signer_user_id ?? null);
           setSignaturePath(a.signature_path ?? null);
           setSignedAt(a.signed_at ?? null);
@@ -292,6 +302,15 @@ function DocumentEditorInner() {
   const isQt = ar && docType === 'QT';
   const locked = status === 'cancelled'
     || (isQt ? status !== 'draft' : Boolean(docNo));
+  // ใบเสนอราคาลงนามโดยเซลล์ · เอกสารอื่นทั้งหมดลงนามโดยผู้อนุมัติจากหน้าตั้งค่า
+  const usesApprover = !isQt;
+  const approverRow = approversQ.data?.find((a) => a.id === approverId);
+  const defaultApprover = approversQ.data?.find((a) => a.is_default && a.is_active);
+
+  // ใบใหม่/ร่างที่ยังไม่ได้เลือก → ผู้อนุมัติหลัก
+  useEffect(() => {
+    if (usesApprover && !locked && !approverId && defaultApprover) setApproverId(defaultApprover.id);
+  }, [usesApprover, locked, approverId, defaultApprover?.id]);
   const label = ar
     ? AR_DOC_LABEL[docType as ArDocType]
     : AP_DOC_LABEL[docType as ApDocType];
@@ -400,8 +419,11 @@ function DocumentEditorInner() {
       if (docType === 'BL' && !dueDate) missing.push('วันครบกำหนดชำระ');
       // ใบกำกับ/ใบเสร็จออกได้จากใบแจ้งหนี้เท่านั้น — กันออกใบรับเงินลอย ๆ ที่ไม่มีหนี้รองรับ
       if ((docType === 'INV' || docType === 'RC') && !sourceRef) missing.push('อ้างอิงใบแจ้งหนี้');
-    } else if (docType === 'PO' && !salesUserId) {
-      missing.push('ผู้อนุมัติ');
+    }
+    if (usesApprover && !approverId) {
+      missing.push(approversQ.data?.some((a) => a.is_active)
+        ? 'ผู้อนุมัติเอกสาร'
+        : 'ผู้อนุมัติเอกสาร (ยังไม่มีในระบบ — Super Admin เพิ่มได้ที่หน้าตั้งค่า)');
     }
     if (missing.length) {
       toast(`ยังไม่ได้กรอก: ${missing.join(' · ')}`, 'error');
@@ -437,6 +459,7 @@ function DocumentEditorInner() {
         ? await saveArDocument({
             ...common, doc_type: docType as ArDocType, customer_id: partyId,
             valid_until: validUntil || null, sales_user_id: salesUserId || null,
+            doc_approver_id: usesApprover ? (approverId || null) : null,
             fulfilment_type: fulfilment, source_document_id: sourceRef?.id ?? null,
             billing_percent: billingPercent ? Number(billingPercent) : null,
             installment_no: installmentNo ? Number(installmentNo) : null,
@@ -449,7 +472,8 @@ function DocumentEditorInner() {
         : await saveApDocument({
             ...common, doc_type: docType as ApDocType, vendor_id: partyId,
             sales_document_id: isPo ? salesRef?.id ?? null : null,
-            approver_user_id: salesUserId || null,
+            approver_user_id: approverId ? null : (salesUserId || null),
+            doc_approver_id: approverId || null,
           }, userId);
       setSavedId(newId);
       toast('บันทึกร่างแล้ว');
@@ -710,8 +734,18 @@ function DocumentEditorInner() {
   const signerUser = usersQ.data?.find((u) => u.id === (signed && signerId ? signerId : salesUserId));
   // ลายเซ็นที่ล็อกกับเอกสารมาก่อน — ถ้าใบนี้ออกไปตอนเซลล์ยังไม่มีลายเซ็น (ยังว่าง)
   // ใช้ลายเซ็นปัจจุบันของเซลล์ในใบแทน ใช้ได้กับทุกประเภท: ใบเสนอราคา ใบวางบิล ใบกำกับ ใบเสร็จ
-  const effectiveSignature = signed
-    ? (signaturePath ?? (signerUser as { signature_path?: string | null } | undefined)?.signature_path ?? null)
+  // ใบที่ออกก่อนมีผู้อนุมัติเอกสาร (ล็อกลายเซ็นผู้ใช้ไว้แล้ว) → แสดงตามที่ล็อกไว้เดิม
+  const legacySigned = usesApprover && signed && !lockedApprover.name && !approverId && Boolean(signerId);
+  const byApprover = usesApprover && !legacySigned;
+  const effectiveSignature = !signed ? null
+    : byApprover
+      ? (signaturePath ?? approverRow?.signature_path ?? null)
+      : (signaturePath ?? (signerUser as { signature_path?: string | null } | undefined)?.signature_path ?? null);
+  const signerName = byApprover
+    ? ((signed ? lockedApprover.name : null) ?? approverRow?.name ?? null)
+    : (signerUser?.name ?? null);
+  const signerPosition = byApprover
+    ? ((signed ? lockedApprover.position : null) ?? approverRow?.position ?? null)
     : null;
 
   useEffect(() => {
@@ -789,7 +823,8 @@ function DocumentEditorInner() {
     items: items.filter((i) => i.description.trim()),
     show_signature: signed,
     signature_url: signatureUrl,
-    signer_name: signerUser?.name ?? null,
+    signer_name: signerName,
+    signer_position: signerPosition,
     signed_date: signed ? (isQt ? (signedAt ?? docDate) : docDate) : null,
     // ตัดกลุ่มที่ไม่เหลือ item อยู่แล้วออกจากตัวอย่าง/พิมพ์ ให้ตรงกับที่ saveArDocument
     // จะเก็บจริงตอนบันทึก (บรรทัดว่างถูกกรองทิ้งเหมือนกันทั้งสองที่)
@@ -1076,13 +1111,34 @@ function DocumentEditorInner() {
               </Field>
             )}
 
-            {(
-              <Field label={ar ? 'ผู้ขาย (พนักงาน)' : 'ผู้อนุมัติ'} required={ar || docType === 'PO'}
-                     hint={ar ? undefined : 'ลายเซ็นของผู้อนุมัติขึ้นในช่องผู้อนุมัติเมื่อออกเอกสารแล้ว'}>
+            {ar && (
+              <Field label="ผู้ขาย (พนักงาน)" required
+                     hint={isQt ? 'ลายเซ็นเซลล์ขึ้นในช่องผู้อนุมัติเมื่ออนุมัติใบเสนอราคาแล้ว' : undefined}>
                 <Select value={salesUserId} disabled={locked}
                         onChange={(e) => setSalesUserId(e.target.value)}>
                   <option value="">— ไม่ระบุ —</option>
                   {usersQ.data?.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                </Select>
+              </Field>
+            )}
+
+            {usesApprover && (
+              <Field label="ผู้อนุมัติเอกสาร" required
+                     hint={locked && lockedApprover.name
+                       ? `ล็อกตอนออกเอกสาร: ${lockedApprover.name}${lockedApprover.position ? ` · ${lockedApprover.position}` : ''}`
+                       : legacySigned
+                         ? `ใบนี้ออกก่อนมีผู้อนุมัติเอกสาร — ลงนามโดย ${signerUser?.name ?? '—'}`
+                         : 'ชื่อ ตำแหน่ง ลายเซ็น ตั้งค่าได้ที่หน้าตั้งค่า · ขึ้นบนเอกสารเมื่อออกแล้ว'}>
+                <Select value={approverId} disabled={locked}
+                        onChange={(e) => setApproverId(e.target.value)}>
+                  <option value="">— เลือกผู้อนุมัติ —</option>
+                  {approversQ.data
+                    ?.filter((a) => a.is_active || a.id === approverId)
+                    .map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}{a.position ? ` — ${a.position}` : ''}{a.signature_path ? '' : ' (ยังไม่มีลายเซ็น)'}
+                      </option>
+                    ))}
                 </Select>
               </Field>
             )}

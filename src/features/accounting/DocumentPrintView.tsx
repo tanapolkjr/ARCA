@@ -54,6 +54,8 @@ export interface PrintableDoc {
   signature_url?: string | null;
   /** ชื่อใต้เส้นลงนามฝั่งผู้ขาย = เซลล์ที่ระบุในใบ */
   signer_name?: string | null;
+  /** ตำแหน่งใต้ชื่อ — ผู้อนุมัติเอกสาร (ไม่ใช่ใบเสนอราคา) */
+  signer_position?: string | null;
   /** วันที่ฝั่งผู้ขาย: ใบเสนอราคา = วันที่อนุมัติ · ใบอื่น = วันที่เอกสาร */
   signed_date?: string | null;
   /** จัดกลุ่มรายการ (Type A/B/C) — optional, ว่างได้ถ้าเอกสารนี้ไม่ได้ใช้ */
@@ -372,7 +374,7 @@ export function DocumentPrintView({
     doc.company_snapshot, doc.party_snapshot, doc.job_name,
     doc.contact_name, doc.contact_phone, doc.sales_name, doc.sales_phone,
     doc.note_text, doc.terms_text, bankAccounts.length,
-    doc.show_signature, doc.signer_name, doc.signed_date, Boolean(doc.signature_url),
+    doc.show_signature, doc.signer_name, doc.signer_position, doc.signed_date, Boolean(doc.signature_url),
     doc.installment_no, doc.pay_method, doc.pay_bank, doc.pay_ref, doc.pay_date, doc.pay_amount, doc.reference_no,
     doc.items.map((i) => [i.description, i.qty, i.unit_price, i.line_total]),
     doc.items.map((i) => [i.description, i.qty, i.unit_price, i.line_total, i.group_id ?? null]),
@@ -819,10 +821,12 @@ function PaymentBlock({ doc }: { doc: PrintableDoc }) {
  *                                               [ลายเซ็นเซลล์]   05/10/2026
  *   ____________  ____/____/____                ____________  ____________
  *   ผู้สั่งซื้อสินค้า      วันที่                       ผู้อนุมัติ         วันที่
- *                                                  (Pear)
+ *                                                  (ชื่อ)
+ *                                                  ตำแหน่ง
  *
- * ฝั่งซ้ายให้ลูกค้าเซ็นและลงวันที่เอง · ฝั่งขวาขึ้นลายเซ็นเซลล์ในใบ
- * เมื่อเอกสารอนุมัติ/ออกแล้วเท่านั้น (ร่างและใบยกเลิกจะเว้นว่าง)
+ * ฝั่งซ้ายให้ลูกค้าเซ็นและลงวันที่เอง · ฝั่งขวา: ใบเสนอราคา = ลายเซ็นเซลล์ในใบ
+ * เอกสารอื่นทั้งหมด = ผู้อนุมัติเอกสารจากหน้าตั้งค่า (ชื่อ + ตำแหน่ง)
+ * ลายเซ็นขึ้นเมื่อเอกสารอนุมัติ/ออกแล้วเท่านั้น (ร่างและใบยกเลิกจะเว้นว่าง)
  */
 function SignBlock({ doc }: { doc: PrintableDoc }) {
   const [leftLabel, rightLabel] = SIGN_LABELS[doc.doc_type] ?? ['ผู้รับเอกสาร', 'ผู้มีอำนาจลงนาม'];
@@ -841,6 +845,7 @@ function SignBlock({ doc }: { doc: PrintableDoc }) {
         align="right"
         signatureUrl={show ? doc.signature_url : null}
         name={doc.signer_name}
+        position={doc.signer_position}
         dateText={show && doc.signed_date ? docDate(doc.signed_date) : null}
       />
     </div>
@@ -848,13 +853,14 @@ function SignBlock({ doc }: { doc: PrintableDoc }) {
 }
 
 function SignSide({
-  inNameOf, label, align, signatureUrl, name, dateText,
+  inNameOf, label, align, signatureUrl, name, position, dateText,
 }: {
   inNameOf?: string | null;
   label: string;
   align: 'left' | 'right';
   signatureUrl?: string | null;
   name?: string | null;
+  position?: string | null;
   dateText?: React.ReactNode;
 }) {
   return (
@@ -872,6 +878,7 @@ function SignSide({
           </div>
           <div className="mt-1.5">{label}</div>
           {name && <div className="text-[9px] text-stone-600">({name})</div>}
+          {position && <div className="text-[9px] text-stone-500">{position}</div>}
         </div>
         <div className="flex-[2] min-w-0 text-center">
           <div className="h-[17mm] flex items-end justify-center border-b border-stone-400 pb-[1mm]">

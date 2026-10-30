@@ -117,6 +117,8 @@ export interface SaveArInput {
   contact_name?: string | null;
   contact_phone?: string | null;
   sales_user_id?: string | null;
+  /** ผู้อนุมัติเอกสาร — ทุกประเภทยกเว้นใบเสนอราคา (0037) */
+  doc_approver_id?: string | null;
   fulfilment_type?: 'install' | 'delivery';
   tag_id?: string | null;
   lead_source_id?: string | null;
@@ -175,6 +177,7 @@ export async function saveArDocument(input: SaveArInput, userId: string): Promis
     contact_name: input.contact_name || null,
     contact_phone: input.contact_phone || null,
     sales_user_id: input.sales_user_id || null,
+    doc_approver_id: input.doc_type === 'QT' ? null : (input.doc_approver_id || null),
     fulfilment_type: input.fulfilment_type ?? 'install',
     tag_id: input.tag_id || null,
     lead_source_id: input.lead_source_id || null,
@@ -461,6 +464,8 @@ export async function convertArDocument(
     contact_name: src.contact_name,
     contact_phone: src.contact_phone,
     sales_user_id: src.sales_user_id,
+    // ใบแจ้งหนี้ → ใบกำกับ/ใบเสร็จ: ผู้อนุมัติคนเดิม · จากใบเสนอราคา: ว่างไว้ (หน้าจอ/ฐานข้อมูลเติมผู้อนุมัติหลัก)
+    doc_approver_id: src.doc_type === 'QT' ? null : (src.doc_approver_id ?? null),
     fulfilment_type: src.fulfilment_type,
     tag_id: src.tag_id,
     lead_source_id: src.lead_source_id ?? null,
@@ -587,6 +592,10 @@ export interface ApDocumentFull {
   signer_user_id?: string | null;
   signature_path?: string | null;
   signed_at?: string | null;
+  /** ผู้อนุมัติเอกสารจากหน้าตั้งค่า + ชื่อ/ตำแหน่งที่ล็อกตอนออก (0037) */
+  doc_approver_id?: string | null;
+  approver_name?: string | null;
+  approver_position?: string | null;
   vendor?: Vendor | null;
   project?: { id: string; project_number: string; product_category: string | null } | null;
   tag?: DocTag | null;
@@ -644,6 +653,8 @@ export interface SaveApInput {
   sales_document_id?: string | null;
   /** ผู้อนุมัติ — ใช้รายชื่อและลายเซ็นเดียวกับผู้ขายฝั่งขาย (0033) */
   approver_user_id?: string | null;
+  /** ผู้อนุมัติเอกสารจากหน้าตั้งค่า — แทน approver_user_id สำหรับใบใหม่ (0037) */
+  doc_approver_id?: string | null;
   items: DocumentItem[];
 }
 
@@ -674,7 +685,8 @@ export async function saveApDocument(input: SaveApInput, userId: string): Promis
     project_id: input.project_id || null,
     purchase_request_id: input.purchase_request_id || null,
     sales_document_id: input.doc_type === 'PO' ? (input.sales_document_id || null) : null,
-    approver_user_id: input.approver_user_id || null,
+    approver_user_id: input.doc_approver_id ? null : (input.approver_user_id || null),
+    doc_approver_id: input.doc_approver_id || null,
     job_name: input.job_name || null,
     ship_to: input.ship_to || null,
     tag_id: input.tag_id || null,

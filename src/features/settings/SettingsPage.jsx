@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Users, Boxes, Plus, Pencil, Phone, ShieldAlert, Trash2, PenLine } from "lucide-react";
+import { Users, Boxes, Plus, Pencil, Phone, ShieldAlert, Trash2, PenLine, BadgeCheck } from "lucide-react";
 import { Card, Select, TextInput, Field, Modal, Pill } from "../../components/ui/primitives.jsx";
 import { useQuery } from "../../hooks/useQuery.js";
 import { listUsers, updateUserRole, updateUserProfile } from "../../api/users.js";
@@ -8,6 +8,9 @@ import { useAuth } from "../../hooks/useAuth.jsx";
 import { useToast } from "../../hooks/useToast.jsx";
 import { errMsg } from "../../lib/format.js";
 import { SignatureField } from "./SignatureField";
+import {
+  listApprovers, saveApprover, uploadApproverSignature, clearApproverSignature,
+} from "../../accounting-api/approvers";
 
 const ROLES = ["Super Admin", "Manager", "Sale", "PM", "Admin", "Store"];
 
@@ -301,6 +304,160 @@ function LocationSection() {
   );
 }
 
+/**
+ * ผู้อนุมัติเอกสารทางบัญชี — ลงนามบนทุกเอกสารที่ไม่ใช่ใบเสนอราคา
+ * (ใบแจ้งหนี้ ใบกำกับภาษี ใบเสร็จ ใบสั่งซื้อ ฯลฯ)
+ * สร้างใหม่ = กรอกชื่อ/ตำแหน่ง บันทึกก่อน แล้วค่อยใส่ลายเซ็นในหน้าต่างเดิม
+ */
+function ApproverModal({ approver, onClose, onSaved }) {
+  const { profile } = useAuth();
+  const toast = useToast();
+  const [current, setCurrent] = useState(approver);
+  const editing = Boolean(current);
+  const [f, setF] = useState({
+    name: approver?.name ?? "",
+    position: approver?.position ?? "",
+    is_default: approver?.is_default ?? false,
+    is_active: approver?.is_active ?? true,
+  });
+  const [saving, setSaving] = useState(false);
+  const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
+
+  async function reload(id) {
+    const fresh = (await listApprovers()).find((a) => a.id === id);
+    if (fresh) setCurrent(fresh);
+  }
+
+  async function handleSave(close) {
+    if (!f.name.trim()) { toast.error("ใส่ชื่อผู้อนุมัติก่อน"); return; }
+    setSaving(true);
+    try {
+      const id = await saveApprover({ id: current?.id, ...f }, profile?.id);
+      onSaved();
+      if (close) { toast.success("บันทึกแล้ว"); onClose(); }
+      else { toast.success("บันทึกแล้ว — ใส่ลายเซ็นต่อได้เลย"); await reload(id); }
+    } catch (err) {
+      toast.error("บันทึกไม่สำเร็จ (เฉพาะ Super Admin): " + errMsg(err));
+    } finally { setSaving(false); }
+  }
+
+  return (
+    <Modal title={editing ? `แก้ไขผู้อนุมัติ — ${current.name}` : "เพิ่มผู้อนุมัติเอกสาร"} onClose={onClose}>
+      <Field label="ชื่อ (พิมพ์ใต้ลายเซ็น)" required>
+        <TextInput value={f.name} placeholder="เช่น ธนพล ใจดี"
+                   onChange={(e) => set("name", e.target.value)} />
+      </Field>
+      <Field label="ตำแหน่ง">
+        <TextInput value={f.position} placeholder="เช่น กรรมการผู้จัดการ"
+                   onChange={(e) => set("position", e.target.value)} />
+      </Field>
+      <label className="flex items-center gap-2 text-sm text-stone-700 dark:text-stone-200 mb-3">
+        <input type="checkbox" checked={f.is_default} disabled={!f.is_active}
+               onChange={(e) => set("is_default", e.target.checked)} />
+        ผู้อนุมัติหลัก — เลือกให้อัตโนมัติในเอกสารใหม่
+      </label>
+      {editing && (
+        <Field label="สถานะ">
+          <Select value={f.is_active ? "y" : "n"}
+                  onChange={(e) => setF((p) => ({ ...p, is_active: e.target.value === "y",
+                    is_default: e.target.value === "y" ? p.is_default : false }))}>
+            <option value="y">ใช้งาน</option>
+            <option value="n">ปิดใช้งาน (ใบที่ออกไปแล้วยังมีลายเซ็นเดิม)</option>
+          </Select>
+        </Field>
+      )}
+      <Field label="ลายเซ็น">
+        {editing ? (
+          <SignatureField
+            currentPath={current.signature_path ?? null}
+            upload={(png) => uploadApproverSignature(current.id, png)}
+            clear={() => clearApproverSignature(current.id)}
+            onChanged={async () => { toast.success("บันทึกลายเซ็นแล้ว"); onSaved(); await reload(current.id); }}
+          />
+        ) : (
+          <p className="text-xs text-stone-400">บันทึกชื่อก่อน แล้วใส่ลายเซ็นได้ในหน้าต่างนี้</p>
+        )}
+      </Field>
+      <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-stone-100 dark:border-stone-700">
+        <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700">
+          {editing ? "ปิด" : "ยกเลิก"}
+        </button>
+        <button onClick={() => handleSave(editing)} disabled={saving}
+                className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white shadow-sm disabled:opacity-60">
+          {saving ? "กำลังบันทึก..." : editing ? "บันทึก" : "บันทึกแล้วใส่ลายเซ็น"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function ApproverSection() {
+  const { data: approvers, loading, refetch } = useQuery(() => listApprovers(), []);
+  const { profile } = useAuth();
+  const canEdit = profile?.role === "Super Admin";
+  const [edit, setEdit] = useState(undefined); // undefined = ปิด · null = เพิ่มใหม่
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <BadgeCheck className="w-4 h-4 text-stone-600" />
+          <h3 className="text-sm font-semibold text-stone-800 dark:text-stone-100">ผู้อนุมัติเอกสารทางบัญชี</h3>
+        </div>
+        {canEdit && (
+          <button onClick={() => setEdit(null)} className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-900 dark:text-stone-100">
+            <Plus className="w-4 h-4" /> เพิ่มผู้อนุมัติ
+          </button>
+        )}
+      </div>
+      <p className="text-xs text-stone-400 mb-4">
+        ลงนามช่อง "ผู้อนุมัติ / ผู้รับเงิน" บนใบแจ้งหนี้ ใบกำกับภาษี ใบเสร็จ ใบสั่งซื้อ และเอกสารอื่นที่ไม่ใช่ใบเสนอราคา
+        (ใบเสนอราคาใช้ลายเซ็นเซลล์ในใบ) · ชื่อ ตำแหน่ง ลายเซ็น ล็อกกับเอกสารตอนออก แก้ทีหลังไม่กระทบใบเดิม
+      </p>
+      {!canEdit && (
+        <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 dark:bg-amber-500/10 rounded-lg px-3 py-2 mb-3">
+          <ShieldAlert className="w-3.5 h-3.5 shrink-0" /> เฉพาะ Super Admin เท่านั้นที่เพิ่ม/แก้ผู้อนุมัติได้
+        </div>
+      )}
+      {loading && <p className="text-sm text-stone-400">กำลังโหลด...</p>}
+      <div className="space-y-2">
+        {approvers?.map((a) => (
+          <div key={a.id} className="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border border-stone-100 dark:border-stone-700">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-stone-800 dark:text-stone-100">{a.name}</span>
+                {a.is_default && <Pill tone="slate">ผู้อนุมัติหลัก</Pill>}
+                {!a.is_active && <Pill tone="slate">ปิดใช้งาน</Pill>}
+              </div>
+              <p className="text-xs text-stone-400">{a.position || "ยังไม่ระบุตำแหน่ง"}</p>
+              <p className="text-xs mt-0.5 flex items-center gap-1">
+                <PenLine className="w-3 h-3 text-stone-300" />
+                {a.signature_path
+                  ? <span className="text-stone-500">มีลายเซ็นแล้ว</span>
+                  : <span className="text-amber-600">ยังไม่มีลายเซ็น — เอกสารจะเว้นช่องลงนามว่าง</span>}
+              </p>
+            </div>
+            {canEdit && (
+              <button onClick={() => setEdit(a)} title="แก้ชื่อ ตำแหน่ง และลายเซ็น"
+                      className="p-1.5 text-stone-400 hover:text-stone-900 shrink-0">
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        ))}
+        {!loading && approvers?.length === 0 && (
+          <p className="text-sm text-stone-400 text-center py-4">
+            ยังไม่มีผู้อนุมัติ — เอกสารที่ไม่ใช่ใบเสนอราคาจะออกโดยไม่มีลายเซ็น
+          </p>
+        )}
+      </div>
+      {edit !== undefined && (
+        <ApproverModal approver={edit} onClose={() => setEdit(undefined)} onSaved={refetch} />
+      )}
+    </Card>
+  );
+}
+
 export default function SettingsPage() {
   return (
     <div>
@@ -308,7 +465,10 @@ export default function SettingsPage() {
       <p className="text-sm text-stone-400 mb-6">จัดการสิทธิ์ผู้ใช้งานและค่าตั้งต้นของระบบ ARCA</p>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <UserRoleSection />
-        <LocationSection />
+        <div className="flex flex-col gap-5">
+          <ApproverSection />
+          <LocationSection />
+        </div>
       </div>
     </div>
   );

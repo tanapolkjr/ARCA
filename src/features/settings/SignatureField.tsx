@@ -15,8 +15,15 @@ type Mode = 'view' | 'upload' | 'draw';
 const MAX_FILE_MB = 15;
 
 export function SignatureField({
-  userId, currentPath, onChanged,
-}: { userId: string; currentPath: string | null; onChanged: () => void }) {
+  userId, currentPath, onChanged, upload, clear,
+}: {
+  /** ลายเซ็นของผู้ใช้ — ไม่ส่งได้ถ้าส่ง upload/clear มาเอง (เช่น ผู้อนุมัติเอกสาร) */
+  userId?: string;
+  currentPath: string | null;
+  onChanged: () => void;
+  upload?: (png: Blob) => Promise<unknown>;
+  clear?: () => Promise<unknown>;
+}) {
   const [mode, setMode] = useState<Mode>('view');
   const [current, setCurrent] = useState<string | null>(null);
   const [result, setResult] = useState<HTMLCanvasElement | null>(null);
@@ -43,7 +50,9 @@ export function SignatureField({
     if (!result) return;
     setBusy(true); setErr(null);
     try {
-      await uploadSignature(userId, await canvasToPng(result));
+      const png = await canvasToPng(result);
+      if (upload) await upload(png);
+      else await uploadSignature(userId!, png);
       reset();
       onChanged();
     } catch (e) {
@@ -54,7 +63,7 @@ export function SignatureField({
   async function remove() {
     if (!window.confirm('เลิกใช้ลายเซ็นนี้? เอกสารที่ออกไปแล้วยังมีลายเซ็นเดิมอยู่')) return;
     setBusy(true);
-    try { await clearSignature(userId); onChanged(); }
+    try { if (clear) await clear(); else await clearSignature(userId!); onChanged(); }
     catch (e) { setErr(e instanceof Error ? e.message : 'ลบไม่สำเร็จ'); }
     finally { setBusy(false); }
   }
