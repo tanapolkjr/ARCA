@@ -22,6 +22,8 @@ interface DocRow {
   doc_date: string;
   job_name: string | null;
   grand_total: number;
+  wht_amount?: number | null;
+  net_payable?: number | null;
   paid_amount: number;
   status: string;
   tag_id: string | null;
@@ -35,6 +37,20 @@ interface DocRow {
  * ยังรับค่าสีจากฐานข้อมูลได้ (indigo/violet/…) แต่แสดงผลเป็นกลางทุกค่า
  * การแยกประเภทอาศัยตัวหนังสือ ไม่ใช่สี — อ่านง่ายกว่าและพิมพ์ขาวดำได้
  */
+/**
+ * ยอดที่แสดงในตาราง = ยอดที่ชำระจริง (หลังหัก ณ ที่จ่าย)
+ * ใบเสนอราคายังแสดงยอดรวมทั้งสิ้น เพราะใช้เทียบกับยอดวางบิล
+ * เอกสารเก่าที่ net_payable ยังเป็น 0 → ใช้ยอดรวมทั้งสิ้น หักภาษีที่ถูกหักไว้
+ */
+function shownAmount(r: DocRow, docType: string): number {
+  const gross = Number(r.grand_total) || 0;
+  if (docType === 'QT') return gross;
+  const wht = Number(r.wht_amount) || 0;
+  const net = Number(r.net_payable) || 0;
+  if (net > 0) return net;
+  return Math.max(0, gross - wht);
+}
+
 const TAG_TONE: Record<string, string> = {};
 const TAG_NEUTRAL =
   'border border-stone-300 dark:border-stone-600 text-stone-600 dark:text-stone-300';
@@ -83,7 +99,7 @@ export function DocumentListPage() {
 
   /** ผลรวมของรายการที่กรองอยู่ — ทุกหน้าในโมดูลต้องบอกยอดรวมได้ */
   const totals = useMemo(() => {
-    const sum = rows.reduce((acc, r) => acc + (Number(r.grand_total) || 0), 0);
+    const sum = rows.reduce((acc, r) => acc + shownAmount(r, docType), 0);
     const byTag = new Map<string, { name: string; color: string; count: number; total: number }>();
     for (const r of rows) {
       const key = r.tag?.id ?? 'none';
@@ -91,7 +107,7 @@ export function DocumentListPage() {
         name: r.tag?.name ?? 'ไม่ระบุประเภทงาน', color: r.tag?.color ?? 'slate', count: 0, total: 0,
       };
       cur.count += 1;
-      cur.total += Number(r.grand_total) || 0;
+      cur.total += shownAmount(r, docType);
       byTag.set(key, cur);
     }
     return {
@@ -101,7 +117,7 @@ export function DocumentListPage() {
         .map(([id, v]) => ({ id, ...v, total: round2(v.total) }))
         .sort((a, b) => b.total - a.total),
     };
-  }, [rows]);
+  }, [rows, docType]);
 
   const label = ar
     ? AR_DOC_LABEL[docType as ArDocType]
@@ -126,7 +142,7 @@ export function DocumentListPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-stone-800 dark:text-stone-100">{label}</h1>
           <p className="text-xs text-stone-500 mt-0.5">
-            {totals.count} ใบ · รวม {money(totals.total)} บาท
+            {totals.count} ใบ · {docType === 'QT' ? 'รวม' : 'ยอดชำระรวม'} {money(totals.total)} บาท
           </p>
         </div>
         <Link to={`/accounting/${docType}/new`} className="ml-auto">
@@ -202,7 +218,7 @@ export function DocumentListPage() {
               <div className="flex items-center gap-2">
                 <TagChip tag={{ name: g.label, color: g.color }} />
                 <span className="text-xs text-stone-400">
-                  {g.rows.length} ใบ · {money(g.rows.reduce((a, r) => a + Number(r.grand_total || 0), 0))} บาท
+                  {g.rows.length} ใบ · {money(g.rows.reduce((a, r) => a + shownAmount(r, docType), 0))} บาท
                 </span>
               </div>
               <DocTable rows={g.rows} ar={ar} docType={docType} loading={false}
@@ -252,7 +268,7 @@ function DocTable({
     } finally { setDuplicating(null); }
   }
 
-  const total = rows.reduce((a, r) => a + (Number(r.grand_total) || 0), 0);
+  const total = rows.reduce((a, r) => a + shownAmount(r, docType), 0);
   return (
     <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100
       dark:border-stone-800 overflow-hidden">
@@ -264,7 +280,9 @@ function DocTable({
               <th className="text-left font-medium px-4 py-3 w-40">เลขที่เอกสาร</th>
               <th className="text-left font-medium px-4 py-3">{ar ? 'ลูกค้า / ชื่องาน' : 'ผู้ขาย / ชื่องาน'}</th>
               <th className="text-left font-medium px-4 py-3 w-40">ประเภทงาน</th>
-              <th className="text-right font-medium px-4 py-3 w-32">ยอดรวมทั้งสิ้น</th>
+              <th className="text-right font-medium px-4 py-3 w-32">
+                {docType === 'QT' ? 'ยอดรวมทั้งสิ้น' : 'ยอดชำระ'}
+              </th>
               <th className="text-left font-medium px-4 py-3 w-32">สถานะ</th>
               {canDuplicate && <th className="w-12" />}
             </tr>
@@ -303,7 +321,12 @@ function DocTable({
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums font-medium
                     text-stone-800 dark:text-stone-100">
-                    {money(d.grand_total)}
+                    {money(shownAmount(d, docType))}
+                    {docType !== 'QT' && Number(d.wht_amount) > 0 && (
+                      <div className="text-[11px] font-normal text-stone-400">
+                        ก่อนหัก ณ ที่จ่าย {money(d.grand_total)}
+                      </div>
+                    )}
                     {billing && (
                       <div className={`text-[11px] font-normal ${billing.tone}`}>
                         {money(rollup?.get(d.id)?.billed ?? 0)}
