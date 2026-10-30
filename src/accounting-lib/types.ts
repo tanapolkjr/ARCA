@@ -3,6 +3,11 @@ export type ApDocType = 'PO' | 'PI' | 'PV' | 'IM';
 export type DocType = ArDocType | ApDocType;
 
 export type ItemType = 'goods' | 'service';
+/** วิธีรับชำระที่ติ๊กบนใบกำกับ/ใบเสร็จ (0036) */
+export type PayMethod = 'cash' | 'cheque' | 'transfer' | 'credit_card';
+export const PAY_METHOD_LABEL: Record<PayMethod, string> = {
+  cash: 'เงินสด', cheque: 'เช็ค', transfer: 'โอนเงิน', credit_card: 'บัตรเครดิต',
+};
 export type VatType = 'vat' | 'exempt' | 'zero';
 
 /** unit = ลดต่อชิ้น · line = ลดทั้งบรรทัด · percent = % ของยอดบรรทัด */
@@ -158,6 +163,13 @@ export interface ArDocument {
   tag_id: string | null;
   /** แหล่งที่มาของงาน (0031) */
   lead_source_id?: string | null;
+  /** งวดที่ + รายละเอียดการรับชำระที่พิมพ์บนใบกำกับ/ใบเสร็จ (0036) */
+  installment_no?: number | null;
+  pay_method?: PayMethod | null;
+  pay_bank?: string | null;
+  pay_ref?: string | null;
+  pay_date?: string | null;
+  pay_amount?: number | null;
   customer_po_no: string | null;
   extra_discount_type: 'amount' | 'percent';
   extra_discount_value: number;

@@ -11,10 +11,10 @@ import { applyVatMode, patchItemVat, withBasePrices } from '@/accounting-lib/vat
 import { buildPoLines } from '@/accounting-lib/poFromQt';
 import { computeTotals, docDate as docDateTh, lineDiscount, money, buildItemLayout } from '@/accounting-lib/calc';
 import {
-  AP_DOC_LABEL, AR_DOC_LABEL,
+  AP_DOC_LABEL, AR_DOC_LABEL, PAY_METHOD_LABEL,
 } from '@/accounting-lib/types';
 import type {
-  ApDocType, ArDocType, DiscountMode, DocumentItem, DocumentItemGroup, VatType,
+  ApDocType, ArDocType, DiscountMode, DocumentItem, DocumentItemGroup, VatType, PayMethod,
 } from '@/accounting-lib/types';
 import { getDefaultCompany, listBankAccounts, listCompanies, listTemplates, listVendors } from '@/accounting-api/setup';
 import {
@@ -24,7 +24,7 @@ import {
   loadSource, resetQuotationToDraft,
   getApDocument, getArDocument, getDocNo, issueApDocument, issueArDocument,
   latestPaymentDate, listChildDocuments,
-  listDocumentTags, listLeadSources, loadQtForPo, saveApDocument, saveArDocument,
+  listDocumentTags, listLeadSources, loadQtForPo, nextInstallmentNo, latestPaymentInfo, saveApDocument, saveArDocument,
 } from '@/accounting-api/documents';
 import { supabase } from '../../lib/supabaseClient.js';
 import { signatureDataUrl } from '@/lib/signature';
@@ -100,6 +100,11 @@ function DocumentEditorInner() {
   const [vatRate, setVatRate] = useState(7);
   const [whtRate, setWhtRate] = useState(0);
   const [billingPercent, setBillingPercent] = useState<string>('');
+  // งวดที่ + รายละเอียดการรับชำระที่พิมพ์บนใบกำกับ/ใบเสร็จ (0036)
+  const [installmentNo, setInstallmentNo] = useState<string>('');
+  const [pay, setPay] = useState<{ method: PayMethod | ''; bank: string; ref: string; date: string; amount: string }>(
+    { method: '', bank: '', ref: '', date: '', amount: '' });
+  const setPayField = (k: keyof typeof pay, v: string) => setPay((p) => ({ ...p, [k]: v }));
   const [tagId, setTagId] = useState('');
   // แหล่งที่มาของงาน — ใช้ในรายงานยอดขายตามแหล่งที่มา (0031)
   const [leadSourceId, setLeadSourceId] = useState('');
@@ -127,6 +132,7 @@ function DocumentEditorInner() {
   const [sourceRemaining, setSourceRemaining] = useState<number | null>(null);
   // PO อ้างอิงใบเสนอราคา (0032) — แยกจาก sourceRef เพราะคนละฝั่ง (ขาย ↔ ซื้อ)
   const isPo = !ar && docType === 'PO';
+  const isReceiptDoc = ar && (docType === 'INV' || docType === 'RC');
   const [salesRef, setSalesRef] = useState<
     { id: string; docNo: string | null; jobName?: string | null } | null>(null);
   // จำนวนที่ขายในใบเสนอราคา และที่สั่งไปแล้วใน PO อื่น ต่อบรรทัดต้นทาง — ใช้เตือนสั่งเกิน
@@ -237,6 +243,11 @@ function DocumentEditorInner() {
           setSignedAt(a.signed_at ?? null);
           setFulfilment(a.fulfilment_type ?? 'install');
           setBillingPercent(a.billing_percent != null ? String(a.billing_percent) : '');
+          setInstallmentNo(a.installment_no ? String(a.installment_no) : '');
+          setPay({
+            method: (a.pay_method as PayMethod | null) ?? '', bank: a.pay_bank ?? '', ref: a.pay_ref ?? '',
+            date: a.pay_date ?? '', amount: a.pay_amount != null ? String(a.pay_amount) : '',
+          });
         } else {
           const a = d as Awaited<ReturnType<typeof getApDocument>>;
           setPartyId(a.vendor_id ?? '');
@@ -428,6 +439,11 @@ function DocumentEditorInner() {
             valid_until: validUntil || null, sales_user_id: salesUserId || null,
             fulfilment_type: fulfilment, source_document_id: sourceRef?.id ?? null,
             billing_percent: billingPercent ? Number(billingPercent) : null,
+            installment_no: installmentNo ? Number(installmentNo) : null,
+            ...(isReceiptDoc ? {
+              pay_method: pay.method || null, pay_bank: pay.bank || null, pay_ref: pay.ref || null,
+              pay_date: pay.date || null, pay_amount: pay.amount ? Number(pay.amount) : null,
+            } : {}),
             groups,
           }, userId)
         : await saveApDocument({
@@ -544,6 +560,21 @@ function DocumentEditorInner() {
       // ตั้ง % ให้ยอดตรงกับส่วนที่ใบต้นทางยังเหลือพอดี ผู้ใช้ปรับลงได้แต่เกินไม่ได้
       const pct = childBillingPercent(src, info.remaining);
       setBillingPercent(pct == null ? '' : String(pct));
+
+      // งวดที่: ใบแจ้งหนี้จากใบเสนอราคา = งวดถัดไป · ใบกำกับ/ใบเสร็จ = งวดเดียวกับใบแจ้งหนี้
+      if (docType === 'BL' && src.doc_type === 'QT') {
+        try { setInstallmentNo(String(await nextInstallmentNo(src.id))); } catch { /* ไม่ขวาง */ }
+      } else if (src.installment_no) {
+        setInstallmentNo(String(src.installment_no));
+      }
+      // ใบกำกับ/ใบเสร็จ: ตั้งต้นการรับชำระจากการรับเงินของใบแจ้งหนี้ (แก้ได้)
+      if ((docType === 'INV' || docType === 'RC') && src.doc_type === 'BL') {
+        try {
+          const p = await latestPaymentInfo(src.id);
+          if (p) setPay({ method: p.method ?? '', bank: p.bank ?? '', ref: p.ref ?? '', date: p.date ?? '',
+                          amount: p.amount != null ? String(p.amount) : '' });
+        } catch { /* ไม่ขวาง */ }
+      }
 
       // ส่วนลดพิเศษต้องตามมาด้วย ไม่งั้นยอดใบลูกจะสูงกว่าใบต้นทางแล้วชนกฎห้ามวางเกิน
       // และถ้าคีย์เป็นบาทต้องย่อตามสัดส่วน กันลดซ้ำเวลาแตกเป็นหลายใบ
@@ -741,6 +772,9 @@ function DocumentEditorInner() {
     price_include_vat: includeVat,
     vat_rate: vatRate,
     billing_percent: billingPercent ? Number(billingPercent) : null,
+    installment_no: installmentNo ? Number(installmentNo) : null,
+    pay_method: pay.method || null, pay_bank: pay.bank || null, pay_ref: pay.ref || null,
+    pay_date: pay.date || null, pay_amount: pay.amount ? Number(pay.amount) : null,
     subtotal: totals.subtotal,
     discount_total: totals.discountTotal,
     vat_base: totals.vatBase,
@@ -1196,6 +1230,12 @@ function DocumentEditorInner() {
               <div className="ml-auto rounded-xl border border-stone-200 dark:border-stone-700
                 px-3 py-2">
                 <div className="flex gap-3">
+                  {ar && (docType === 'BL' || docType === 'INV' || docType === 'RC') && (
+                    <Field label="งวดที่" className="w-20" hint="พิมพ์บนเอกสาร">
+                      <NumberInput value={installmentNo} disabled={locked} placeholder="1" min={1} step="1"
+                                   onChange={(e) => setInstallmentNo(e.target.value)} />
+                    </Field>
+                  )}
                   <Field label="แบ่งชำระ % ของยอดเอกสาร" className="w-44"
                          hint="ว่าง = เรียกเก็บเต็มจำนวน">
                     <NumberInput value={billingPercent} disabled={locked} placeholder="30"
@@ -1363,6 +1403,45 @@ function DocumentEditorInner() {
               </div>
             </div>
           </section>
+
+          {isReceiptDoc && (
+            <section className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100
+              dark:border-stone-800 p-5 flex flex-col gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-stone-800 dark:text-stone-100">การรับชำระ (พิมพ์บนใบ)</h3>
+                <p className="text-xs text-stone-500">ตั้งต้นจากการรับเงินของใบแจ้งหนี้ต้นทาง แก้ได้ · ว่างไว้ = พิมพ์เป็นช่องว่างให้เขียนเอง</p>
+              </div>
+              <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="วิธีชำระ">
+                {(Object.keys(PAY_METHOD_LABEL) as PayMethod[]).map((m) => (
+                  <label key={m} className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-sm cursor-pointer
+                    ${pay.method === m ? 'border-stone-900 bg-stone-50 dark:bg-stone-800 font-medium' : 'border-stone-200 dark:border-stone-700'}`}>
+                    <input type="radio" name="pay_method" className="accent-stone-900" disabled={locked}
+                           checked={pay.method === m} onChange={() => setPayField('method', m)} />
+                    {PAY_METHOD_LABEL[m]}
+                  </label>
+                ))}
+                {pay.method && !locked && (
+                  <button type="button" onClick={() => setPayField('method', '')}
+                          className="text-xs text-stone-500 hover:text-stone-900 px-2">ล้าง</button>
+                )}
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <Field label="ธนาคาร">
+                  <TextInput value={pay.bank} disabled={locked} onChange={(e) => setPayField('bank', e.target.value)} />
+                </Field>
+                <Field label="เลขที่ (เช็ค / อ้างอิงโอน)">
+                  <TextInput value={pay.ref} disabled={locked} onChange={(e) => setPayField('ref', e.target.value)} />
+                </Field>
+                <Field label="วันที่">
+                  <TextInput type="date" value={pay.date} disabled={locked} onChange={(e) => setPayField('date', e.target.value)} />
+                </Field>
+                <Field label="จำนวนเงิน">
+                  <NumberInput value={pay.amount} disabled={locked} step="0.01" placeholder={totals.netPayable.toFixed(2)}
+                               onChange={(e) => setPayField('amount', e.target.value)} />
+                </Field>
+              </div>
+            </section>
+          )}
 
           <section className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100
             dark:border-stone-800 p-5 grid grid-cols-1 md:grid-cols-2 gap-4">

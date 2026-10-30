@@ -41,6 +41,14 @@ export interface PrintableDoc {
   note_text?: string | null;
   terms_text?: string | null;
   items: DocumentItem[];
+  /** งวดที่ (0036) */
+  installment_no?: number | null;
+  /** การรับชำระที่พิมพ์บนใบกำกับ/ใบเสร็จ — ว่าง = พิมพ์เป็นช่องว่างให้เขียนเอง (0036) */
+  pay_method?: string | null;
+  pay_bank?: string | null;
+  pay_ref?: string | null;
+  pay_date?: string | null;
+  pay_amount?: number | null;
   /** ลายเซ็นฝั่งผู้ขาย — แสดงเฉพาะเอกสารที่อนุมัติ/ออกแล้ว (คนเรียกเป็นคนตัดสิน) */
   show_signature?: boolean;
   signature_url?: string | null;
@@ -365,6 +373,7 @@ export function DocumentPrintView({
     doc.contact_name, doc.contact_phone, doc.sales_name, doc.sales_phone,
     doc.note_text, doc.terms_text, bankAccounts.length,
     doc.show_signature, doc.signer_name, doc.signed_date, Boolean(doc.signature_url),
+    doc.installment_no, doc.pay_method, doc.pay_bank, doc.pay_ref, doc.pay_date, doc.pay_amount, doc.reference_no,
     doc.items.map((i) => [i.description, i.qty, i.unit_price, i.line_total]),
     doc.items.map((i) => [i.description, i.qty, i.unit_price, i.line_total, i.group_id ?? null]),
     (doc.groups ?? []).map((g) => [g.id, g.group_name]),
@@ -439,7 +448,7 @@ export function DocumentPrintView({
           <div key={b.key} data-mk={b.key}><TextLine block={b} color={color} /></div>
         ))}
         {(doc.doc_type === 'INV' || doc.doc_type === 'RC') && (
-          <div data-mk="payment"><PaymentBlock /></div>
+          <div data-mk="payment"><PaymentBlock doc={doc} /></div>
         )}
         <div data-mk="sign"><SignBlock doc={doc} /></div>
       </div>
@@ -509,7 +518,7 @@ function DocPage({
           return <TotalsBlock key={b.key} doc={doc} color={color} bankAccounts={bankAccounts} />;
         }
         if (b.kind === 'text') return <TextLine key={b.key} block={b} color={color} />;
-        if (b.kind === 'payment') return <PaymentBlock key={b.key} />;
+        if (b.kind === 'payment') return <PaymentBlock key={b.key} doc={doc} />;
         if (b.kind === 'sign') return <SignBlock key={b.key} doc={doc} />;
         return null;
       })}
@@ -593,6 +602,7 @@ function DocHeader({
             } />
           )}
           {doc.reference_no && <Row k={isPurchaseDoc(doc.doc_type) ? 'อ้างอิงงาน' : 'อ้างอิง'} v={doc.reference_no} />}
+          {doc.installment_no && <Row k="งวดที่" v={String(doc.installment_no)} bold />}
           {doc.customer_po_no && (
             <Row k={isPurchaseDoc(doc.doc_type) ? 'ใบเสนอราคาผู้ขาย' : 'เลขที่ PO'} v={doc.customer_po_no} />
           )}
@@ -718,7 +728,8 @@ function TotalsBlock({
     <div className="flex justify-between items-start gap-8 pt-6">
       {/* บัญชีรับเงินอยู่ระดับเดียวกับยอด ลูกค้าเห็นเลขบัญชีกับยอดที่ต้องโอนพร้อมกัน
           เอกสารฝั่งซื้อ (เราเป็นคนจ่าย) ไม่มีกล่องนี้ — เหลือที่ว่างให้ยอดชิดขวาเหมือนเดิม */}
-      {isPurchaseDoc(doc.doc_type) ? <div className="flex-1" /> : (
+      {(isPurchaseDoc(doc.doc_type) || doc.doc_type === 'INV' || doc.doc_type === 'RC')
+        ? <div className="flex-1" /> : (
       <div className="flex-1 text-[10px] leading-[1.7] pt-1">
         <div className="font-semibold" style={{ color }}>กรุณาชำระ</div>
         <div className="pl-3">
@@ -743,7 +754,8 @@ function TotalsBlock({
                  v={doc.subtotal - doc.discount_total - (doc.extra_discount ?? 0)} />
         )}
         {doc.billing_percent != null && doc.billing_percent > 0 && doc.billing_percent < 100 && (
-          <Total k={`แบ่งชำระ ${doc.billing_percent}%`} v={doc.grand_total} bold />
+          <Total k={`${doc.installment_no ? `งวดที่ ${doc.installment_no} · ` : ''}แบ่งชำระ ${doc.billing_percent}%`}
+                 v={doc.grand_total} bold />
         )}
         <Total k="มูลค่าที่ไม่มี/ยกเว้นภาษี" v={doc.vat_exempt_base} />
         <Total k="มูลค่าที่คำนวณภาษี" v={doc.vat_base} />
@@ -774,18 +786,27 @@ function TextLine({ block, color }: { block: Block; color: string }) {
   return <div className="text-[10px] leading-[1.7] pl-1">{block.line}</div>;
 }
 
-function PaymentBlock() {
+const PAY_LABEL: [string, string][] = [['cash', 'เงินสด'], ['cheque', 'เช็ค'], ['transfer', 'โอนเงิน'], ['credit_card', 'บัตรเครดิต']];
+
+/** ช่องการรับชำระบนใบกำกับ/ใบเสร็จ — ติ๊กและเติมตามที่กรอกในเอกสาร ส่วนที่ว่างเว้นเส้นให้เขียนเอง */
+function PaymentBlock({ doc }: { doc: PrintableDoc }) {
+  const blank = (v: string | null | undefined, w: string) =>
+    v ? <span className="font-medium underline decoration-stone-300 underline-offset-2">{v}</span> : <span>{w}</span>;
   return (
     <div className="text-[10px] border-t border-stone-200 pt-2 mt-0">
       <div className="mb-1">การชำระเงินจะสมบูรณ์เมื่อบริษัทได้รับเงินเรียบร้อยแล้ว</div>
       <div className="flex gap-5">
-        {['เงินสด', 'เช็ค', 'โอนเงิน', 'บัตรเครดิต'].map((m) => <span key={m}>☐ {m}</span>)}
+        {PAY_LABEL.map(([k, label]) => (
+          <span key={k} className={doc.pay_method === k ? 'font-semibold' : ''}>
+            {doc.pay_method === k ? '☑' : '☐'} {label}
+          </span>
+        ))}
       </div>
-      <div className="mt-1.5 flex gap-6">
-        <span>ธนาคาร ______________</span>
-        <span>เลขที่ ______________</span>
-        <span>วันที่ __________</span>
-        <span>จำนวนเงิน __________</span>
+      <div className="mt-1.5 flex flex-wrap gap-x-6 gap-y-1">
+        <span>ธนาคาร {blank(doc.pay_bank, '______________')}</span>
+        <span>เลขที่ {blank(doc.pay_ref, '______________')}</span>
+        <span>วันที่ {blank(doc.pay_date ? docDate(doc.pay_date) : null, '__________')}</span>
+        <span>จำนวนเงิน {blank(doc.pay_amount != null ? `${money(doc.pay_amount)} บาท` : null, '__________')}</span>
       </div>
     </div>
   );

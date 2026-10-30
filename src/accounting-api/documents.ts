@@ -120,6 +120,9 @@ export interface SaveArInput {
   fulfilment_type?: 'install' | 'delivery';
   tag_id?: string | null;
   lead_source_id?: string | null;
+  installment_no?: number | null;
+  pay_method?: string | null; pay_bank?: string | null; pay_ref?: string | null;
+  pay_date?: string | null; pay_amount?: number | null;
   customer_po_no?: string | null;
   extra_discount_type?: 'amount' | 'percent';
   extra_discount_value?: number;
@@ -175,6 +178,12 @@ export async function saveArDocument(input: SaveArInput, userId: string): Promis
     fulfilment_type: input.fulfilment_type ?? 'install',
     tag_id: input.tag_id || null,
     lead_source_id: input.lead_source_id || null,
+    installment_no: input.installment_no || null,
+    pay_method: input.pay_method || null,
+    pay_bank: input.pay_bank || null,
+    pay_ref: input.pay_ref || null,
+    pay_date: input.pay_date || null,
+    pay_amount: input.pay_amount ?? null,
     customer_po_no: input.customer_po_no || null,
     extra_discount_type: input.extra_discount_type ?? 'amount',
     extra_discount_value: input.extra_discount_value ?? 0,
@@ -429,7 +438,19 @@ export async function convertArDocument(
     group_id: i.group_id ? groupIdMap.get(i.group_id) ?? null : null,
   }));
 
-  return saveArDocument({
+  // งวดที่: ใบแจ้งหนี้ใหม่ = งวดถัดไปของใบเสนอราคา · ใบกำกับ/ใบเสร็จ = งวดเดียวกับใบแจ้งหนี้
+  const installment = targetType === 'BL'
+    ? await nextInstallmentNo(src.id)
+    : (src.installment_no ?? null);
+  // ใบกำกับ/ใบเสร็จจากใบแจ้งหนี้ที่รับเงินแล้ว → ตั้งต้นรายละเอียดการรับชำระจากการรับเงินครั้งล่าสุด
+  const pay = (targetType === 'INV' || targetType === 'RC') && src.doc_type === 'BL'
+    ? await latestPaymentInfo(src.id)
+    : null;
+
+  const newId = await saveArDocument({
+    installment_no: installment,
+    pay_method: pay?.method ?? null, pay_bank: pay?.bank ?? null, pay_ref: pay?.ref ?? null,
+    pay_date: pay?.date ?? null, pay_amount: pay?.amount ?? null,
     company_id: src.company_id,
     doc_type: targetType,
     doc_date: new Date().toISOString().slice(0, 10),
@@ -457,6 +478,7 @@ export async function convertArDocument(
     items,
     groups,
   }, userId);
+  return newId;
 }
 
 /**
@@ -1275,5 +1297,58 @@ export async function loadQtForPo(qtId: string, excludePoId?: string | null): Pr
     qt,
     exVatTotal: round2((Number(qt.grand_total) || 0) - (Number(qt.vat_amount) || 0)),
     ordered,
+  };
+}
+
+
+// ===========================================================================
+// งวดที่ + รายละเอียดการรับชำระ (0036)
+// ===========================================================================
+
+/** งวดถัดไปของใบเสนอราคา = จำนวนใบแจ้งหนี้ที่ไม่ยกเลิก + 1 */
+export async function nextInstallmentNo(qtId: string): Promise<number> {
+  const { count, error } = await supabase.from('ar_documents')
+    .select('id', { count: 'exact', head: true })
+    .eq('source_document_id', qtId).eq('doc_type', 'BL').neq('status', 'cancelled');
+  if (error) throw error;
+  return (count ?? 0) + 1;
+}
+
+export interface PaymentInfo {
+  method: 'cash' | 'cheque' | 'transfer' | 'credit_card' | null;
+  bank: string | null; ref: string | null; date: string | null; amount: number | null;
+}
+
+/**
+ * การรับเงินครั้งล่าสุดของเอกสาร — ใช้ตั้งต้นช่องการชำระบนใบกำกับ/ใบเสร็จ
+ * จำนวนเงิน = เงินที่เข้าจริง (หลังหัก ณ ที่จ่ายและค่าธรรมเนียม) ของทุกครั้งที่รับ
+ */
+export async function latestPaymentInfo(documentId: string): Promise<PaymentInfo | null> {
+  const { data, error } = await supabase
+    .from('ar_payment_allocations')
+    .select('amount, payment:ar_payments(payment_method, payment_date, reference_no, amount_received, wht_amount, fee_amount, wallet:wallets(name, bank_name))')
+    .eq('document_id', documentId);
+  if (error) throw error;
+  type Row = { amount: number; payment: { payment_method: string; payment_date: string; reference_no: string | null;
+    amount_received: number; wht_amount: number; fee_amount: number;
+    wallet: { name: string; bank_name: string | null } | null } | null };
+  const rows = ((data ?? []) as unknown as Row[]).filter((r) => r.payment);
+  if (!rows.length) return null;
+  rows.sort((a, b) => a.payment!.payment_date.localeCompare(b.payment!.payment_date));
+  const last = rows[rows.length - 1].payment!;
+  // เงินเข้าจริงของใบนี้ = ยอดตัดหนี้ − ส่วนของ หัก ณ ที่จ่าย/ค่าธรรมเนียม (ตามสัดส่วนถ้ารับรวมหลายใบ)
+  const cash = rows.reduce((s, r) => {
+    const p = r.payment!;
+    const cleared = (Number(p.amount_received) || 0) + (Number(p.wht_amount) || 0) + (Number(p.fee_amount) || 0);
+    const share = cleared > 0 ? (Number(r.amount) || 0) / cleared : 0;
+    return s + (Number(p.amount_received) || 0) * share;
+  }, 0);
+  const m = last.payment_method;
+  return {
+    method: m === 'cash' || m === 'cheque' || m === 'transfer' || m === 'credit_card' ? m : null,
+    bank: last.wallet?.bank_name || last.wallet?.name || null,
+    ref: last.reference_no ?? null,
+    date: last.payment_date,
+    amount: round2(cash),
   };
 }
