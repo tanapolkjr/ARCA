@@ -551,12 +551,15 @@ function DocHeader({
           <div className="text-[10px] leading-[1.55] min-w-0">
             <div className="text-[13px] font-bold leading-tight">{co?.name ?? '—'}</div>
             {co?.name_en && <div className="text-[10px]">{co.name_en}</div>}
-            {co?.address && <div className="whitespace-pre-line">{co.address}</div>}
-            <div>
-              เลขประจำตัวผู้เสียภาษี {co?.tax_id || '-'}
-              {doc.company_email && <span className="ml-6">E-mail {doc.company_email}</span>}
-              {co?.phone && <span className="ml-6">โทร. {co.phone}</span>}
-            </div>
+            {co?.address && <div className="whitespace-pre-line">{splitAddress(co.address)}</div>}
+            <div>เลขประจำตัวผู้เสียภาษี {co?.tax_id || '-'}</div>
+            {/* อีเมล/โทร ขึ้นบรรทัดของตัวเอง — ต่อท้ายเลขผู้เสียภาษีแล้วถูกตัดคำครึ่งบรรทัด */}
+            {(doc.company_email || co?.phone) && (
+              <div>
+                {doc.company_email && <span>E-mail {doc.company_email}</span>}
+                {co?.phone && <span className={doc.company_email ? 'ml-6' : ''}>โทร. {co.phone}</span>}
+              </div>
+            )}
           </div>
         </div>
         <div className="text-right shrink-0">
@@ -604,7 +607,7 @@ function DocHeader({
             } />
           )}
           {doc.reference_no && <Row k={isPurchaseDoc(doc.doc_type) ? 'อ้างอิงงาน' : 'อ้างอิง'} v={doc.reference_no} />}
-          {doc.installment_no && <Row k="งวดที่" v={String(doc.installment_no)} bold />}
+          {doc.installment_no && <Row k="งวดที่" v={String(doc.installment_no)} />}
           {doc.customer_po_no && (
             <Row k={isPurchaseDoc(doc.doc_type) ? 'ใบเสนอราคาผู้ขาย' : 'เลขที่ PO'} v={doc.customer_po_no} />
           )}
@@ -661,7 +664,7 @@ function ItemHead({ color }: { color: string }) {
       <th className={`${HEAD_CELL} text-center`} style={border}>หน่วย</th>
       <th className={`${HEAD_CELL} text-center`} style={border}>ราคา/หน่วย</th>
       <th className={`${HEAD_CELL} text-center`} style={border}>ส่วนลด</th>
-      <th className={`${HEAD_CELL} text-right pr-1`} style={border}>มูลค่า</th>
+      <th className={`${HEAD_CELL} text-center`} style={border}>มูลค่า</th>
     </>
   );
 }
@@ -674,15 +677,16 @@ function ItemRow({ it, no, mk }: { it: DocumentItem; no: number; mk?: string }) 
       <td className="py-2 pl-1">{no}</td>
       {/* รายละเอียดหลายบรรทัด: ชื่อรุ่นบรรทัดแรก สเปกย่อยบรรทัดถัดไป */}
       <td className="py-2 whitespace-pre-line pr-3">{it.description}</td>
-      <td className="py-2 text-right tabular-nums">{money(it.qty).replace('.00', '')}</td>
+      {/* ตัวเลขทุกคอลัมน์จัดกึ่งกลางใต้หัวคอลัมน์ */}
+      <td className="py-2 text-center tabular-nums">{money(it.qty).replace('.00', '')}</td>
       <td className="py-2 text-center">{it.unit ?? ''}</td>
-      <td className="py-2 text-right tabular-nums">{money(it.unit_price)}</td>
+      <td className="py-2 text-center tabular-nums">{money(it.unit_price)}</td>
       {/* ส่วนลดต่อหน่วย เพื่อให้บวกลบในบรรทัดเดียวได้:
           (ราคา/หน่วย − ส่วนลด) × จำนวน = มูลค่า */}
-      <td className="py-2 text-right tabular-nums">
+      <td className="py-2 text-center tabular-nums">
         {disc > 0 && qty > 0 ? money(disc / qty) : ''}
       </td>
-      <td className="py-2 text-right tabular-nums pr-1">{money(it.line_total)}</td>
+      <td className="py-2 text-center tabular-nums">{money(it.line_total)}</td>
     </tr>
   );
 }
@@ -713,7 +717,7 @@ function GroupSubtotalRow({ name, subtotal, mk }: { name: string; subtotal: numb
   return (
     <tr data-mk={mk}>
       <td colSpan={6} className="py-1 pr-3 text-right text-stone-500">รวม {name}</td>
-      <td className="py-1 text-right tabular-nums font-semibold pr-1 border-t border-stone-200">
+      <td className="py-1 text-center tabular-nums font-semibold border-t border-stone-200">
         {money(subtotal)}
       </td>
     </tr>
@@ -889,6 +893,16 @@ function SignSide({
       </div>
     </div>
   );
+}
+
+/**
+ * ที่อยู่บริษัทบนหัวเอกสาร: ถ้าไม่ได้ขึ้นบรรทัดเองในหน้าตั้งค่า
+ * ตัดบรรทัดก่อน เขต/อำเภอ — บรรทัดแรกเลขที่ ถนน แขวง/ตำบล · บรรทัดสอง เขต/อำเภอ จังหวัด รหัสไปรษณีย์
+ * กันไม่ให้ชื่อเขตถูกตัดครึ่งไปคนละบรรทัด
+ */
+export function splitAddress(address: string): string {
+  if (address.includes('\n')) return address;
+  return address.replace(/\s+(?=(เขต|อำเภอ|อ\.)\S)/, '\n');
 }
 
 function Row({ k, v, bold }: { k: string; v: React.ReactNode; bold?: boolean }) {
